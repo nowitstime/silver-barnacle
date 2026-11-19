@@ -28,14 +28,19 @@ export interface RenderState {
   numbers: boolean;
 }
 
-/** Draws the game in the Risograph style: paper, two multiplying inks, halftone and misregistration. */
+/**
+ * Draws the game in the Risograph style: paper, two inks, halftone and misregistration.
+ * Only the cached background uses real multiply blending. Per-frame drawing uses normal blending,
+ * which looks nearly the same on light paper but avoids a costly read-back on phone GPUs.
+ */
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private bgCache: { key: string; canvas: HTMLCanvasElement } | null = null;
   private dark: HTMLCanvasElement | null = null;
 
   constructor(private view: View) {
-    this.ctx = view.canvas.getContext('2d')!;
+    // Opaque canvas: we paint the whole background every frame, and phones composite it faster.
+    this.ctx = view.canvas.getContext('2d', { alpha: false })!;
   }
 
   /** Forget cached layers (after a resolution change). */
@@ -117,7 +122,6 @@ export class Renderer {
     const { ctx } = this;
     const dir = Math.sign(s.sim.current);
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.strokeStyle = inks.i1;
     ctx.globalAlpha = 0.18;
     ctx.lineWidth = 1.5;
@@ -174,7 +178,6 @@ export class Renderer {
     for (const it of s.sim.items) if (it.kind === 'orb') light(cellCenterX(it.c), cellCenterY(it.r), 16);
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(this.dark, 0, 0, view.canvas.width, view.canvas.height);
     ctx.restore();
   }
@@ -182,7 +185,6 @@ export class Renderer {
   private drawFloor(inks: Inks, sim: Sim): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.strokeStyle = inks.i1;
     ctx.globalAlpha = 0.5;
     ctx.setLineDash([4, 4]);
@@ -226,7 +228,6 @@ export class Renderer {
     ctx.save();
     ctx.translate(x + half, y + half);
     ctx.scale(k, k);
-    ctx.globalCompositeOperation = 'multiply';
 
     // Body.
     ctx.globalAlpha = alpha;
@@ -381,7 +382,6 @@ export class Renderer {
     const { ctx } = this;
     const size = span(1);
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = inks.i2;
     for (let i = 0; i < 3; i++) {
       const t = (time * 1.6 + i / 3 + (seed % 7) * 0.13) % 1;
@@ -409,7 +409,6 @@ export class Renderer {
     ctx.translate(x + w / 2, y + h / 2);
     ctx.scale(k, k);
     // Body: dense halftone over a solid fill, offset print.
-    ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = flash > 0.3 ? inks.i2 : inks.i1;
     ctx.globalAlpha = 0.9;
     ctx.fillRect(-w / 2, -h / 2, w, h);
@@ -441,7 +440,6 @@ export class Renderer {
     this.hpLabel(b.hp, 0, 9, 13, inks.paper);
 
     // Gimmick tells.
-    ctx.globalCompositeOperation = 'multiply';
     switch (st.id) {
       case 'glacier': {
         ctx.fillStyle = inks.i2;
@@ -500,7 +498,6 @@ export class Renderer {
     for (const it of s.sim.items) {
       ctx.save();
       ctx.translate(cellCenterX(it.c), cellCenterY(it.r) + off);
-      ctx.globalCompositeOperation = 'multiply';
       this.drawItem(it, inks, pulse, s.time);
       ctx.restore();
     }
@@ -549,7 +546,6 @@ export class Renderer {
   private drawTrace(t: Trace, inks: Inks): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     let dist = 0;
     for (let i = 1; i < t.points.length; i++) {
       const [x0, y0] = t.points[i - 1], [x1, y1] = t.points[i];
@@ -589,7 +585,6 @@ export class Renderer {
   private drawBalls(s: RenderState, inks: Inks): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     // Trails: one path per fade level instead of one fill per dot.
     ctx.fillStyle = inks.i2;
     const levels = 3;
@@ -684,7 +679,6 @@ export class Renderer {
     const count = firing ? sim.unfired : sim.ballCount;
     const showBall = !firing || sim.unfired > 0;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     if (showBall && sim.phase !== 'settle') this.ball(sim.launchX, FLOOR - BALL_R, inks, 0, 0, 0, 1 + s.fx.launcherKick * 0.45);
     ctx.restore();
     if (count > 0 && sim.phase !== 'settle') {
@@ -701,7 +695,6 @@ export class Renderer {
   private drawBeams(s: RenderState, inks: Inks): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     for (const b of s.fx.beams) {
       const f = b.life / b.max;
       const thick = CELL * b.width * (0.4 + 0.6 * f);
@@ -723,7 +716,6 @@ export class Renderer {
     const ps = s.fx.particles;
     if (!ps.length) return;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     for (const ink of [0, 1] as const) {
       ctx.fillStyle = ink ? inks.i2 : inks.i1;
       for (let lv = 1; lv <= 3; lv++) {
@@ -754,7 +746,6 @@ export class Renderer {
   private drawRings(s: RenderState, inks: Inks): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     for (const r of s.fx.rings) {
       const f = 1 - r.life / r.max;
       ctx.globalAlpha = (1 - f) * 0.9;
@@ -769,7 +760,6 @@ export class Renderer {
   private drawZaps(s: RenderState, inks: Inks): void {
     const { ctx } = this;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.lineJoin = 'round';
     for (const z of s.fx.zaps) {
       const f = z.life / z.max;
@@ -799,7 +789,6 @@ export class Renderer {
     const pulse = 0.75 + 0.25 * Math.sin(s.time * 7);
     const height = CELL * 4;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = inks.i2;
     ctx.globalAlpha = 0.55 * d * pulse;
     for (let y = FLOOR; y > FLOOR - height; y -= 6) {
@@ -876,7 +865,6 @@ export class Renderer {
     ctx.fillText(label, 10, 27);
     const x0 = 14 + ctx.measureText(label).width, x1 = W - 10;
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = inks.i1;
     ctx.globalAlpha = 0.3;
     ctx.fillRect(x0, boss ? 25 : 26, x1 - x0, boss ? 4 : 2);
@@ -904,7 +892,6 @@ export class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `700 20px ${FONT}`;
-    ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = inks.i1;
     ctx.fillText(`${fx.combo}× COMBO`, 1.5, 1);
     ctx.fillStyle = inks.i2;
@@ -931,7 +918,6 @@ export class Renderer {
     ctx.globalAlpha = a;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.globalCompositeOperation = 'multiply';
     ctx.font = `700 ${b.title.length > 12 ? 20 : 26}px ${FONT}`;
     ctx.fillStyle = inks.i1;
     ctx.fillText(b.title, W / 2 - slide + 2, top + 26);

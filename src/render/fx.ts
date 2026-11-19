@@ -50,6 +50,7 @@ export class Fx {
   zaps: Zap[] = [];
   beams: Beam[] = [];
   private lastImmune = 0;
+  private lastHazard = 0;
   banner: Banner | null = null;
   bricks = new Map<number, BrickFx>();
   trails = new Map<number, number[]>();
@@ -126,7 +127,10 @@ export class Fx {
           break;
         case 'hazard': {
           const label = HAZARD_LABEL[e.kind];
-          if (label) this.text(e.x, e.y - 8, label, true);
+          if (label && performance.now() - this.lastHazard > 350) {
+            this.lastHazard = performance.now();
+            this.text(e.x, e.y - 8, label, true);
+          }
           if (e.kind === 'popper') {
             this.burst(e.x, e.y, 16, 160, 0.5, 1, true, 200);
             this.rings.push({ x: e.x, y: e.y, radius: 20, life: 0.3, max: 0.3, ink: 1 });
