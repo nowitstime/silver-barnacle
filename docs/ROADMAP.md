@@ -109,6 +109,7 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
+| Ricochet Rush is overpowered and wall-spam beats aiming (see balance.md). Cap the bonus per ball per turn? Only count bounces after the first brick hit? Diminishing returns? | Next |
 | Loot bricks as an extra pick source? (mid-biome picks are in) | M9 |
 | Should brick HP also scale with ball count? (not needed so far, per the bot) | M9 |
 | Game name | M9 |
