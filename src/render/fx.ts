@@ -13,6 +13,8 @@ export interface Particle {
 
 export interface FloatText {
   x: number; y: number; text: string; big: boolean; life: number; max: number;
+  /** Print in the secondary ink. */
+  alt: boolean;
 }
 
 export interface Ring {
@@ -20,6 +22,10 @@ export interface Ring {
 }
 
 export interface BrickFx { flash: number; wobble: number }
+
+export interface Zap { x1: number; y1: number; x2: number; y2: number; life: number; max: number; seed: number }
+
+export interface Banner { title: string; sub: string; life: number; max: number }
 
 /** Kills in one volley needed before the combo counter shows. */
 export const COMBO_SHOW = 3;
@@ -30,6 +36,8 @@ export class Fx {
   particles: Particle[] = [];
   texts: FloatText[] = [];
   rings: Ring[] = [];
+  zaps: Zap[] = [];
+  banner: Banner | null = null;
   bricks = new Map<number, BrickFx>();
   trails = new Map<number, number[]>();
   squash = new Map<number, number>();
@@ -54,10 +62,15 @@ export class Fx {
           break;
         case 'hit': {
           const fx = this.brickFx(e.brick.id);
-          fx.flash = 1;
-          fx.wobble = 1;
-          this.squash.set(e.ballId, 1);
-          this.burst(e.x, e.y, 3, 55, 0.3, 0);
+          fx.flash = e.source === 'burn' ? 0.5 : 1;
+          fx.wobble = e.source === 'ball' || e.crit ? 1 : 0.5;
+          if (e.ballId >= 0) this.squash.set(e.ballId, 1);
+          if (e.source === 'burn') this.burst(e.x, e.y, 4, 40, 0.4, 1, false, -60);
+          else this.burst(e.x, e.y, e.crit ? 8 : 3, e.crit ? 110 : 55, 0.3, e.crit ? 1 : 0);
+          if (e.crit) {
+            this.rings.push({ x: e.x, y: e.y, radius: 18, life: 0.25, max: 0.25, ink: 1 });
+            this.kick(2);
+          }
           if (e.killed) {
             const cx = cellCenterX(e.brick.c), cy = cellCenterY(e.brick.r);
             this.burst(cx, cy, 14, 180, 0.75, 0, true, 420, true);
@@ -68,11 +81,25 @@ export class Fx {
             this.comboFade = 1;
             if (this.combo >= COMBO_SHOW) this.comboPop = 1;
             this.kick(2.5 + Math.min(this.combo, 10) * 0.25);
-          } else {
-            this.text(e.x, e.y, String(e.damage));
           }
+          if (e.crit) this.text(e.x, e.y - 6, `${e.damage}!`, true);
+          else if (!e.killed || e.source === 'burn') this.text(e.x, e.y, String(e.damage), false, e.source === 'burn');
           break;
         }
+        case 'zap':
+          this.zaps.push({ ...e, life: 0.22, max: 0.22, seed: Math.random() * 1000 });
+          break;
+        case 'split':
+          this.rings.push({ x: e.x, y: e.y, radius: 14, life: 0.25, max: 0.25, ink: 0 });
+          break;
+        case 'ignite':
+          this.burst(e.x, e.y, 12, 120, 0.5, 1, true, 0);
+          this.rings.push({ x: e.x, y: e.y, radius: 26, life: 0.35, max: 0.35, ink: 1 });
+          break;
+        case 'shield':
+          this.kick(7);
+          this.showBanner('SHIELD!', 'The bottom rows are cleared', 1.4);
+          break;
         case 'wall':
           this.squash.set(e.ballId, 1);
           this.burst(e.x, e.y, 2, 30, 0.2, 1);
@@ -111,6 +138,9 @@ export class Fx {
     }
     this.texts = this.texts.filter((t) => t.life > 0);
     for (const r of this.rings) r.life -= dt;
+    for (const z of this.zaps) z.life -= dt;
+    this.zaps = this.zaps.filter((z) => z.life > 0);
+    if (this.banner && (this.banner.life -= dt) <= 0) this.banner = null;
     this.rings = this.rings.filter((r) => r.life > 0);
     for (const fx of this.bricks.values()) {
       fx.flash = Math.max(0, fx.flash - dt * 7);
@@ -172,16 +202,22 @@ export class Fx {
     }
   }
 
-  text(x: number, y: number, text: string, big = false): void {
+  text(x: number, y: number, text: string, big = false, alt = big): void {
     if (this.texts.length > 60 && !big) return;
     const life = big ? 0.85 : 0.4;
-    this.texts.push({ x, y, text, big, life, max: life });
+    this.texts.push({ x, y, text, big, life, max: life, alt });
+  }
+
+  showBanner(title: string, sub: string, seconds = 2.2): void {
+    this.banner = { title, sub, life: seconds, max: seconds };
   }
 
   reset(): void {
     this.particles = [];
     this.texts = [];
     this.rings = [];
+    this.zaps = [];
+    this.banner = null;
     this.bricks.clear();
     this.trails.clear();
     this.squash.clear();

@@ -1,5 +1,5 @@
 import { BALL_R, BALL_SPEED, FLOOR, STEP } from './constants';
-import { stepBody } from './physics';
+import { bounce, stepBody } from './physics';
 import type { BrickGrid } from './types';
 
 export interface Trace {
@@ -23,6 +23,7 @@ export function traceShot(
     const res = stepBody(b, STEP, grid);
     if (i % sampleEvery === 0) points.push([b.x, b.y]);
     if (res?.kind === 'floor') break;
+    if (res?.kind === 'brick') bounce(b, res.contact);
     if (res) {
       contacts.push([b.x, b.y]);
       points.push([b.x, b.y]);

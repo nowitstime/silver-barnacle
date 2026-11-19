@@ -5,6 +5,7 @@ export interface DebugHooks {
   restart: (seed?: number) => void;
   setFast: (on: boolean) => void;
   setHitboxes: (on: boolean) => void;
+  upgrades: string[];
 }
 
 /** Developer panel, shown with ?debug in the URL. */
@@ -16,7 +17,9 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     <button type="button" data-a="balls">+10 balls</button>
     <button type="button" data-a="fast">10× speed</button>
     <button type="button" data-a="hit">Hitboxes</button>
-    <button type="button" data-a="seed">New seed</button>`;
+    <button type="button" data-a="seed">New seed</button>
+    <button type="button" data-a="pick">Skip to pick</button>
+    <select data-a="grant" aria-label="Grant upgrade"><option value="">Grant upgrade…</option>${hooks.upgrades.map((id) => `<option>${id}</option>`).join('')}</select>`;
   root.appendChild(el);
   const stats = el.querySelector<HTMLElement>('.debug-stats')!;
   let fast = false, hit = false;
@@ -27,9 +30,16 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     if (a === 'fast') hooks.setFast((fast = !fast));
     if (a === 'hit') hooks.setHitboxes((hit = !hit));
     if (a === 'seed') hooks.restart();
+    if (a === 'pick') hooks.sim().debugSkipToPick();
+  });
+  el.querySelector('select')!.addEventListener('change', (e) => {
+    const sel = e.target as HTMLSelectElement;
+    if (sel.value) hooks.sim().debugGrant(sel.value);
+    sel.value = '';
   });
   return (fps: number) => {
     const s = hooks.sim();
-    stats.textContent = `${fps.toFixed(0)} fps · seed ${s.seed} · ${s.phase} · balls ${s.ballCount} · bricks ${s.bricks.length}`;
+    const ups = Object.entries(s.upgrades).map(([k, v]) => (v > 1 ? `${k}×${v}` : k)).join(' ');
+    stats.textContent = `${fps.toFixed(0)} fps · seed ${s.seed} · ${s.phase} · balls ${s.ballCount} · bricks ${s.bricks.length} · ${ups || 'no upgrades'}`;
   };
 }

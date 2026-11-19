@@ -36,6 +36,7 @@ export class Hud {
           <p class="eyebrow">Run over</p>
           <h2 id="over-title">Depth <span id="over-depth">0</span></h2>
           <p class="sub">Best <span id="over-best">0</span> <span class="new" id="over-new" hidden>New best!</span></p>
+          <dl class="totals" id="over-totals"></dl>
           <button class="btn-primary" id="restart" type="button">Play again</button>
         </div>
       </div>`;
@@ -83,7 +84,11 @@ export class Hud {
     b?.classList.toggle('off', !on);
   }
 
-  showOver(depth: number, best: number, isNew: boolean): void {
+  showOver(depth: number, best: number, isNew: boolean, totals?: { kills: number; damage: number; bestCombo: number }): void {
+    const t = this.over.querySelector('#over-totals')!;
+    t.innerHTML = totals
+      ? `<div><dt>Bricks broken</dt><dd>${totals.kills}</dd></div><div><dt>Damage</dt><dd>${totals.damage.toLocaleString()}</dd></div><div><dt>Best combo</dt><dd>${totals.bestCombo}</dd></div>`
+      : '';
     this.overDepth.textContent = String(depth);
     this.overBest.textContent = String(best);
     this.overNew.hidden = !isNew;

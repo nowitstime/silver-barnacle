@@ -26,7 +26,7 @@ Status: **draft**. Anything marked ❓ is still open.
 | Meta progression | Unlocks only (no permanent stat boosts) |
 | Saving | Autosave every turn and resume after closing. High scores, unlocks and settings stored in localStorage |
 | Art style | **Risograph**: paper stock plus two inks per biome, multiply blending, halftone, grain |
-| Aiming | Point to aim anywhere on screen, then tap **Fire** to confirm. Aim carries over between turns |
+| Aiming | Drag left/right anywhere to turn the aim like a dial (precise when slow), or tap to point at a spot. **Fire** confirms. Aim carries over between turns |
 | Juice | An absurd amount |
 | Audio | Generated sound effects (ZzFX / WebAudio) |
 | Haptics | Light vibration (Android only, because iOS Safari has no Vibration API) |
@@ -66,7 +66,7 @@ Target: about 10 seconds per turn, about 110 turns, so roughly 20 minutes.
 | ∞ | **Endless** | ∞ | The biomes repeat with modifiers stacking up | High score |
 
 - **Biome transition:** the background color and pattern slide in, the music key changes, and a title card appears ("DEPTH 2 · CAVERNS").
-- ❓ **Upgrade frequency:** decided that there will be **more than 5 picks per run**. How to add them is still open:
+- ✅ **Upgrade frequency:** a small pick **halfway through each biome** plus a big pick (rare or better) when it's cleared, so 10 picks in a full run. Loot bricks are still an option for later:
   - (a) A small **common pick halfway through each biome**, plus the big pick (rare or better guaranteed) after each mini-boss.
   - (b) **Loot bricks** that give a pick when you break them.
   - (c) Both. *Leaning (a), maybe adding (b) later.*

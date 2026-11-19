@@ -31,9 +31,8 @@ export class Renderer {
     this.ctx = view.canvas.getContext('2d')!;
   }
 
-  /** Biomes arrive in M3; until then everything is Meadow. */
-  inks(_sim: Sim): Inks {
-    return BIOME_INKS[0];
+  inks(sim: Sim): Inks {
+    return BIOME_INKS[sim.biome % BIOME_INKS.length];
   }
 
   draw(s: RenderState): void {
@@ -58,12 +57,70 @@ export class Renderer {
     this.drawLauncher(s, inks);
     this.drawParticles(s, inks);
     this.drawRings(s, inks);
+    this.drawZaps(s, inks);
     this.drawTexts(s, inks);
     if (s.showHitboxes) this.drawHitboxes(s);
     ctx.restore();
 
     this.drawHud(s, inks);
     this.drawCombo(s, inks);
+    this.drawBanner(s, inks);
+  }
+
+  /** Jagged lightning between two points, re-randomised every frame so it crackles. */
+  private drawZaps(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.lineJoin = 'round';
+    for (const z of s.fx.zaps) {
+      const f = z.life / z.max;
+      for (const [ink, off, w] of [[inks.i1, 1, 2.5], [inks.i2, 0, 1.6]] as const) {
+        ctx.strokeStyle = ink;
+        ctx.globalAlpha = f;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(z.x1 + off, z.y1);
+        const n = 6;
+        for (let i = 1; i < n; i++) {
+          const t = i / n;
+          const jx = (Math.random() - 0.5) * 9, jy = (Math.random() - 0.5) * 9;
+          ctx.lineTo(z.x1 + (z.x2 - z.x1) * t + jx + off, z.y1 + (z.y2 - z.y1) * t + jy);
+        }
+        ctx.lineTo(z.x2 + off, z.y2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /** Big two-ink title card, e.g. a new biome. */
+  private drawBanner(s: RenderState, inks: Inks): void {
+    const b = s.fx.banner;
+    if (!b) return;
+    const { ctx } = this;
+    const age = b.max - b.life;
+    const a = Math.min(1, age * 4, b.life * 2.5);
+    const slide = Math.max(0, 1 - age * 5) * 30;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = inks.paper;
+    ctx.globalAlpha = a * 0.85;
+    ctx.fillRect(0, H * 0.38, W, 64);
+    ctx.globalAlpha = a;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.font = `700 26px ${FONT}`;
+    ctx.fillStyle = inks.i1;
+    ctx.fillText(b.title, W / 2 - slide + 2, H * 0.38 + 26);
+    ctx.fillStyle = inks.i2;
+    ctx.fillText(b.title, W / 2 - slide, H * 0.38 + 24);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.font = `400 10px ${FONT}`;
+    ctx.fillStyle = inks.i1;
+    ctx.fillText(b.sub, W / 2 + slide, H * 0.38 + 48);
+    ctx.restore();
   }
 
   // ---- background ----
@@ -140,8 +197,29 @@ export class Renderer {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, 0, 1);
+      if (b.burn > 0) this.drawFlames(inks, s.time, b.id);
       ctx.restore();
     }
+  }
+
+  /** Little ink flames licking up a burning brick (drawn in brick-local space). */
+  private drawFlames(inks: Inks, time: number, seed: number): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = inks.i2;
+    for (let i = 0; i < 3; i++) {
+      const t = (time * 1.6 + i / 3 + (seed % 7) * 0.13) % 1;
+      const x = (i - 1) * 9 + Math.sin(time * 5 + i + seed) * 2;
+      const y = BRICK / 2 - t * BRICK * 0.9;
+      ctx.globalAlpha = (1 - t) * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 6 * (1 - t) - 2);
+      ctx.quadraticCurveTo(x + 3.5, y, x, y + 3);
+      ctx.quadraticCurveTo(x - 3.5, y, x, y - 6 * (1 - t) - 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawOrbs(s: RenderState, inks: Inks, off: number): void {
@@ -230,7 +308,20 @@ export class Renderer {
     }
     ctx.globalAlpha = 1;
     for (const b of s.sim.balls) {
-      if (b.state === 'flying') this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0);
+      if (b.state === 'flying') {
+        if (b.fire) {
+          ctx.strokeStyle = inks.i2;
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.6 + 0.4 * Math.sin(s.time * 30 + b.id);
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, BALL_R * 1.9, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        if (b.copy) ctx.globalAlpha = 0.7;
+        this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0, b.fire ? 1.35 : b.copy ? 0.75 : 1);
+        ctx.globalAlpha = 1;
+      }
       else this.ball(b.x, b.y, inks);
     }
     ctx.restore();
@@ -357,7 +448,7 @@ export class Renderer {
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = inks.paper;
       ctx.strokeText(t.text, 0, 0);
-      ctx.fillStyle = t.big ? inks.i2 : inks.i1;
+      ctx.fillStyle = t.alt ? inks.i2 : inks.i1;
       ctx.fillText(t.text, 0, 0);
       ctx.restore();
     }
@@ -386,10 +477,34 @@ export class Renderer {
     ctx.textBaseline = 'middle';
     ctx.font = `700 11px ${FONT}`;
     ctx.textAlign = 'left';
-    ctx.fillText(`DEPTH ${s.sim.level}`, 10, 17);
-    ctx.textAlign = 'center';
+    ctx.fillText(`DEPTH ${s.sim.level}`, 10, 13);
     ctx.font = `400 10px ${FONT}`;
-    ctx.fillText(`BEST ${Math.max(s.best, s.sim.level)}`, W / 2, 17);
+    ctx.textAlign = 'center';
+    ctx.fillText(`BEST ${Math.max(s.best, s.sim.level)}`, W / 2, 13);
+    if (s.sim.shields > 0) {
+      ctx.textAlign = 'right';
+      ctx.font = `700 10px ${FONT}`;
+      ctx.fillStyle = inks.i2;
+      ctx.fillText(`◆${s.sim.shields}`, W - 44, 13);
+    }
+    // Biome name and progress through it.
+    ctx.fillStyle = inks.i1;
+    ctx.textAlign = 'left';
+    ctx.font = `700 8px ${FONT}`;
+    const name = inks.name.toUpperCase();
+    ctx.fillText(name, 10, 27);
+    const x0 = 14 + ctx.measureText(name).width, x1 = W - 10;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(x0, 26, x1 - x0, 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = inks.i2;
+    ctx.fillRect(x0, 26, (x1 - x0) * s.sim.biomeProgress, 2);
+    // Tick marking the halfway pick.
+    ctx.fillStyle = inks.i1;
+    ctx.fillRect(x0 + (x1 - x0) * 0.5 - 0.5, 24, 1, 6);
+    ctx.restore();
   }
 }
 

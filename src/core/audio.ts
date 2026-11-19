@@ -135,6 +135,28 @@ export class Sfx {
     this.tone({ freq: 440, to: 90, dur: 0.7, vol: 0.1, wave: 'sawtooth' });
     this.burst(0.5, 0.15, 1500);
   }
+  crit(): void {
+    this.tone({ freq: 1200, to: 1800, dur: 0.07, vol: 0.06, wave: 'square' });
+    this.burst(0.04, 0.08, 6000);
+  }
+  zap(): void {
+    this.tone({ freq: 1800, to: 300, dur: 0.09, vol: 0.04, wave: 'sawtooth' });
+    this.burst(0.06, 0.05, 8000);
+  }
+  split(): void { this.tone({ freq: 700, to: 1400, dur: 0.06, vol: 0.04, wave: 'sine' }); }
+  ignite(): void {
+    this.burst(0.25, 0.12, 2500);
+    this.tone({ freq: 200, to: 600, dur: 0.2, vol: 0.06, wave: 'sawtooth' });
+  }
+  shield(): void {
+    [0, 7, 12, 19].forEach((n, i) => this.tone({ freq: this.st(330, n), dur: 0.12, vol: 0.07, wave: 'triangle', delay: i * 0.06 }));
+    this.burst(0.4, 0.12, 3000);
+  }
+  /** Played when an upgrade pick appears. */
+  fanfare(big: boolean): void {
+    const notes = big ? [0, 4, 7, 12, 16] : [0, 4, 7];
+    notes.forEach((n, i) => this.tone({ freq: this.st(523, n), dur: 0.14, vol: 0.06, wave: 'square', delay: i * 0.08 }));
+  }
   click(): void { this.tone({ freq: 900, dur: 0.03, vol: 0.04, wave: 'square' }); }
 }
 

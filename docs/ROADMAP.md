@@ -30,6 +30,10 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ Aim stays when you lift your finger, and carries over to the next turn; a **Fire** button confirms
 - ✅ Desktop: arrow keys nudge the aim (Shift for bigger steps), Space or Enter fires
 
+## Controls (revision 2)
+- ✅ Drag left/right anywhere to turn the aim like a dial (slow = precise, fast = quick); tap to jump the aim to a spot
+- ✅ The laser eases toward the new angle, which gives aiming some weight
+
 ## M2: Juice pass #1 and sound *(make it feel amazing early, so every later feature feels good too)*
 - ✅ Squash and stretch, hit flash, brick fragments, shockwave rings, screen shake, hit-stop
 - ✅ Damage numbers, combo counter (with a bigger sound and freeze every 5 kills)
@@ -39,14 +43,14 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ **Art direction test**: picked **Risograph** from the [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs)
 
 ## M3: The roguelike run *(first real "run")*
-- ⬜ Depth counter, biome progress bar
-- ⬜ 3 biomes (looks only for now) with transitions and title cards
-- ⬜ HP and density scaling; hand-made row patterns
-- ⬜ Upgrade system: event hooks, pick-1-of-3 screen, ~12 upgrades (the ✅ ones), rarity
-- ⬜ Crits
-- ⬜ Autosave each turn, and "Continue" after closing the app
-- ⬜ Tests: upgrade math, save round-trip
-- ⬜ **Done when:** a 3-biome run with meaningful build choices
+- ✅ Depth counter, biome name and progress bar (with a tick at the halfway pick)
+- ✅ All 5 biomes (each a new ink pair; gameplay gimmicks come in M5) with title cards
+- ✅ HP and density scaling (HP grows ~12% per biome); hand-made row patterns (wall with a gap, pillars, edges, center block)
+- ✅ Upgrade system: pick-1-of-3 screen, 14 upgrades across all 4 rarities, depth-weighted odds. Small pick halfway through each biome, big pick (no commons) at the end
+- ✅ Crits
+- ✅ Autosave between turns; the run resumes automatically when the app reopens (a Continue button comes with the title screen in M4)
+- ✅ Tests: upgrade math, offers, pick timing, shields, save round-trip determinism
+- 🟨 **Done when:** a 3-biome run with meaningful build choices
 
 ## M4: Menus and shell *(make it feel like a real game)*
 - ⬜ Title screen with animated background
@@ -102,7 +106,7 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| How to add more picks (more than 5 per run is decided): mid-biome common pick, loot bricks, or both | M3 / M6 |
+| Loot bricks as an extra pick source? (mid-biome picks are in) | M6 |
 | Should brick HP also scale with ball count? | M6 |
 | Final boss phases | M7 |
 | Cursed upgrades: yes or no? | M6 |

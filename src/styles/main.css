@@ -124,6 +124,10 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .sheet h2 { margin: 0; font-size: 34px; line-height: 1.1; }
 .sub { margin: 6px 0 20px; font-size: 14px; }
 .new { color: var(--i2); font-weight: 700; }
+.totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: -6px 0 20px; }
+.totals div { display: grid; gap: 2px; }
+.totals dt { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.totals dd { margin: 0; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .btn-primary {
   font-weight: 700;
   font-size: 16px;
@@ -174,3 +178,35 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* ---- upgrade pick ---- */
+.pick { align-items: center; background: color-mix(in srgb, var(--paper) 80%, transparent); overflow-y: auto; }
+.pick-inner { width: min(440px, 100%); text-align: center; padding-block: 12px; }
+.pick-inner h2 { margin: 0; font-size: 28px; line-height: 1.1; }
+.cards { display: grid; gap: 10px; margin-bottom: 16px; text-align: left; }
+.card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px 13px;
+  background: var(--paper);
+  color: var(--i1);
+  border: 2px solid var(--i1);
+  box-shadow: 3px 3px 0 var(--i2);
+  text-align: left;
+  animation: deal 0.28s cubic-bezier(.2,1.4,.4,1) both;
+  transition: transform 0.12s ease;
+}
+.card .rarity { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; }
+.card .name { font-size: 18px; font-weight: 700; line-height: 1.15; }
+.card .desc { font-size: 13px; line-height: 1.45; }
+.card .owned { font-size: 11px; color: var(--i2); font-weight: 700; }
+.card[data-rarity="rare"] { background-image: radial-gradient(color-mix(in srgb, var(--i1) 22%, transparent) 1px, transparent 1.5px); background-size: 6px 6px; }
+.card[data-rarity="epic"] { border-color: var(--i2); box-shadow: 3px 3px 0 var(--i1); }
+.card[data-rarity="epic"] .rarity { color: var(--i2); }
+.card[data-rarity="legendary"] { background: var(--i2); color: var(--paper); border-color: var(--i2); box-shadow: 3px 3px 0 var(--i1); }
+.card[data-rarity="legendary"] .owned { color: var(--paper); }
+.card[aria-pressed="true"] { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--i2); outline: 3px solid var(--i1); outline-offset: 2px; }
+.card[data-rarity="epic"][aria-pressed="true"], .card[data-rarity="legendary"][aria-pressed="true"] { box-shadow: 6px 6px 0 var(--i1); }
+.take:disabled { opacity: 0.4; box-shadow: none; }
+@keyframes deal { from { opacity: 0; transform: translateY(18px) rotate(-2deg); } }
+@media (prefers-reduced-motion: reduce) { .card, .fire, .overlay { animation: none; } }
