@@ -44,8 +44,16 @@ export class Loop {
     requestAnimationFrame(loop);
   }
 
-  /** Freeze game time briefly (hit-stop). Doesn't stack beyond the longest request. */
-  hold(seconds: number): void {
+  private lastHold = -Infinity;
+
+  /**
+   * Freeze game time briefly (hit-stop). Requests within `cooldown` seconds of the last freeze are
+   * ignored, so a storm of hits late in a run can never stall the game.
+   */
+  hold(seconds: number, cooldown = 0.35): void {
+    const now = performance.now() / 1000;
+    if (now - this.lastHold < cooldown) return;
+    this.lastHold = now;
     this.holdLeft = Math.max(this.holdLeft, Math.min(seconds, 0.12));
   }
 

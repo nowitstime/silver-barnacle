@@ -11,12 +11,26 @@ export class View {
   offX = 0;
   offY = 0;
 
+  /**
+   * Render resolution as a fraction of the 2× cap. Lowered automatically when frames run slow:
+   * the art is flat ink, so a softer canvas costs little and saves a lot of pixel filling.
+   */
+  quality = 1;
+
   constructor(readonly canvas: HTMLCanvasElement) {
     this.resize();
   }
 
+  /** Drop render resolution one step. Returns false when already at the floor. */
+  lowerQuality(): boolean {
+    if (this.quality <= 0.55) return false;
+    this.quality = Math.max(0.55, this.quality - 0.15);
+    this.resize();
+    return true;
+  }
+
   resize(): void {
-    this.dpr = Math.min(3, window.devicePixelRatio || 1);
+    this.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1) * this.quality);
     this.cssW = window.innerWidth;
     this.cssH = window.innerHeight;
     this.canvas.width = Math.round(this.cssW * this.dpr);

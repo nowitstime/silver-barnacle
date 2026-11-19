@@ -60,9 +60,17 @@ let volleyHits = 0;
 let lastSavedPhase = '';
 let demoWait = 0;
 
+/** Frame timing, exposed as window.__perf with ?debug for profiling. */
+const perf = { sim: 0, render: 0, frames: [] as { dt: number; game: number; sim: number; render: number; balls: number; fx: number }[] };
+if (debug) (window as unknown as { __perf: typeof perf }).__perf = perf;
+
 const loop = new Loop(
-  (h) => sim.tick(h),
-  (realDt) => {
+  (h) => {
+    const t0 = performance.now();
+    sim.tick(h);
+    perf.sim += performance.now() - t0;
+  },
+  (realDt, gameDt) => {
     time += realDt;
     const events = sim.drainEvents();
     fx.consume(events);
@@ -73,8 +81,17 @@ const loop = new Loop(
     aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 16);
     trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.accel) : null;
     if (mode === 'run') autosave();
+    const r0 = performance.now();
     renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers });
+    perf.render = performance.now() - r0;
+    if (debug) {
+      perf.frames.push({ dt: realDt * 1000, game: gameDt * 1000, sim: perf.sim, render: perf.render, balls: sim.balls.length,
+        fx: fx.particles.length + fx.rings.length + fx.texts.length + fx.zaps.length });
+      if (perf.frames.length > 2000) perf.frames.shift();
+    }
+    perf.sim = 0;
     hud.update(sim, loop.speed, pick.open || menus.open);
+    adaptQuality(realDt);
     updateDebug?.(1 / Math.max(realDt, 1e-3));
   },
 );
@@ -285,30 +302,33 @@ function feedback(events: SimEvent[]): void {
     switch (e.type) {
       case 'launch': sfx.launch(); break;
       case 'wall': sfx.wall(); break;
-      case 'hit':
+      case 'hit': {
         volleyHits++;
+        // Small freezes only while the screen is calm; with lots of balls they'd stall the game.
+        const calm = sim.balls.length < 25;
         if (e.killed) {
           sfx.kill(fx.combo);
           haptics.buzz(10);
           if (fx.combo > 0 && fx.combo % 5 === 0) {
             sfx.combo(fx.combo / 5);
-            loop.hold(0.07);
+            loop.hold(0.06, 0.5);
             haptics.buzz([20, 30, 20], 0);
-          } else loop.hold(0.025);
+          } else if (calm) loop.hold(0.025);
         } else if (e.source === 'ball') sfx.hit(volleyHits);
         if (e.crit) {
           sfx.crit();
-          loop.hold(0.04);
+          if (calm) loop.hold(0.04);
           haptics.buzz(14);
         }
         break;
+      }
       case 'immune': sfx.immune(); break;
       case 'zap': sfx.zap(); break;
       case 'split': sfx.split(); break;
       case 'ignite': sfx.ignite(); break;
       case 'explode':
         sfx.explode();
-        loop.hold(0.05);
+        if (sim.balls.length < 25) loop.hold(0.05);
         haptics.buzz(30);
         break;
       case 'laser': sfx.laser(); haptics.buzz(15); break;
@@ -330,7 +350,7 @@ function feedback(events: SimEvent[]): void {
         break;
       case 'bossDown':
         sfx.bossDown();
-        loop.hold(0.12);
+        loop.hold(0.12, 0);
         haptics.buzz([80, 40, 160], 0);
         break;
       case 'pick': sfx.fanfare(e.kind === 'biome'); break;
@@ -363,6 +383,26 @@ const updateDebug = debug
     })
   : null;
 
+/**
+ * If frames stay slow for a couple of seconds, render at a lower resolution.
+ * Only ever steps down (a 60Hz screen can't tell us when there's headroom again); resets on reload.
+ */
+let slowTime = 0, quietTime = 0;
+function adaptQuality(dt: number): void {
+  if (loop.paused || document.hidden) return;
+  if (dt > 1 / 40 && dt < 0.25) {
+    slowTime += dt;
+    quietTime = 0;
+  } else {
+    quietTime += dt;
+    if (quietTime > 1) slowTime = Math.max(0, slowTime - dt);
+  }
+  if (slowTime > 1.5) {
+    slowTime = 0;
+    if (view.lowerQuality()) renderer.invalidate();
+  }
+}
+
 function applySettings(): void {
   sfx.enabled = settings.sound;
   haptics.enabled = settings.haptics;
@@ -384,7 +424,6 @@ document.addEventListener('visibilitychange', () => {
   else if (document.hidden) loop.paused = true;
   else if (!menus.open || mode === 'title') loop.paused = false;
 });
-mountGrain();
 newDemo();
 showTitle();
 loop.start();
@@ -393,21 +432,3 @@ const updateSW = registerSW({
   onNeedRefresh: () => toast('A new version is ready.', { label: 'Update', run: () => updateSW(true) }),
   onOfflineReady: () => toast('Ready to play offline.'),
 });
-
-/** Paper grain as a CSS overlay so the GPU composites it instead of the canvas redrawing it every frame. */
-function mountGrain(): void {
-  const c = document.createElement('canvas');
-  c.width = c.height = 160;
-  const g = c.getContext('2d')!;
-  const d = g.createImageData(160, 160);
-  for (let i = 0; i < d.data.length; i += 4) {
-    const v = 200 + Math.random() * 55;
-    d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
-    d.data[i + 3] = Math.random() < 0.55 ? 255 : 0;
-  }
-  g.putImageData(d, 0, 0);
-  const el = document.createElement('div');
-  el.className = 'grain';
-  el.style.backgroundImage = `url(${c.toDataURL()})`;
-  document.body.appendChild(el);
-}

@@ -14,7 +14,7 @@ interface Tone {
   delay?: number;
 }
 
-const MAX_VOICES_PER_FRAME = 6;
+const MAX_VOICES_PER_FRAME = 4;
 
 export class Sfx {
   enabled = true;
@@ -98,9 +98,19 @@ export class Sfx {
   }
 
   launch(): void { this.tone({ freq: 520, to: 780, dur: 0.045, vol: 0.035, wave: 'triangle' }); }
-  wall(): void { this.tone({ freq: 1400, dur: 0.018, vol: 0.02, wave: 'sine' }); }
+  private lastWall = 0;
+  wall(): void {
+    const now = performance.now();
+    if (now - this.lastWall < 40) return;
+    this.lastWall = now;
+    this.tone({ freq: 1400, dur: 0.018, vol: 0.02, wave: 'sine' });
+  }
   /** `combo` is the hit count this volley; pitch climbs a pentatonic scale. */
+  private lastHit = 0;
   hit(combo: number): void {
+    const now = performance.now();
+    if (now - this.lastHit < 30) return;
+    this.lastHit = now;
     const scale = [0, 2, 4, 7, 9];
     const n = Math.min(combo, 24);
     const semis = scale[n % 5] + 12 * Math.floor(n / 5);

@@ -5,7 +5,7 @@ import { CLASS_BY_ID, type ClassId } from '../content/classes';
 import { UPGRADE_BY_ID, computeStats, rollOffer, type Stats } from '../content/upgrades';
 import type { Contact } from './collision';
 import {
-  BALL_R, BALL_SPEED, COLS, DROP_TIME, FLOOR, LAUNCH_INTERVAL, MIN_ANGLE, ROWS, SETTLE_TIME, W,
+  BALL_R, BALL_SPEED, COLS, DROP_TIME, FLOOR, LAUNCH_INTERVAL, MAX_LAUNCH_TIME, MIN_ANGLE, ROWS, SETTLE_TIME, W,
   CELL, TOP, cellCenterX, cellCenterY,
 } from './constants';
 import { bounce, stepBody, type Accel } from './physics';
@@ -273,7 +273,8 @@ export class Sim {
   }
 
   private launchDue(): void {
-    while (this.fired < this.toFire && this.phaseTime >= this.fired * LAUNCH_INTERVAL) {
+    const interval = Math.min(LAUNCH_INTERVAL, MAX_LAUNCH_TIME / this.toFire);
+    while (this.fired < this.toFire && this.phaseTime >= this.fired * interval) {
       const copy = this.fired >= this.ballCount;
       const ball = this.spawnBall(this.launchX, FLOOR - BALL_R, this.aimAngle, this.fired % this.ballCount, copy);
       ball.golden = !copy && ball.index === this.goldenIndex;

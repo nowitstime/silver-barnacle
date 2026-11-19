@@ -17,6 +17,8 @@ export const BALL_R = 5;
 export const BALL_SPEED = 440;
 /** Seconds between balls in a volley. */
 export const LAUNCH_INTERVAL = 0.07;
+/** A whole volley leaves the launcher within this many seconds, however many balls you have. */
+export const MAX_LAUNCH_TIME = 2.4;
 /** Fixed simulation step. */
 export const STEP = 1 / 240;
 

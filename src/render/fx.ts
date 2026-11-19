@@ -38,7 +38,9 @@ export interface Banner { title: string; sub: string; life: number; max: number 
 
 /** Kills in one volley needed before the combo counter shows. */
 export const COMBO_SHOW = 3;
-const MAX_PARTICLES = 700;
+const MAX_PARTICLES = 450;
+/** Caps so a late-game storm of hits can't flood the screen (or the frame budget). */
+const MAX_RINGS = 50, MAX_ZAPS = 24, MAX_BEAMS = 8, MAX_TEXTS = 45;
 
 /** Visual-only effects driven by sim events. Never feeds back into the sim. */
 export class Fx {
@@ -204,12 +206,20 @@ export class Fx {
     for (const z of this.zaps) z.life -= dt;
     for (const b of this.beams) b.life -= dt;
     this.beams = this.beams.filter((b) => b.life > 0);
+    if (this.rings.length > MAX_RINGS) this.rings.splice(0, this.rings.length - MAX_RINGS);
+    if (this.zaps.length > MAX_ZAPS) this.zaps.splice(0, this.zaps.length - MAX_ZAPS);
+    if (this.beams.length > MAX_BEAMS) this.beams.splice(0, this.beams.length - MAX_BEAMS);
     this.zaps = this.zaps.filter((z) => z.life > 0);
     if (this.banner && (this.banner.life -= dt) <= 0) this.banner = null;
     this.rings = this.rings.filter((r) => r.life > 0);
     for (const fx of this.bricks.values()) {
       fx.flash = Math.max(0, fx.flash - dt * 7);
       fx.wobble = Math.max(0, fx.wobble - dt * 6);
+    }
+    // Forget effects for bricks that left the board some other way (scrolled off, shield, etc).
+    if (this.bricks.size > sim.bricks.length + 40) {
+      const ids = new Set(sim.bricks.map((b) => b.id));
+      for (const id of this.bricks.keys()) if (!ids.has(id)) this.bricks.delete(id);
     }
     for (const [id, v] of this.squash) {
       const n = v - dt * 9;
@@ -252,6 +262,8 @@ export class Fx {
     x: number, y: number, n: number, speed: number, life: number, ink: 0 | 1,
     mixInk = false, gravity = 420, square = false,
   ): void {
+    // Thin out bursts as the screen fills up.
+    n = Math.ceil(n * Math.max(0.15, 1 - this.particles.length / MAX_PARTICLES));
     for (let i = 0; i < n && this.particles.length < MAX_PARTICLES; i++) {
       const a = Math.random() * Math.PI * 2;
       const sp = speed * (0.4 + Math.random() * 0.8);
@@ -268,7 +280,7 @@ export class Fx {
   }
 
   text(x: number, y: number, text: string, big = false, alt = big, number = false): void {
-    if (this.texts.length > 60 && !big) return;
+    if (this.texts.length > (big ? MAX_TEXTS : MAX_TEXTS * 0.6)) return;
     const life = big ? 0.85 : 0.4;
     this.texts.push({ x, y, text, big, life, max: life, alt, number });
   }

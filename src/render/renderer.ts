@@ -38,6 +38,12 @@ export class Renderer {
     this.ctx = view.canvas.getContext('2d')!;
   }
 
+  /** Forget cached layers (after a resolution change). */
+  invalidate(): void {
+    this.bgCache = null;
+    this.dark = null;
+  }
+
   inks(sim: Sim): Inks {
     return BIOME_INKS[sim.biome % BIOME_INKS.length];
   }
@@ -94,6 +100,14 @@ export class Renderer {
     g.globalAlpha = 0.45;
     halftone(g, W * 0.82, H * 0.2, 90, 6, inks.i2, 2.6);
     halftone(g, W * 0.12, H * 0.88, 170, 6, inks.i1, 2.2);
+    // Paper grain, baked in once instead of a full-screen blended overlay every frame.
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = 0.5;
+    const pattern = g.createPattern(grainTile(), 'repeat');
+    if (pattern) {
+      g.fillStyle = pattern;
+      g.fillRect(0, 0, c.width, c.height);
+    }
     this.bgCache = { key, canvas: c };
     return c;
   }
@@ -576,21 +590,60 @@ export class Renderer {
     const { ctx } = this;
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    for (const tr of s.fx.trails.values()) {
-      const n = tr.length / 2;
-      ctx.fillStyle = inks.i2;
-      for (let i = 0; i < n; i += 2) {
-        ctx.globalAlpha = (i / n) * 0.6;
-        ctx.beginPath(); ctx.arc(tr[i * 2], tr[i * 2 + 1], 1.6, 0, TAU); ctx.fill();
+    // Trails: one path per fade level instead of one fill per dot.
+    ctx.fillStyle = inks.i2;
+    const levels = 3;
+    for (let lv = 1; lv <= levels; lv++) {
+      ctx.globalAlpha = (lv / levels) * 0.5;
+      ctx.beginPath();
+      for (const tr of s.fx.trails.values()) {
+        const n = tr.length / 2;
+        for (let i = 0; i < n; i += 2) {
+          if (Math.ceil(((i + 1) / n) * levels) !== lv) continue;
+          ctx.moveTo(tr[i * 2] + 1.6, tr[i * 2 + 1]);
+          ctx.arc(tr[i * 2], tr[i * 2 + 1], 1.6, 0, TAU);
+        }
       }
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
-    for (const b of s.sim.balls) {
-      if (b.state === 'held') continue;
-      if (b.state === 'flying') this.drawFlyingBall(s, inks, b);
-      else this.ball(b.x, b.y, inks);
+    const visible = s.sim.balls.filter((b) => b.state !== 'held');
+    if (visible.length > 30) this.drawBallsBatched(s, inks, visible);
+    else {
+      for (const b of visible) {
+        if (b.state === 'flying') this.drawFlyingBall(s, inks, b);
+        else this.ball(b.x, b.y, inks);
+      }
     }
     ctx.restore();
+  }
+
+  /** Lots of balls: plain two-ink circles in two fills, plus one stroke for all the fireball rings. */
+  private drawBallsBatched(s: RenderState, inks: Inks, balls: Ball[]): void {
+    const { ctx } = this;
+    const r = (b: Ball) => BALL_R * (b.fire ? 1.35 : b.copy ? 0.75 : b.shrunk ? 0.65 : 1);
+    for (const [ink, dx, dy] of [[inks.i1, 1.2, 0.8], [inks.i2, 0, 0]] as const) {
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      for (const b of balls) {
+        ctx.moveTo(b.x + dx + r(b), b.y + dy);
+        ctx.arc(b.x + dx, b.y + dy, r(b), 0, TAU);
+      }
+      ctx.fill();
+    }
+    const rings = balls.filter((b) => b.state === 'flying' && (b.fire || b.golden));
+    if (rings.length) {
+      ctx.strokeStyle = inks.i2;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      for (const b of rings) {
+        const rr = BALL_R * (b.fire ? 1.9 : 1.6);
+        ctx.moveTo(b.x + rr, b.y);
+        ctx.arc(b.x, b.y, rr, 0, TAU);
+      }
+      ctx.stroke();
+    }
+    void s;
   }
 
   private drawFlyingBall(s: RenderState, inks: Inks, b: Ball): void {
@@ -664,21 +717,35 @@ export class Renderer {
     ctx.restore();
   }
 
+  /** Particles in at most 6 fills: two inks × three fade levels. Squares are rotated by hand. */
   private drawParticles(s: RenderState, inks: Inks): void {
     const { ctx } = this;
+    const ps = s.fx.particles;
+    if (!ps.length) return;
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    for (const p of s.fx.particles) {
-      ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.6);
-      ctx.fillStyle = p.ink ? inks.i2 : inks.i1;
-      if (p.square) {
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
-        ctx.restore();
-      } else {
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
+    for (const ink of [0, 1] as const) {
+      ctx.fillStyle = ink ? inks.i2 : inks.i1;
+      for (let lv = 1; lv <= 3; lv++) {
+        ctx.globalAlpha = Math.min(1, lv / 3 + 0.15);
+        ctx.beginPath();
+        let any = false;
+        for (const p of ps) {
+          if (p.ink !== ink || Math.min(3, Math.ceil((p.life / p.max) * 1.6 * 3)) !== lv) continue;
+          any = true;
+          if (p.square) {
+            const c = Math.cos(p.rot) * p.size, sn = Math.sin(p.rot) * p.size;
+            ctx.moveTo(p.x + c - sn, p.y + sn + c);
+            ctx.lineTo(p.x - c - sn, p.y - sn + c);
+            ctx.lineTo(p.x - c + sn, p.y - sn - c);
+            ctx.lineTo(p.x + c + sn, p.y + sn - c);
+            ctx.closePath();
+          } else {
+            ctx.moveTo(p.x + p.size, p.y);
+            ctx.arc(p.x, p.y, p.size, 0, TAU);
+          }
+        }
+        if (any) ctx.fill();
       }
     }
     ctx.restore();
@@ -931,4 +998,22 @@ function halftone(
       g.fill();
     }
   }
+}
+
+let grainCanvas: HTMLCanvasElement | null = null;
+/** A small tile of paper speckle, multiplied into the background. */
+function grainTile(): HTMLCanvasElement {
+  if (grainCanvas) return grainCanvas;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const d = g.createImageData(128, 128);
+  for (let i = 0; i < d.data.length; i += 4) {
+    const v = 200 + Math.random() * 55;
+    d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
+    d.data[i + 3] = Math.random() < 0.55 ? 255 : 0;
+  }
+  g.putImageData(d, 0, 0);
+  grainCanvas = c;
+  return c;
 }
