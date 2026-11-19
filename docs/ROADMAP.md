@@ -97,9 +97,9 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| Next launch from where the first ball landed, or always center? | M1 |
-| Art style (A–E in DESIGN §9) | M2 |
-| Mid-biome common pick vs. loot bricks vs. both | M3 / M6 |
+| Art style: pick finalists from the [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs) (A–F) | M2 |
+| How to add more picks (more than 5 per run is decided): mid-biome common pick, loot bricks, or both | M3 / M6 |
+| Should brick HP also scale with ball count? | M6 |
 | Final boss phases | M7 |
 | Cursed upgrades: yes or no? | M6 |
 | Game name | M9 |

@@ -38,7 +38,7 @@ Status: **draft**. Anything marked ❓ is still open.
 2. **Launch.** Release to fire. Balls leave in a stream from the launcher, a few frames apart.
 3. **Bounce.** Balls bounce off walls, the ceiling and bricks, doing damage on every hit. Balls pass through each other.
 4. **Return.** A ball that reaches the floor is collected.
-   - ❓ **Where does the next launch come from?** (a) where the first ball landed (Ballz style, adds strategy) or (b) always the bottom center. *Leaning (a).*
+   - ✅ **The next volley launches from where the first ball landed** (Ballz style).
 5. **Descend.** Once every ball is back, all bricks move down one row and a new row appears at the top.
 6. **Check.** If any brick crossed the danger line, the run is over (unless a shield or extra life saves you).
 
@@ -64,13 +64,14 @@ Target: about 10 seconds per turn, about 110 turns, so roughly 20 minutes.
 | ∞ | **Endless** | ∞ | The biomes repeat with modifiers stacking up | High score |
 
 - **Biome transition:** the background color and pattern slide in, the music key changes, and a title card appears ("DEPTH 2 · CAVERNS").
-- ❓ **Upgrade frequency:** 5 picks per run feels thin for a roguelike. Options:
+- ❓ **Upgrade frequency:** decided that there will be **more than 5 picks per run**. How to add them is still open:
   - (a) A small **common pick halfway through each biome**, plus the big pick (rare or better guaranteed) after each mini-boss.
   - (b) **Loot bricks** that give a pick when you break them.
   - (c) Both. *Leaning (a), maybe adding (b) later.*
 
 ### Difficulty scaling
-- Brick HP scales with **depth** and also with **how many balls you have**, so power growth is always matched.
+- ✅ Brick HP scales with **depth**.
+- ❓ Maybe also scale with **how many balls you have**. Decide during balancing (M6), since it can make +ball upgrades feel pointless.
 - Row density and the mix of special bricks rise within each biome and reset a little when a new one starts, giving a breather.
 - Hand-made **row patterns** (walls, funnels, checkerboards, columns) mixed with random rows, so the layouts stay interesting.
 
@@ -223,7 +224,7 @@ Minimal geometric shapes, **not neon**. Some alternatives to look at:
 | **D. Soft toy / clay** | Rounded bricks with a highlight and squash-and-stretch. Feels bouncy and friendly |
 | **E. Mono + accent** | Each biome is one dark color plus one accent color. Very clean, and color tells you what each thing is |
 
-❓ Pick 1–2 and I'll mock them up as a quick visual test before we commit. *My gut: **A or D**, because they pair best with heavy juice without turning into neon soup.*
+❓ **Round 1 mockups are live:** [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs) (A–E above plus **F. Blueprint**: line art on a technical grid, hatching shows HP, and the aim line shows its angle). Pick 1–2 finalists for round 2. *My gut: **A or D**, because they pair best with heavy juice without turning into neon soup.*
 
 **Readability rules, whatever the style:** hazard bricks always share one recognizable shape language (for example spikes or dashed outlines), not only color, so they're colorblind-safe. The HP number is always readable.
 
