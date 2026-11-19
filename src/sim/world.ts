@@ -653,7 +653,7 @@ export class Sim {
         this.events.push({ type: 'split', x: ball.x, y: ball.y });
       }
     }
-    if (s.payload && this.hitsThisVolley % 10 === 0) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.6), x, y);
+    if (s.payload && this.hitsThisVolley % 10 === 0) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.3), x, y);
   }
 
   private ballDamage(ball: Ball, brick: Brick, crit: boolean): number {
