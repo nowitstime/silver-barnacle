@@ -33,8 +33,11 @@ export interface RowOptions extends SpawnTuning {
 export function brickHp(level: number, biome: number): number {
   return level * (1 + level / HP_CURVE) * (1 + BIOME_HP * biome);
 }
-export const HP_CURVE = 60;
+export const HP_CURVE = 50;
 export const BIOME_HP = 0.2;
+
+/** Chance a new row carries a +ball orb. */
+export const orbChance = (level: number) => (level <= 20 ? 1 : Math.max(0.45, 1 - (level - 20) / 140));
 
 export function generateRow(rng: Rng, level: number, o: RowOptions = { biome: 0, hpMult: 1, hazardMult: 1, bombMult: 1 }): RowSpec {
   const baseHp = (tough: boolean) => brickHp(level, o.biome) * o.hpMult * (tough ? 2 : 1);
@@ -62,7 +65,8 @@ export function generateRow(rng: Rng, level: number, o: RowOptions = { biome: 0,
     return { c, hp, kind };
   });
   const items: RowSpec['items'] = [];
-  if (free.length) items.push({ c: free.shift()!, kind: 'orb' });
+  // An orb in every row early on; deeper down they thin out so ball counts can't run away.
+  if (free.length && rng() < orbChance(level)) items.push({ c: free.shift()!, kind: 'orb' });
   if (free.length && level >= 6 && rng() < 0.07) items.push({ c: free.shift()!, kind: rng() < 0.5 ? 'laserH' : 'laserV' });
   if (free.length >= 2 && level >= 16 && rng() < 0.05) {
     items.push({ c: free.shift()!, kind: 'portal' }, { c: free.shift()!, kind: 'portal' });

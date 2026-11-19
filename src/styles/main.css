@@ -366,3 +366,23 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .skin[aria-pressed="true"] { box-shadow: 3px 3px 0 var(--i2); outline: 2px solid var(--i1); outline-offset: 2px; }
 .skin[disabled] { opacity: 0.5; border-style: dashed; cursor: not-allowed; }
 .stats-grid { grid-template-columns: repeat(3, 1fr) !important; text-align: center; }
+
+/* ---- tips ---- */
+.tip {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: max(44px, calc(env(safe-area-inset-top) + 40px));
+  z-index: 4;
+  width: min(380px, calc(100vw - 32px));
+  padding: 10px 12px;
+  background: var(--paper);
+  color: var(--i1);
+  border: 2px solid var(--i1);
+  box-shadow: 3px 3px 0 var(--i2);
+  font-size: 12px;
+  line-height: 1.45;
+  animation: rise 0.2s ease-out;
+}
+.tip b { color: var(--i2); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 6px; }
+.tip small { display: block; margin-top: 4px; opacity: 0.6; font-size: 10px; }

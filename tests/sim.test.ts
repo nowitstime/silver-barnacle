@@ -50,7 +50,7 @@ describe('collision', () => {
 });
 
 describe('rows', () => {
-  it('never fills every column and places one orb in a free cell', () => {
+  it('never fills every column; orbs sit in free cells and come every row early on', () => {
     const rng = mulberry32(3);
     for (let level = 1; level < 200; level++) {
       const row = generateRow(rng, level);
@@ -59,8 +59,8 @@ describe('rows', () => {
       const cols = new Set(row.bricks.map((b) => b.c));
       expect(cols.size).toBe(row.bricks.length);
       const orb = row.items.find((i) => i.kind === 'orb');
-      expect(orb).toBeDefined();
-      expect(cols.has(orb!.c)).toBe(false);
+      if (level <= 20) expect(orb).toBeDefined();
+      if (orb) expect(cols.has(orb.c)).toBe(false);
       for (const it of row.items) expect(cols.has(it.c)).toBe(false);
       for (const b of row.bricks) if (b.kind === 'normal') expect(b.hp).toBeGreaterThanOrEqual(level);
     }

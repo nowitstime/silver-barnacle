@@ -80,21 +80,21 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ First tuning pass: brick HP now grows faster than depth and +20% per biome; boss HP follows the same curve
 
 ## M7: Final boss, win and endless
-- ⬜ Multi-phase final boss in The Core
-- ⬜ Win screen and credits
-- ⬜ Endless mode: biomes repeat with stacking modifiers, separate high score
+- ✅ The Core (biome 6): a 3×3, three-phase final boss: rotating two-sided shell → swarm (spawns bricks every turn) → meltdown (takes +50% damage, finally descends)
+- ✅ Win screen with stats and credits, slow-mo finish; bank the win or keep going
+- ✅ Endless: the five biomes repeat as laps (Caverns II…), each lap with tougher bricks and more hazards; scores mark wins with ★ and the title shows your endless best
 
 ## M8: Meta progression
-- ⬜ Unlock system (upgrades, classes, endless, cosmetics)
-- ⬜ Collection screen and lifetime stats
-- ⬜ Achievements, ball skins and trails
+- ✅ Lifetime stats and 17 achievements; many unlock content (Bomber and Gambler, 7 upgrades, 5 ball skins). "Unlock everything" setting is on by default while testing
+- ✅ Collection screen: awards, upgrades, bricks and bosses met, skins, stats
+- ✅ Ball skins: Ink, Hollow, Star, Block, Comet, Spark
 
 ## M9: Polish
-- ⬜ Juice pass #2 (boss slow-mo, biome-clear spectacle, danger heartbeat)
-- ⬜ Balance tuning from bot and play data
-- ⬜ Performance check on a cheap Android phone (particle limits)
-- ⬜ Tutorial hints in the first biome
-- ⬜ Name the game, final icon
+- ✅ Juice pass #2: boss-kill slow-mo and confetti, phase banners for the final boss, an ink-wipe transition between biomes (danger heartbeat was already in)
+- ✅ First-time tips: every new brick and hazard explains itself once, plus tips for orbs, picks, danger, lasers, portals and bosses
+- ✅ Balance: orbs thin out after depth 20 and brick HP climbs faster, which ends the runaway late game; wall-spam check added to the bot report
+- ✅ Performance: adaptive resolution, batched drawing, no per-frame multiply blending, hit-stop budget (see the lag fixes)
+- ⬜ Name the game, final icon (waiting on a name)
 
 ## Later / ideas parking lot
 - Daily seeded run
@@ -111,5 +111,4 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 |---|---|
 | Loot bricks as an extra pick source? (mid-biome picks are in) | M9 |
 | Should brick HP also scale with ball count? (not needed so far, per the bot) | M9 |
-| Final boss phases | M7 |
 | Game name | M9 |

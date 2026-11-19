@@ -217,6 +217,7 @@ export class Fx {
     if (this.beams.length > MAX_BEAMS) this.beams.splice(0, this.beams.length - MAX_BEAMS);
     this.zaps = this.zaps.filter((z) => z.life > 0);
     if (this.banner && (this.banner.life -= dt) <= 0) this.banner = null;
+    if (this.wipeLeft > 0) this.wipeLeft = Math.max(0, this.wipeLeft - dt);
     this.rings = this.rings.filter((r) => r.life > 0);
     for (const fx of this.bricks.values()) {
       fx.flash = Math.max(0, fx.flash - dt * 7);
@@ -289,6 +290,27 @@ export class Fx {
     if (this.texts.length > (big ? MAX_TEXTS : MAX_TEXTS * 0.6)) return;
     const life = big ? 0.85 : 0.4;
     this.texts.push({ x, y, text, big, life, max: life, alt, number });
+  }
+
+  /** Seconds left in the biome-change ink wipe. */
+  wipeLeft = 0;
+  readonly wipeTime = 0.8;
+
+  wipe(): void {
+    this.wipeLeft = this.wipeTime;
+  }
+
+  /** A shower of two-ink confetti from the top of the board. */
+  confetti(): void {
+    for (let i = 0; i < 60 && this.particles.length < MAX_PARTICLES; i++) {
+      const x = Math.random() * 252;
+      const l = 1 + Math.random() * 0.8;
+      this.particles.push({
+        x, y: 30 + Math.random() * 20, vx: (Math.random() - 0.5) * 80, vy: 40 + Math.random() * 80,
+        gravity: 120, life: l, max: l, size: 2 + Math.random() * 2, ink: Math.random() < 0.5 ? 0 : 1,
+        square: true, rot: Math.random() * 6, spin: (Math.random() - 0.5) * 10,
+      });
+    }
   }
 
   showBanner(title: string, sub: string, seconds = 2.2): void {

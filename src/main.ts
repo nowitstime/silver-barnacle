@@ -27,6 +27,8 @@ import { Hud } from './ui/hud';
 import { Menus } from './ui/menus';
 import { PickScreen } from './ui/pick';
 import { toast } from './ui/toast';
+import { Tips } from './ui/tips';
+import { BRICKS } from './content/bricks';
 
 const params = new URLSearchParams(location.search);
 const debug = params.has('debug');
@@ -111,6 +113,7 @@ const hud = new Hud(uiRoot, {
   onRecall: () => sim.recall(),
 });
 const pick = new PickScreen(uiRoot);
+const tips = new Tips(uiRoot);
 const menus = new Menus(uiRoot, {
   onContinue: () => continueRun(),
   onNewRun: (c) => startRun(c),
@@ -170,6 +173,7 @@ function savedRun(): SaveData | null {
 
 function showTitle(): void {
   mode = 'title';
+  tips.clear();
   hud.show(false);
   pick.hide();
   loop.paused = false;
@@ -340,6 +344,7 @@ function onGameOver(): void {
 /** Sound, vibration and hit-stop for sim events. */
 function feedback(events: SimEvent[]): void {
   for (const e of events) {
+    momentTips(e);
     switch (e.type) {
       case 'launch': sfx.launch(); break;
       case 'wall': sfx.wall(); break;
@@ -398,6 +403,8 @@ function feedback(events: SimEvent[]): void {
         break;
       case 'bossDown':
         runFacts.bossesBeaten.push(e.name);
+        slowMo(0.7);
+        fx.confetti();
         sfx.bossDown();
         loop.hold(0.12, 0);
         haptics.buzz([80, 40, 160], 0);
@@ -424,6 +431,7 @@ function feedback(events: SimEvent[]): void {
         haptics.buzz([100, 50, 100, 50, 300], 0);
         break;
       case 'biome': {
+        fx.wipe();
         applyInks();
         const g = GIMMICK_TEXT[gimmickFor(e.index)];
         const lap = endlessLap(e.index);
@@ -498,8 +506,22 @@ function noticeBricks(): void {
   }
 }
 
-/** Hook for first-time tips (M9). */
-function onFirstSight(_id: string): void {}
+/** First time a brick kind shows up, explain it. */
+function onFirstSight(id: string): void {
+  const info = BRICKS[id as keyof typeof BRICKS];
+  if (!info) return;
+  tips.show(`${info.hazard ? 'Hazard' : 'New brick'}: <b>${info.name}</b>. ${info.desc}${info.hazard && profile.tip('hazards') ? ' Hazards always have a jagged outline.' : ''}`);
+}
+
+/** Tips tied to moments rather than bricks. Each shows once ever. */
+function momentTips(e: SimEvent): void {
+  if (e.type === 'orb' && profile.tip('orb')) tips.show('Every ⊕ orb you grab adds a ball to your next volley.');
+  if (e.type === 'pick' && profile.tip('pick')) tips.show('Upgrades stack and combine. Small picks come halfway through a biome; big ones after its boss.');
+  if (e.type === 'drop' && sim.lowestRow >= ROWS - 2 && profile.tip('danger')) tips.show('If a brick crosses the bottom row, the run ends. Shields and Second Wind can save you once.');
+  if (e.type === 'laser' && profile.tip('laser')) tips.show('Line lasers blast every brick in their row or column each time a ball passes through.');
+  if (e.type === 'portal' && profile.tip('portal')) tips.show('Portals come in pairs: a ball that enters one comes out of the other.');
+  if (e.type === 'boss' && profile.tip('boss')) tips.show('Mini-bosses stop new rows from arriving. Beat them for the big upgrade pick.');
+}
 
 /** Briefly run the game in slow motion (big finishes). */
 let slowUntil = 0;

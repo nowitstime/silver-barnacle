@@ -11,12 +11,13 @@ import { mulberry32 } from '../src/core/rng';
 import { bestAngle, finishTurn } from '../src/sim/bot';
 import { BIOME_INKS } from '../src/render/palette';
 import { Sim } from '../src/sim/world';
+import { MIN_ANGLE } from '../src/sim/constants';
 
 const RUNS = Number(process.env.RUNS ?? 25);
 const CANDIDATES = Number(process.env.CANDIDATES ?? 8);
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? 260);
 
-interface Result { classId: ClassId; depth: number; biome: number; bosses: number; turns: number; balls: number; upgrades: string[]; secs: number }
+interface Result { won: boolean; classId: ClassId; depth: number; biome: number; bosses: number; turns: number; balls: number; upgrades: string[]; secs: number }
 
 /** Upgrade picks: prefer higher rarity, then a stable random tiebreak. */
 function choosePick(sim: Sim, rnd: () => number): number {
@@ -30,18 +31,28 @@ function choosePick(sim: Sim, rnd: () => number): number {
   return best;
 }
 
-function playRun(seed: number, classId: ClassId): Result {
+type Strategy = 'best' | 'wall';
+
+/** 'wall' always fires at a shallow angle into the side walls, alternating sides. */
+function aim(sim: Sim, strategy: Strategy, turn: number): number {
+  if (strategy === 'wall') return turn % 2 ? MIN_ANGLE + 0.04 : Math.PI - MIN_ANGLE - 0.04;
+  return bestAngle(sim, CANDIDATES);
+}
+
+function playRun(seed: number, classId: ClassId, strategy: Strategy = 'best', grants: string[] = []): Result {
   const t0 = performance.now();
   const sim = new Sim(seed, { classId });
+  for (const g of grants) sim.debugGrant(g);
   const rnd = mulberry32(seed ^ 0x5eed);
   let turns = 0;
-  while (sim.phase !== 'over' && turns < MAX_TURNS) {
+  while (sim.phase !== 'over' && sim.phase !== 'won' && turns < MAX_TURNS) {
     if (sim.phase === 'pick') { sim.choose(choosePick(sim, rnd)); continue; }
-    sim.fire(bestAngle(sim, CANDIDATES));
+    sim.fire(aim(sim, strategy, turns));
     finishTurn(sim);
     turns++;
   }
   return {
+    won: sim.won,
     classId, depth: sim.level, biome: sim.biome, bosses: sim.totals.bosses, turns, balls: sim.ballCount,
     upgrades: Object.keys(sim.upgrades), secs: (performance.now() - t0) / 1000,
   };
@@ -68,7 +79,8 @@ it('balance report', async () => {
   lines.push(`| Median depth | ${median(depths)} |`);
   lines.push(`| Best / worst depth | ${Math.max(...depths)} / ${Math.min(...depths)} |`);
   lines.push(`| Median bosses beaten | ${median(results.map((r) => r.bosses))} |`);
-  lines.push(`| Runs that beat all 5 bosses | ${results.filter((r) => r.bosses >= 5).length} |`, '');
+  lines.push(`| Runs that beat all 5 bosses | ${results.filter((r) => r.bosses >= 5).length} |`);
+  lines.push(`| Runs that broke The Core (won) | ${results.filter((r) => r.won).length} |`, '');
   lines.push('## Where runs end', '', '| Biome | Runs ending here |', '|---|---|');
   const byBiome = new Map<number, number>();
   for (const r of results) byBiome.set(r.biome, (byBiome.get(r.biome) ?? 0) + 1);
@@ -78,6 +90,24 @@ it('balance report', async () => {
     const rs = results.filter((r) => r.classId === c.id);
     if (rs.length) lines.push(`| ${c.name} | ${median(rs.map((r) => r.depth))} | ${median(rs.map((r) => r.bosses))} |`);
   }
+  lines.push('');
+
+  // Is "just bounce it off the wall" a degenerate strategy? Same Ricochet build, two ways of aiming.
+  const WALL_RUNS = Number(process.env.WALL_RUNS ?? 6);
+  const build = ['ricochet', 'ricochet', 'ricochet'];
+  const best: Result[] = [], wall: Result[] = [];
+  for (let i = 0; i < WALL_RUNS; i++) {
+    const seed = 5000 + i * 104729;
+    best.push(playRun(seed, 'ricochet', 'best', build));
+    wall.push(playRun(seed, 'ricochet', 'wall', build));
+    console.log(`wall check ${i + 1}/${WALL_RUNS}: aimed ${best[i].depth}, wall-spam ${wall[i].depth}`);
+    await new Promise((res) => setTimeout(res, 0));
+  }
+  lines.push('## Wall-spam check', '');
+  lines.push('Ricochet class with Ricochet Rush ×3 from the start. One bot aims properly; the other always fires a shallow shot into a side wall and never aims at anything.', '');
+  lines.push('| Strategy | Median depth | Best |', '|---|---|---|');
+  lines.push(`| Aimed (bot) | ${median(best.map((r) => r.depth))} | ${Math.max(...best.map((r) => r.depth))} |`);
+  lines.push(`| Wall-spam | ${median(wall.map((r) => r.depth))} | ${Math.max(...wall.map((r) => r.depth))} |`);
   lines.push('');
   writeFileSync(new URL('../docs/balance.md', import.meta.url), lines.join('\n'));
   console.log(lines.join('\n'));

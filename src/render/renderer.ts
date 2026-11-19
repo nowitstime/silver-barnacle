@@ -88,7 +88,34 @@ export class Renderer {
 
     this.drawHud(s, inks);
     this.drawCombo(s, inks);
+    this.drawWipe(s, inks);
     this.drawBanner(s, inks);
+  }
+
+  /** Biome change: a band of the new secondary ink sweeps down the board with a halftone edge. */
+  private drawWipe(s: RenderState, inks: Inks): void {
+    const left = s.fx.wipeLeft;
+    if (left <= 0) return;
+    const { ctx } = this;
+    const t = 1 - left / s.fx.wipeTime;
+    const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    const band = 90;
+    const y = -band + e * (H + band * 2);
+    ctx.save();
+    ctx.fillStyle = inks.i2;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(0, y - band, W, band);
+    // Halftone fringe on both edges.
+    for (const [edge, dir] of [[y, 1], [y - band, -1]] as const) {
+      for (let row = 0; row < 4; row++) {
+        const r = 2.6 - row * 0.6;
+        const yy = edge + dir * (row * 6 + 3);
+        ctx.beginPath();
+        for (let x = 3 + (row % 2) * 3; x < W; x += 6) { ctx.moveTo(x + r, yy); ctx.arc(x, yy, r, 0, TAU); }
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   // ---- background and biome effects ----
