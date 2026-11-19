@@ -1,4 +1,4 @@
-# Game Design Doc (working title: TBD)
+# Ricochet Press: Game Design Doc
 
 A turn-based, aim-and-shoot brick breaker roguelike for phones held in portrait.
 Each turn you fire a volley of balls, the bricks drop one row, and as you sink deeper you pass through biomes.

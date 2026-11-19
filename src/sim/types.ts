@@ -66,6 +66,8 @@ export interface Ball {
   /** Golden ball (Juggler's Encore). */
   golden: boolean;
   wallBounces: number;
+  /** Has hit a brick this turn (Ricochet bonuses only build after that). */
+  struck: boolean;
   /** Hazard effects for the rest of the turn. */
   heavy: boolean;
   slow: boolean;

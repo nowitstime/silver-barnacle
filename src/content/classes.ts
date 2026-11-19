@@ -26,7 +26,7 @@ export const CLASSES: ClassDef[] = [
   },
   {
     id: 'ricochet', name: 'Ricochet', tagline: 'Every bounce counts.', startBalls: 2,
-    perk: 'Billiards', perkDesc: 'Wall bounces give +1 damage for the turn, and the laser shows one more bounce.',
+    perk: 'Billiards', perkDesc: 'After a ball hits a brick, each wall bounce gives it +1 damage for the turn. The laser shows one more bounce.',
     apply: (s) => { s.ricochet += 1; s.sight += 1; },
   },
   {

@@ -1,13 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#f4efe4"/>
+  <!-- registration marks: a printer's press -->
+  <g stroke="#2a2622" stroke-width="5" fill="none" opacity=".55">
+    <circle cx="70" cy="70" r="16"/><path d="M70 42v56M42 70h56"/>
+    <circle cx="442" cy="442" r="16"/><path d="M442 414v56M414 442h56"/>
+  </g>
   <g style="mix-blend-mode:multiply">
-    <rect x="96" y="104" width="140" height="140" fill="#00a95c" fill-opacity=".95"/>
-    <rect x="276" y="104" width="140" height="140" fill="#00a95c" fill-opacity=".5"/>
-    <rect x="276" y="270" width="140" height="140" fill="#00a95c" fill-opacity=".28"/>
-    <rect x="104" y="110" width="140" height="140" fill="none" stroke="#ff48b0" stroke-width="10"/>
-    <rect x="284" y="110" width="140" height="140" fill="none" stroke="#ff48b0" stroke-width="10"/>
-    <rect x="284" y="276" width="140" height="140" fill="none" stroke="#ff48b0" stroke-width="10"/>
-    <circle cx="176" cy="360" r="46" fill="#00a95c"/>
-    <circle cx="166" cy="352" r="46" fill="#ff48b0"/>
+    <!-- the brick, in two misregistered inks -->
+    <rect x="270" y="96" width="150" height="150" fill="#00a95c" fill-opacity=".92"/>
+    <rect x="279" y="103" width="150" height="150" fill="none" stroke="#ff48b0" stroke-width="11"/>
+    <!-- ricochet path: up from the bottom-left, off the left wall, into the brick -->
+    <path d="M196 430 L96 300 L270 196" fill="none" stroke="#ff48b0" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 34"/>
+    <path d="M204 436 L104 306 L278 202" fill="none" stroke="#00a95c" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 34"/>
+    <!-- the ball at the bounce -->
+    <circle cx="112" cy="312" r="40" fill="#00a95c"/>
+    <circle cx="100" cy="302" r="40" fill="#ff48b0"/>
   </g>
 </svg>

@@ -42,3 +42,12 @@ Ricochet class with Ricochet Rush ×3 from the start. One bot aims properly; the
 | Wall-spam | 171 | 207 |
 
 **Reading:** wall-spam does at least as well as careful aiming (median 171 vs 155) with zero thought, and a Ricochet ×3 build reaches roughly twice the overall median depth. Ricochet Rush is overpowered and rewards a degenerate strategy. Not changed yet; candidate fixes are in the roadmap's open questions.
+
+### After the fix (Ricochet only builds after the first brick hit)
+
+| Strategy | Median depth | Best |
+|---|---|---|
+| Aimed (bot) | 78 | 127 |
+| Wall-spam | 55 | 79 |
+
+Aiming now clearly beats wall-spam, and the Ricochet build sits near the overall median instead of doubling it.

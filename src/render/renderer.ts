@@ -315,7 +315,7 @@ export class Renderer {
   }
 
   /** Small symbols drawn in brick-local space, centred on 0,0, about 12px across. */
-  private glyph(kind: Brick['kind'], ink: string, inks: Inks): () => void {
+  glyph(kind: Brick['kind'], ink: string, inks: Inks): () => void {
     const { ctx } = this;
     const line = (pts: number[][], close = false) => {
       ctx.beginPath();
@@ -568,7 +568,7 @@ export class Renderer {
     }
   }
 
-  private drawItem(it: Item, inks: Inks, pulse: number, time: number): void {
+  drawItem(it: Item, inks: Inks, pulse: number, time: number): void {
     const { ctx } = this;
     switch (it.kind) {
       case 'orb':
@@ -1003,7 +1003,7 @@ export class Renderer {
 }
 
 /** A square outline with a sawtooth edge: the shared shape language for every hazard brick. */
-function sawtooth(ctx: CanvasRenderingContext2D, half: number, teeth: number, depth: number): void {
+export function sawtooth(ctx: CanvasRenderingContext2D, half: number, teeth: number, depth: number): void {
   const step = (half * 2) / teeth;
   ctx.beginPath();
   ctx.moveTo(-half, -half);
@@ -1091,6 +1091,31 @@ export function ballPath(ctx: CanvasRenderingContext2D, x: number, y: number, r:
     case 'square':
       ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8);
       break;
+    case 'bolt':
+      ctx.moveTo(x + r * 0.3, y - r * 1.4); ctx.lineTo(x - r * 0.8, y + r * 0.15); ctx.lineTo(x - r * 0.05, y + r * 0.15);
+      ctx.lineTo(x - r * 0.35, y + r * 1.4); ctx.lineTo(x + r * 0.85, y - r * 0.2); ctx.lineTo(x + r * 0.1, y - r * 0.2);
+      ctx.closePath();
+      break;
+    case 'heart':
+      ctx.moveTo(x, y + r * 1.1);
+      ctx.bezierCurveTo(x - r * 1.6, y, x - r * 0.9, y - r * 1.3, x, y - r * 0.45);
+      ctx.bezierCurveTo(x + r * 0.9, y - r * 1.3, x + r * 1.6, y, x, y + r * 1.1);
+      ctx.closePath();
+      break;
+    case 'moon':
+      ctx.moveTo(x + r * 0.5, y - r * 1.05);
+      ctx.arc(x, y, r * 1.15, -Math.PI / 3.2, Math.PI / 3.2, true);
+      ctx.arc(x + r * 0.55, y, r * 0.85, Math.PI / 2.2, -Math.PI / 2.2, false);
+      ctx.closePath();
+      break;
+    case 'gem':
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3 + Math.PI / 6;
+        if (i === 0) ctx.moveTo(x + Math.cos(a) * r * 1.15, y + Math.sin(a) * r * 1.15);
+        else ctx.lineTo(x + Math.cos(a) * r * 1.15, y + Math.sin(a) * r * 1.15);
+      }
+      ctx.closePath();
+      break;
     case 'spark':
       ctx.moveTo(x, y - r * 1.35); ctx.lineTo(x + r * 0.9, y); ctx.lineTo(x, y + r * 1.35); ctx.lineTo(x - r * 0.9, y);
       ctx.closePath();
@@ -1099,4 +1124,57 @@ export function ballPath(ctx: CanvasRenderingContext2D, x: number, y: number, r:
       ctx.moveTo(x + r, y);
       ctx.arc(x, y, r, 0, TAU);
   }
+}
+
+/** Draw a brick as the game shows it, for menus and the wiki. */
+export function drawBrickIcon(c: HTMLCanvasElement, kind: Brick['kind'], inks: Inks, hp = 12): void {
+  const ctx = c.getContext('2d')!;
+  const k = c.width / 40;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.setTransform(k, 0, 0, k, c.width / 2, c.height / 2);
+  const half = 16;
+  const hazard = isHazard(kind);
+  ctx.globalAlpha = kind === 'steel' ? 0.9 : hazard ? 0.55 : 0.75;
+  ctx.fillStyle = hazard ? inks.i2 : inks.i1;
+  if (hazard) { sawtooth(ctx, half, 5, 2.2); ctx.fill(); } else ctx.fillRect(-half, -half, half * 2, half * 2);
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
+  if (hazard) { ctx.strokeStyle = inks.i1; sawtooth(ctx, half, 5, 2.2); ctx.stroke(); }
+  else {
+    ctx.strokeStyle = inks.i2;
+    ctx.strokeRect(-half + 1.8, -half + 1.2, half * 2 - 1.5, half * 2 - 1.5);
+    if (kind === 'armored') { ctx.strokeStyle = inks.i1; ctx.lineWidth = 2.5; ctx.strokeRect(-half + 4, -half + 4, half * 2 - 8, half * 2 - 8); }
+  }
+  const ink = hazard ? inks.i1 : inks.paper;
+  const fake = { ctx } as unknown as Renderer;
+  if (kind === 'normal') {
+    ctx.fillStyle = ink;
+    ctx.font = `700 13px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(hp), 0, 1);
+  } else {
+    ctx.save();
+    if (kind !== 'steel') ctx.translate(0, kind === 'popper' ? 0 : -5);
+    Renderer.prototype.glyph.call(fake, kind, ink, inks)();
+    ctx.restore();
+    if (kind !== 'popper' && kind !== 'steel') {
+      ctx.fillStyle = ink;
+      ctx.font = `700 9px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(hp), 0, 9);
+    }
+  }
+}
+
+/** Draw a pickup (orb, laser, portal) as the game shows it. */
+export function drawItemIcon(c: HTMLCanvasElement, kind: Item['kind'], inks: Inks): void {
+  const ctx = c.getContext('2d')!;
+  const k = c.width / 28;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.setTransform(k, 0, 0, k, c.width / 2, c.height / 2);
+  Renderer.prototype.drawItem.call({ ctx } as unknown as Renderer, { id: 1, c: 0, r: 0, kind }, inks, 1, 0.4);
 }

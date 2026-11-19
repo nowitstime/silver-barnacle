@@ -271,7 +271,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 
 .logo {
   margin: 0;
-  font-size: clamp(64px, 22vw, 104px);
+  font-size: clamp(44px, 14vw, 72px);
   line-height: 0.9;
   letter-spacing: -0.04em;
   display: grid;
@@ -279,7 +279,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
   text-shadow: 4px 3px 0 var(--i2);
   mix-blend-mode: multiply;
 }
-.logo span:last-child { color: var(--i2); text-shadow: -4px 3px 0 var(--i1); margin-left: 0.5em; }
+.logo span:last-child { color: var(--i2); text-shadow: -4px 3px 0 var(--i1); margin-left: 1.2em; }
 .tagline { margin: -4px 0 4px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
 
 .scores { margin-top: 10px; background: color-mix(in srgb, var(--paper) 85%, transparent); padding: 10px 14px; border-top: 2px solid var(--i1); }
@@ -359,7 +359,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .coll li small { font-weight: 400; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.08em; font-size: 9px; margin-left: 4px; }
 .coll li.todo { opacity: 0.55; border-left-style: dashed; }
 .coll li[data-rarity="epic"], .coll li[data-rarity="legendary"], .coll li[data-rarity="cursed"] { border-left-color: var(--i2); }
-.skins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
 .skin { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; background: var(--paper); color: var(--i1); border: 2px solid var(--i1); font-size: 12px; }
 .skin canvas { width: 48px; height: 48px; }
 .skin small { font-size: 9px; opacity: 0.8; line-height: 1.3; }

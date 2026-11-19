@@ -224,3 +224,18 @@ describe('sim run flow', () => {
     expect(Sim.isValidSave(null)).toBe(false);
   });
 });
+
+describe('ricochet rush', () => {
+  it('wall bounces only build damage after the ball has hit a brick', () => {
+    const sim = new Sim(31);
+    sim.bricks = [];
+    sim.debugGrant('ricochet');
+    sim.fire(0.2);
+    let maxBonus = 0;
+    for (let i = 0; i < 240 * 3 && sim.phase !== 'aim'; i++) {
+      sim.tick(STEP);
+      for (const b of sim.balls) maxBonus = Math.max(maxBonus, b.bonus);
+    }
+    expect(maxBonus).toBe(0);
+  });
+});

@@ -30,7 +30,8 @@ describe('achievements and unlocks', () => {
     expect(p.check(null)).toEqual([]); // not earned twice
     p.unlockAll = true;
     expect(p.lockedUpgrades()).toEqual([]);
-    expect(p.skinUnlocked('comet')).toBe(true);
+    expect(p.skinUnlocked('comet')).toBe(false); // skins are always earned
+    expect(p.skinUnlocked('ink')).toBe(true);
   });
 
   it('run-based achievements read the run facts', () => {

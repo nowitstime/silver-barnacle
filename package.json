@@ -1,5 +1,5 @@
 {
-  "name": "brick-roguelike",
+  "name": "ricochet-press",
   "version": "0.1.0",
   "scripts": {
     "dev": "vite --host",

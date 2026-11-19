@@ -1,4 +1,4 @@
-# Bricks (working title)
+# Ricochet Press
 
 A turn-based, aim-and-shoot brick breaker roguelike for phones held in portrait. Installable as a PWA and hosted on GitHub Pages.
 

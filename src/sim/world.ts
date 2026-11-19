@@ -300,6 +300,7 @@ export class Sim {
       pierceLeft: from?.pierceLeft ?? this.stats.pierce,
       fire: from?.fire ?? false,
       wallBounces: from?.wallBounces ?? 0,
+      struck: from?.struck ?? false,
       heavy: false, slow: false, shrunk: from?.shrunk ?? false, popped: false,
       heldBy: 0, heldTime: 0, portalCooldown: 0, lasers: [],
     };
@@ -568,7 +569,8 @@ export class Sim {
   private onWall(ball: Ball, x: number, y: number, ceiling: boolean): void {
     const s = this.stats;
     ball.wallBounces++;
-    if (s.ricochet && !ceiling) ball.bonus += s.ricochet;
+    // Only bank shots count: a ball must hit a brick before wall bounces build damage.
+    if (s.ricochet && !ceiling && ball.struck) ball.bonus += s.ricochet;
     if (this.gimmick === 'ice') {
       const sp = Math.hypot(ball.vx, ball.vy);
       const k = Math.min(ICE_SPEEDUP, (BALL_SPEED * ICE_MAX) / sp);
@@ -648,6 +650,7 @@ export class Sim {
   private ballHit(ball: Ball, brick: Brick, x: number, y: number, contact: Contact): void {
     const s = this.stats;
     this.hitsThisVolley++;
+    ball.struck = true;
 
     // Hazards act on the ball first.
     if (isHazard(brick.kind) && !s.hazardProof) {

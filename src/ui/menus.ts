@@ -105,7 +105,7 @@ export class Menus {
     const cls = v.continueClass ? CLASS_BY_ID.get(v.continueClass)?.name : '';
     this.render(`
       <div class="title-inner">
-        <h1 class="logo" aria-label="Bricks"><span>BRI</span><span>CKS</span></h1>
+        <h1 class="logo" aria-label="Ricochet Press"><span>RICOCHET</span><span>PRESS</span></h1>
         <p class="tagline">A brick-breaking roguelike</p>
         <div class="stack">
           ${v.canContinue ? `<button class="btn-primary" id="m-continue" type="button" data-focus>Continue <small>${cls ? `${esc(cls)} · ` : ''}depth ${v.continueDepth}</small></button>` : ''}
@@ -114,6 +114,7 @@ export class Menus {
             <button class="btn-secondary" id="m-collection" type="button">Collection</button>
             <button class="btn-secondary" id="m-settings" type="button">Settings</button>
           </div>
+          <a class="btn-text" href="wiki.html">Open the wiki</a>
         </div>
         ${this.scoresHtml(v.scores)}
       </div>`, 'title', null);
@@ -226,7 +227,7 @@ export class Menus {
           ${toggle('haptics', 'Vibration', 'Android only')}
           ${toggle('shake', 'Screen shake', 'Turn off if it makes you dizzy')}
           ${toggle('numbers', 'Damage numbers', 'Small numbers on every hit')}
-          ${toggle('unlockAll', 'Unlock everything', 'For testing: all classes, upgrades and skins, without earning them')}
+          ${toggle('unlockAll', 'Unlock everything', 'For testing: all classes and upgrades without earning them. Ball skins still have to be earned')}
         </div>
         <button class="btn-primary" id="m-done" type="button" data-focus>Done</button>
         <button class="btn-text danger" id="m-reset" type="button">Reset all data</button>
@@ -326,7 +327,7 @@ export class Menus {
         </div>
         <section class="credits">
           <h3>Credits</h3>
-          <p>Designed by you, built with Claude. Every brick, ink, sound and shake is generated in code: no image or audio files.</p>
+          <p>Ricochet Press. Designed by you, built with Claude. Every brick, ink, sound and shake is generated in code: no image or audio files.</p>
           <p>Set in Space Mono. Printed in two inks per biome.</p>
         </section>
       </div>`, 'win', null);

@@ -61,8 +61,9 @@ export class ProfileStore {
     return ACHIEVEMENTS.some((a) => a.reward?.kind === 'upgrade' && a.reward.id === id && this.has(a.id));
   }
 
+  /** Skins are always earned: the testing switch doesn't cover them. */
   skinUnlocked(id: string): boolean {
-    if (this.unlockAll || id === 'ink') return true;
+    if (id === 'ink') return true;
     return ACHIEVEMENTS.some((a) => a.reward?.kind === 'skin' && a.reward.id === id && this.has(a.id));
   }
 

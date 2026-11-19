@@ -58,6 +58,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'runs10', name: 'Regular', desc: 'Finish 10 runs.', check: (l) => l.runs >= 10, reward: { kind: 'upgrade', id: 'wind' } },
   { id: 'glasswin', name: 'Handle With Care', desc: 'Win a run with Glass Cannon.', check: (_, r) => !!r?.won && !!r.upgrades.glass },
   { id: 'allclasses', name: 'Renaissance', desc: 'Win a run with every class.', check: (l) => l.classWins.length >= 5 },
+  { id: 'crits1000', name: 'Critical Thinker', desc: 'Land 1,000 crits in total.', check: (l) => l.crits >= 1000, reward: { kind: 'skin', id: 'bolt' } },
+  { id: 'wins3', name: 'Hat Trick', desc: 'Win 3 runs.', check: (l) => l.wins >= 3, reward: { kind: 'skin', id: 'heart' } },
+  { id: 'time2h', name: 'Night Shift', desc: 'Play for 2 hours in total.', check: (l) => l.time >= 7200, reward: { kind: 'skin', id: 'moon' } },
+  { id: 'depth220', name: 'Bedrock', desc: 'Reach depth 220.', check: (l) => l.deepest >= 220, reward: { kind: 'skin', id: 'gem' } },
 ];
 
 /** Content that starts locked, and the achievement that unlocks it. */
@@ -76,4 +80,8 @@ export const SKINS: SkinDef[] = [
   { id: 'square', name: 'Block' },
   { id: 'comet', name: 'Comet' },
   { id: 'spark', name: 'Spark' },
+  { id: 'bolt', name: 'Bolt' },
+  { id: 'heart', name: 'Heart' },
+  { id: 'moon', name: 'Moon' },
+  { id: 'gem', name: 'Gem' },
 ];

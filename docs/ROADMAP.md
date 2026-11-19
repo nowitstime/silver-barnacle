@@ -71,7 +71,7 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ Hazards share a jagged sawtooth outline and every special brick has its own symbol, so nothing relies on color alone
 
 ## M6: The upgrade expansion *(the replayability engine)*
-- ✅ 39 upgrades: 10 common, 14 rare, 7 epic, 4 legendary, plus 3 cursed
+- ✅ 38 upgrades across all rarities, plus 3 cursed (Gambler only)
 - ✅ Stacking upgrades, depth-weighted rarity odds
 - ✅ Mid-biome pick (from M3)
 - ✅ Classes 4 and 5: Bomber (Payload) and Gambler (Wildcard: 4 cards, one cursed)
@@ -109,7 +109,6 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| Ricochet Rush is overpowered and wall-spam beats aiming (see balance.md). Cap the bonus per ball per turn? Only count bounces after the first brick hit? Diminishing returns? | Next |
 | Loot bricks as an extra pick source? (mid-biome picks are in) | M9 |
 | Should brick HP also scale with ball count? (not needed so far, per the bot) | M9 |
 | Game name | M9 |

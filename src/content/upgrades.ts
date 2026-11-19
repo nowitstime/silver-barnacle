@@ -124,7 +124,7 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'steeltoe', name: 'Can Opener', rarity: 'common', max: 1, desc: () => 'Armored bricks take full damage.', apply: (s) => { s.armorPierce = true; } }),
   // ---- rare ----
   U({ id: 'pierce', name: 'Pierce', rarity: 'rare', max: 5, desc: (n) => `Each ball smashes straight through ${n === 0 ? 'the first brick' : `the first ${n + 1} bricks`} it kills each turn.`, apply: (s, n) => { s.pierce += n; } }),
-  U({ id: 'ricochet', name: 'Ricochet Rush', rarity: 'rare', max: 5, desc: () => 'Every wall bounce gives that ball +1 damage until the turn ends.', apply: (s, n) => { s.ricochet += n; } }),
+  U({ id: 'ricochet', name: 'Ricochet Rush', rarity: 'rare', max: 5, desc: () => 'Once a ball has hit a brick, every wall bounce gives it +1 damage until the turn ends.', apply: (s, n) => { s.ricochet += n; } }),
   U({ id: 'chain', name: 'Chain Lightning', rarity: 'rare', max: 4, desc: () => 'Crits zap 2 more nearby bricks.', apply: (s, n) => { s.chain += 2 * n; } }),
   U({ id: 'kindling', name: 'Kindling', rarity: 'rare', max: 5, desc: () => 'Hits set bricks on fire. Burning bricks take damage at the end of every turn.', apply: (s, n) => { s.burn += n; } }),
   U({ id: 'splash', name: 'Splash', rarity: 'rare', max: 4, desc: (n) => `When a brick breaks, its neighbours take ${pct(0.5 * (n + 1))} of your damage.`, apply: (s, n) => { s.splash += 0.5 * n; } }),

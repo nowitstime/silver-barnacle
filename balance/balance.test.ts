@@ -109,6 +109,6 @@ it('balance report', async () => {
   lines.push(`| Aimed (bot) | ${median(best.map((r) => r.depth))} | ${Math.max(...best.map((r) => r.depth))} |`);
   lines.push(`| Wall-spam | ${median(wall.map((r) => r.depth))} | ${Math.max(...wall.map((r) => r.depth))} |`);
   lines.push('');
-  writeFileSync(new URL('../docs/balance.md', import.meta.url), lines.join('\n'));
+  if (RUNS > 0) writeFileSync(new URL('../docs/balance.md', import.meta.url), lines.join('\n'));
   console.log(lines.join('\n'));
 });
