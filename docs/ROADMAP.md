@@ -94,21 +94,88 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ First-time tips: every new brick and hazard explains itself once, plus tips for orbs, picks, danger, lasers, portals and bosses
 - ✅ Balance: orbs thin out after depth 20 and brick HP climbs faster, which ends the runaway late game; wall-spam check added to the bot report
 - ✅ Performance: adaptive resolution, batched drawing, no per-frame multiply blending, hit-stop budget (see the lag fixes)
-- ⬜ Name the game, final icon (waiting on a name)
+- ✅ Named **Ricochet Press**, with a two-ink icon
+- ✅ Game wiki (`wiki.html`), built from the game's data
+- ✅ Ricochet Rush only builds after a brick hit (wall-spam no longer beats aiming)
+
+# Part 2: making it great
+
+## What the best roguelikes do well, and what we borrow
+
+| Game | What it nails | What Ricochet Press takes from it |
+|---|---|---|
+| **Peglin** (closest cousin: aim, bounce, roguelike) | Different *orbs* with their own effects; relics that change the rules; a clear shot preview | **Ball types**: a few special balls in your volley (bomb ball, ghost ball, splitter ball), and relics |
+| **Balatro** | Escalating number spectacle (chips × mult counting up); jokers that combine in wild ways; shop and reroll economy; "stakes" difficulty | **End-of-volley tally** that counts up; a **shop with rerolls**; **Pressure** difficulty levels after a win |
+| **Slay the Spire** | Branching map with known risks; removing bad cards; Ascension; every number is readable | **Route choices** between biomes; a way to **remove or transmute** upgrades; full readability |
+| **Hades** | Duo boons when two gods combine; door rewards shown before you choose; Heat; aspects (alternate versions of each weapon) | **Duo upgrades**; reward previews on route choices; **class aspects** |
+| **Vampire Survivors** | Evolutions: max an upgrade plus a catalyst for a super form; huge power fantasy; an endless collection to fill | **Evolutions** for maxed upgrades; the late game should feel absurd in a good way |
+| **The Binding of Isaac** | Emergent item synergies; risky deals (devil rooms) | **Risk/reward events**: trade HP or shields for power |
+| **Into the Breach** | Perfect telegraphing: you always know what the enemy will do next turn | **Danger preview**: show which bricks will cross the line next drop and what bosses will do |
+| **Brotato / Risk of Rain 2** | Fast runs, many classes, stacking items with clear math | Short "quick run" mode; show exact numbers on upgrade cards |
+| **Downwell / Dead Cells** | Tight, responsive feel; every hit has weight | Keep the juice budget; better audio mix; aim feel |
+
+Principles we keep: **every run should create a different build**, **you should always know why you lost**, **decisions beat reflexes**, and **the late game should feel powerful, not grindy**.
+
+## M10: Build-craft and balance *(more interesting choices every pick)*
+- ⬜ **Duo upgrades** (Hades): owning two specific upgrades unlocks a special card, e.g. Kindling + Splash → *Firestorm*, Chain Lightning + Mitosis → *Storm Cell*
+- ⬜ **Evolutions** (Vampire Survivors): a maxed upgrade plus a catalyst evolves into a super form
+- ⬜ **Rerolls and skips**: earn ink from bricks; spend it to reroll a pick, or skip a pick for ink
+- ⬜ **Show real numbers** on cards ("+8% crit → 21% total")
+- ⬜ **Remove or transmute** an upgrade at certain events (Slay the Spire)
+- ⬜ Bot report v2: **pick rate vs win rate per upgrade** and per class, 50+ runs, to find the duds and the overpowered cards
+- ⬜ Second pass on any upgrade the report flags as dominant or useless
+
+## M11: Run variety and decisions *(no two runs alike)*
+- ⬜ **Route choice between biomes** (Slay the Spire map, Hades doors): two or three options with the reward shown, such as "Elite row (better pick)", "Merchant", "Rest (+shield)"
+- ⬜ **Special balls** (Peglin): Bomb ball, Ghost ball (passes through the first brick), Splitter ball, Magnet ball. Collect them like upgrades; they fire as part of your volley
+- ⬜ **Relics**: rule-changing trinkets from bosses, separate from upgrades (pick 1 of 2 after each boss)
+- ⬜ **Events** (Isaac, Slay the Spire): a gamble brick, a treasure row, a cursed altar with risk/reward trades
+- ⬜ **Elite rows** mid-biome: tougher wave, better reward
+- ⬜ **Boss variants**: two possible bosses per biome
+
+## M12: Feel *(every shot should feel amazing)*
+- ⬜ **Volley tally** (Balatro): after each volley, a counter rolls up bricks broken, damage and combo, with rising pitch
+- ⬜ **Generative music** per biome that builds with combos and danger, plus stereo panning by ball position
+- ⬜ **Last-shot ghost**: a faint line showing where your previous shot went
+- ⬜ Camera punch-in on boss kills; bigger biome transitions
+- ⬜ Audio mix pass: limiter, fewer harsh highs at high ball counts
+- ⬜ Real-device testing pass on a mid-range Android phone and an iPhone
+
+## M13: Clarity and onboarding *(always know why you lost)*
+- ⬜ **Danger preview** (Into the Breach): bricks that will cross the line next turn pulse; bosses show their next move
+- ⬜ **Hold to inspect**: long-press any brick, pickup or boss for its info card
+- ⬜ **Run history**: the last 20 runs with build, depth and what killed you
+- ⬜ Guided first run (three short steps), then tips as now
+- ⬜ Accessibility: colorblind-safe ink sets, larger text, left-handed layout, effects intensity slider
+
+## M14: Long-term goals *(reasons to play again)*
+- ⬜ **Pressure levels** (Ascension / Heat / stakes): after your first win, unlock levels 1–10, each adding one modifier
+- ⬜ **Class aspects** (Hades): each class gets two alternate perks to unlock
+- ⬜ **Daily run**: same seed for everyone each day, with a local best
+- ⬜ More classes (6–8), more achievements, cosmetic ink palettes and launcher skins
+- ⬜ Seeds you can share and enter
+- ⬜ Mastery marks: badges per class for wins at each Pressure level (Balatro stakes stickers)
+
+## Suggested order
+1. **M13 danger preview and hold-to-inspect**: cheap, and fixes "why did I lose?"
+2. **M10 rerolls, real numbers on cards, bot report v2**: data before more content
+3. **M11 route choices and special balls**: the biggest boost to variety
+4. **M10 duos and evolutions**
+5. **M12 volley tally and music**
+6. **M14 Pressure levels and daily run**
 
 ## Later / ideas parking lot
-- Daily seeded run
-- Generated music per biome
-- Triangle and big 2×2 bricks
+- Triangle bricks and other shapes
 - Shareable run summary image
-- Custom seeds
 - Leaderboard (would need a backend; probably never)
+- Quick-run mode (3 biomes)
 
 ---
 
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| Loot bricks as an extra pick source? (mid-biome picks are in) | M9 |
-| Should brick HP also scale with ball count? (not needed so far, per the bot) | M9 |
-| Game name | M9 |
+| Loot bricks as an extra pick source, or fold into rerolls/shop? | M10 |
+| Should brick HP also scale with ball count? (not needed so far, per the bot) | M10 |
+| Shop between biomes, or rerolls only? | M10 |
+| How many special ball types to start with? | M11 |
