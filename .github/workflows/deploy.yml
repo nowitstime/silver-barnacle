@@ -2,8 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    # The dev branch is included until a main branch exists.
-    branches: [main, ccr-5af2d1af-ugjala]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
