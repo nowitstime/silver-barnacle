@@ -16,13 +16,13 @@ export interface ClassDef {
 export const CLASSES: ClassDef[] = [
   {
     id: 'striker', name: 'Striker', tagline: 'One heavy ball. Big crits.', startBalls: 1,
-    perk: 'Executioner', perkDesc: 'Crits instantly finish bricks left under 25% HP.',
-    apply: (s) => { s.damage += 1; s.critChance += 0.1; s.executioner = true; },
+    perk: 'Executioner', perkDesc: '+25% damage and +10% crit chance. Crits instantly finish bricks left under 25% HP.',
+    apply: (s) => { s.dmgMult += 0.25; s.critChance += 0.1; s.executioner = true; },
   },
   {
-    id: 'juggler', name: 'Juggler', tagline: 'Lots of light balls.', startBalls: 3,
-    perk: 'Encore', perkDesc: 'One random ball in every volley is golden and deals double damage.',
-    apply: (s) => { s.encore = true; },
+    id: 'juggler', name: 'Juggler', tagline: 'Lots of light balls.', startBalls: 4,
+    perk: 'Encore', perkDesc: 'One random ball in every volley is golden and deals double damage. Orbs have a 25% chance to give two balls.',
+    apply: (s) => { s.encore = true; s.luckyOrbs += 0.25; },
   },
   {
     id: 'ricochet', name: 'Ricochet', tagline: 'Every bounce counts.', startBalls: 2,
@@ -31,7 +31,7 @@ export const CLASSES: ClassDef[] = [
   },
   {
     id: 'bomber', name: 'Bomber', tagline: 'Weak hits, loud results.', startBalls: 2,
-    perk: 'Payload', perkDesc: 'Every 10th hit in a volley sets off an explosion.',
+    perk: 'Payload', perkDesc: 'Every 10th hit in a volley sets off an explosion that grows with depth.',
     apply: (s) => { s.payload = true; },
   },
   {

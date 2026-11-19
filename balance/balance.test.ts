@@ -49,11 +49,13 @@ function playRun(seed: number, classId: ClassId): Result {
 
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 
-it('balance report', () => {
+it('balance report', async () => {
   const results: Result[] = [];
   for (let i = 0; i < RUNS; i++) {
     const c = CLASSES[i % CLASSES.length].id;
     const r = playRun(1000 + i * 7919, c);
+    // Let the test runner breathe between long runs.
+    await new Promise((res) => setTimeout(res, 0));
     results.push(r);
     console.log(`run ${i + 1}/${RUNS} ${c.padEnd(8)} depth ${String(r.depth).padStart(3)} biome ${r.biome} bosses ${r.bosses} balls ${r.balls} (${r.secs.toFixed(1)}s)`);
   }
