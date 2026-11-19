@@ -6,6 +6,8 @@ const RECALL_AFTER = 8;
 const SPEEDS = [1, 2, 4];
 
 export interface HudHandlers {
+  onFire: () => void;
+  onToggleSound: () => boolean;
   onSpeed: (speed: number) => void;
   onRecall: () => void;
   onRestart: () => void;
@@ -13,6 +15,7 @@ export interface HudHandlers {
 
 /** DOM controls that sit over the canvas. */
 export class Hud {
+  private fire: HTMLButtonElement;
   private ff: HTMLButtonElement;
   private recall: HTMLButtonElement;
   private over: HTMLElement;
@@ -22,6 +25,8 @@ export class Hud {
 
   constructor(root: HTMLElement, private h: HudHandlers) {
     root.innerHTML = `
+      <button class="icon-btn" id="sound" type="button" aria-pressed="true" aria-label="Sound">♪</button>
+      <button class="fire" id="fire" type="button">Fire</button>
       <div class="turn-controls">
         <button class="pill" id="recall" type="button" hidden>Recall</button>
         <button class="pill" id="ff" type="button" hidden aria-label="Fast forward">▶▶ 1×</button>
@@ -34,7 +39,15 @@ export class Hud {
           <button class="btn-primary" id="restart" type="button">Play again</button>
         </div>
       </div>`;
+    this.fire = root.querySelector('#fire')!;
     this.ff = root.querySelector('#ff')!;
+    this.fire.addEventListener('click', () => this.h.onFire());
+    const sound = root.querySelector<HTMLButtonElement>('#sound')!;
+    sound.addEventListener('click', () => {
+      const on = this.h.onToggleSound();
+      sound.setAttribute('aria-pressed', String(on));
+      sound.classList.toggle('off', !on);
+    });
     this.recall = root.querySelector('#recall')!;
     this.over = root.querySelector('#over')!;
     this.overDepth = root.querySelector('#over-depth')!;
@@ -54,6 +67,7 @@ export class Hud {
 
   update(sim: Sim, speed: number): void {
     const inVolley = sim.phase === 'fire' || sim.phase === 'run';
+    this.fire.hidden = sim.phase !== 'aim' || !this.over.hidden;
     this.ff.hidden = !(inVolley && (sim.turnTime > FF_AFTER || speed > 1));
     this.recall.hidden = !(inVolley && sim.turnTime > RECALL_AFTER);
     if (this.ff.dataset.speed !== String(speed)) {
@@ -61,6 +75,12 @@ export class Hud {
       this.ff.textContent = `▶▶ ${speed}×`;
       this.ff.classList.toggle('on', speed > 1);
     }
+  }
+
+  setSound(on: boolean): void {
+    const b = document.querySelector<HTMLButtonElement>('#sound');
+    b?.setAttribute('aria-pressed', String(on));
+    b?.classList.toggle('off', !on);
   }
 
   showOver(depth: number, best: number, isNew: boolean): void {

@@ -8,6 +8,8 @@ export class Loop {
   speed = 1;
   paused = false;
   private acc = 0;
+  /** Real seconds left in a hit-stop freeze. */
+  private holdLeft = 0;
   private last = 0;
   private running = false;
 
@@ -25,7 +27,8 @@ export class Loop {
       const realDt = Math.min(0.1, (now - this.last) / 1000);
       this.last = now;
       let gameDt = 0;
-      if (!this.paused) {
+      if (this.holdLeft > 0) this.holdLeft -= realDt;
+      else if (!this.paused) {
         this.acc += realDt * this.speed;
         // Never try to catch up more than a few frames' worth after a stall.
         this.acc = Math.min(this.acc, (1 / 15) * this.speed);
@@ -39,6 +42,11 @@ export class Loop {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+  }
+
+  /** Freeze game time briefly (hit-stop). Doesn't stack beyond the longest request. */
+  hold(seconds: number): void {
+    this.holdLeft = Math.max(this.holdLeft, Math.min(seconds, 0.12));
   }
 
   stop(): void {

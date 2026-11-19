@@ -163,17 +163,17 @@ export class Sim {
         this.events.push({ type: 'land', x: ball.x, first });
         continue;
       }
-      if (res?.kind === 'wall') this.events.push({ type: 'wall', x: res.x, y: res.y });
-      if (res?.kind === 'brick') this.damage(res.brick, 1, res.x, res.y);
+      if (res?.kind === 'wall') this.events.push({ type: 'wall', ballId: ball.id, x: res.x, y: res.y });
+      if (res?.kind === 'brick') this.damage(res.brick, 1, res.x, res.y, ball.id);
       this.collectOrbs(ball);
     }
   }
 
-  private damage(brick: Brick, amount: number, x: number, y: number): void {
+  private damage(brick: Brick, amount: number, x: number, y: number, ballId: number): void {
     brick.hp -= amount;
     const killed = brick.hp <= 0;
     if (killed) this.removeBrick(brick);
-    this.events.push({ type: 'hit', brick, x, y, damage: amount, killed });
+    this.events.push({ type: 'hit', ballId, brick, x, y, damage: amount, killed });
   }
 
   private removeBrick(brick: Brick): void {

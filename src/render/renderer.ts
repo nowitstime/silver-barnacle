@@ -3,7 +3,7 @@ import {
 } from '../sim/constants';
 import type { Trace } from '../sim/trace';
 import type { Sim } from '../sim/world';
-import type { Fx } from './fx';
+import { COMBO_SHOW, type Fx } from './fx';
 import { BIOME_INKS, type Inks } from './palette';
 import type { View } from './view';
 
@@ -48,6 +48,7 @@ export class Renderer {
     ctx.save();
     if (s.fx.shake > 0) ctx.translate((Math.random() - 0.5) * s.fx.shake, (Math.random() - 0.5) * s.fx.shake);
 
+    this.drawDanger(s, inks);
     this.drawFloor(inks, s.sim);
     const off = s.sim.phase === 'drop' ? -(1 - easeOutBack(Math.min(1, s.sim.phaseTime / DROP_TIME))) * CELL : 0;
     this.drawBricks(s, inks, off);
@@ -56,11 +57,13 @@ export class Renderer {
     this.drawBalls(s, inks);
     this.drawLauncher(s, inks);
     this.drawParticles(s, inks);
+    this.drawRings(s, inks);
     this.drawTexts(s, inks);
     if (s.showHitboxes) this.drawHitboxes(s);
     ctx.restore();
 
     this.drawHud(s, inks);
+    this.drawCombo(s, inks);
   }
 
   // ---- background ----
@@ -190,16 +193,25 @@ export class Renderer {
     ctx.restore();
   }
 
-  private ball(x: number, y: number, inks: Inks): void {
+  /** A ball printed in two inks, slightly out of register. Stretches along its motion and squashes on impact. */
+  private ball(x: number, y: number, inks: Inks, vx = 0, vy = 0, squash = 0, scale = 1): void {
     const { ctx } = this;
+    const moving = vx !== 0 || vy !== 0;
+    const stretch = moving ? 1.1 : 1;
+    const sx = scale * stretch * (1 - squash * 0.35);
+    const sy = (scale / stretch) * (1 + squash * 0.3);
+    ctx.save();
+    ctx.translate(x, y);
+    if (moving) ctx.rotate(Math.atan2(vy, vx));
     ctx.fillStyle = inks.i1;
     ctx.beginPath();
-    ctx.arc(x + 1.2, y + 0.8, BALL_R, 0, Math.PI * 2);
+    ctx.ellipse(1.2, 0.8, BALL_R * sx, BALL_R * sy, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = inks.i2;
     ctx.beginPath();
-    ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, BALL_R * sx, BALL_R * sy, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 
   private drawBalls(s: RenderState, inks: Inks): void {
@@ -217,7 +229,10 @@ export class Renderer {
       }
     }
     ctx.globalAlpha = 1;
-    for (const b of s.sim.balls) this.ball(b.x, b.y, inks);
+    for (const b of s.sim.balls) {
+      if (b.state === 'flying') this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0);
+      else this.ball(b.x, b.y, inks);
+    }
     ctx.restore();
   }
 
@@ -228,7 +243,7 @@ export class Renderer {
       (sim.phase === 'fire' && sim.ballsInFlight > sim.balls.filter((b) => b.state === 'flying').length);
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    if (showBall) this.ball(sim.launchX, FLOOR - BALL_R, inks);
+    if (showBall) this.ball(sim.launchX, FLOOR - BALL_R, inks, 0, 0, 0, 1 + s.fx.launcherKick * 0.45);
     ctx.restore();
     let count = sim.ballCount;
     if (sim.phase === 'fire' || sim.phase === 'run') {
@@ -250,10 +265,79 @@ export class Renderer {
     for (const p of s.fx.particles) {
       ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.6);
       ctx.fillStyle = p.ink ? inks.i2 : inks.i1;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      if (p.square) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
+    ctx.restore();
+  }
+
+  private drawRings(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    for (const r of s.fx.rings) {
+      const f = 1 - r.life / r.max;
+      ctx.globalAlpha = (1 - f) * 0.9;
+      ctx.strokeStyle = r.ink ? inks.i2 : inks.i1;
+      ctx.lineWidth = 3 * (1 - f) + 0.5;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.radius * (0.3 + f * 0.9), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** Halftone dots rising from the floor as bricks get close: more danger, bigger dots. */
+  private drawDanger(s: RenderState, inks: Inks): void {
+    const d = s.fx.danger;
+    if (d < 0.02) return;
+    const { ctx } = this;
+    const pulse = 0.75 + 0.25 * Math.sin(s.time * 7);
+    const height = CELL * 4;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = inks.i2;
+    ctx.globalAlpha = 0.55 * d * pulse;
+    for (let y = FLOOR; y > FLOOR - height; y -= 6) {
+      const k = 1 - (FLOOR - y) / height;
+      const r = 2.4 * k * k * d;
+      if (r < 0.3) continue;
+      for (let x = 3; x < W; x += 6) {
+        ctx.beginPath();
+        ctx.arc(x + ((y / 6) % 2) * 3, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  private drawCombo(s: RenderState, inks: Inks): void {
+    const { fx } = s;
+    if (fx.combo < COMBO_SHOW || fx.comboFade <= 0) return;
+    const { ctx } = this;
+    const k = 1 + fx.comboPop * 0.5;
+    ctx.save();
+    ctx.translate(W / 2, TOP + 26);
+    ctx.scale(k, k);
+    ctx.rotate(-0.06 + fx.comboPop * 0.08);
+    ctx.globalAlpha = Math.min(1, fx.comboFade * 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 20px ${FONT}`;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = inks.i1;
+    ctx.fillText(`${fx.combo}× COMBO`, 1.5, 1);
+    ctx.fillStyle = inks.i2;
+    ctx.fillText(`${fx.combo}× COMBO`, 0, 0);
     ctx.restore();
   }
 
@@ -303,9 +387,9 @@ export class Renderer {
     ctx.font = `700 11px ${FONT}`;
     ctx.textAlign = 'left';
     ctx.fillText(`DEPTH ${s.sim.level}`, 10, 17);
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'center';
     ctx.font = `400 10px ${FONT}`;
-    ctx.fillText(`BEST ${Math.max(s.best, s.sim.level)}`, W - 10, 17);
+    ctx.fillText(`BEST ${Math.max(s.best, s.sim.level)}`, W / 2, 17);
   }
 }
 

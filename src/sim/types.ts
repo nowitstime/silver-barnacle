@@ -31,8 +31,8 @@ export type Phase = 'aim' | 'fire' | 'run' | 'settle' | 'drop' | 'over';
 
 export type SimEvent =
   | { type: 'launch'; x: number; y: number }
-  | { type: 'wall'; x: number; y: number }
-  | { type: 'hit'; brick: Brick; x: number; y: number; damage: number; killed: boolean }
+  | { type: 'wall'; ballId: number; x: number; y: number }
+  | { type: 'hit'; ballId: number; brick: Brick; x: number; y: number; damage: number; killed: boolean }
   | { type: 'orb'; x: number; y: number }
   | { type: 'land'; x: number; first: boolean }
   | { type: 'recall' }

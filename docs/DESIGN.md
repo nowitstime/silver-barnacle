@@ -26,7 +26,7 @@ Status: **draft**. Anything marked ❓ is still open.
 | Meta progression | Unlocks only (no permanent stat boosts) |
 | Saving | Autosave every turn and resume after closing. High scores, unlocks and settings stored in localStorage |
 | Art style | **Risograph**: paper stock plus two inks per biome, multiply blending, halftone, grain |
-| Aiming | Slingshot: press anywhere, pull back, release |
+| Aiming | Point to aim anywhere on screen, then tap **Fire** to confirm. Aim carries over between turns |
 | Juice | An absurd amount |
 | Audio | Generated sound effects (ZzFX / WebAudio) |
 | Haptics | Light vibration (Android only, because iOS Safari has no Vibration API) |
@@ -36,8 +36,8 @@ Status: **draft**. Anything marked ❓ is still open.
 
 ## 2. Core turn loop
 
-1. **Aim.** Drag anywhere on screen. A dotted laser shows the path up to the **first bounce** (upgrades extend it).
-2. **Launch.** Release to fire. Balls leave in a stream from the launcher, a few frames apart.
+1. **Aim.** Touch or drag anywhere on screen; the laser points from the launcher towards your finger and shows the path up to the **first bounce** (upgrades extend it). Lifting your finger keeps the aim.
+2. **Launch.** Tap **Fire** to confirm. Balls leave in a stream from the launcher, a few frames apart.
 3. **Bounce.** Balls bounce off walls, the ceiling and bricks, doing damage on every hit. Balls pass through each other.
 4. **Return.** A ball that reaches the floor is collected.
    - ✅ **The next volley launches from where the first ball landed** (Ballz style).

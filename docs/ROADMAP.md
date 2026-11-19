@@ -25,12 +25,17 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ✅ Unit tests: collision, RNG
 - 🟨 **Done when:** an endless Ballz-like I'd actually play for 5 minutes
 
+## Controls (revised after first phone test)
+- ✅ Point to aim: touch or drag anywhere, and the laser points from the launcher to your finger (touches below the launcher are mirrored upward)
+- ✅ Aim stays when you lift your finger, and carries over to the next turn; a **Fire** button confirms
+- ✅ Desktop: arrow keys nudge the aim (Shift for bigger steps), Space or Enter fires
+
 ## M2: Juice pass #1 and sound *(make it feel amazing early, so every later feature feels good too)*
-- ⬜ Squash and stretch, hit flash, brick fragments, screen shake, hit-stop
-- ⬜ Damage numbers, combo counter
-- ⬜ Ball trails
-- ⬜ ZzFX sound effects with rising combo pitch
-- ⬜ Haptics (Android)
+- ✅ Squash and stretch, hit flash, brick fragments, shockwave rings, screen shake, hit-stop
+- ✅ Damage numbers, combo counter (with a bigger sound and freeze every 5 kills)
+- ✅ Ball trails, launcher recoil, landing puffs, halftone danger warning with heartbeat
+- ✅ Procedural WebAudio sound effects with rising pitch (own tiny synth instead of ZzFX), mute toggle
+- ✅ Haptics (Android)
 - ✅ **Art direction test**: picked **Risograph** from the [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs)
 
 ## M3: The roguelike run *(first real "run")*

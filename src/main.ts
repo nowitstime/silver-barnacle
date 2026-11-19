@@ -2,6 +2,7 @@ import '@fontsource/space-mono/400.css';
 import '@fontsource/space-mono/700.css';
 import './styles/main.css';
 import { registerSW } from 'virtual:pwa-register';
+import { Haptics, Sfx } from './core/audio';
 import { AimInput } from './core/input';
 import { Loop } from './core/loop';
 import { load, save } from './core/storage';
@@ -9,7 +10,9 @@ import { Fx } from './render/fx';
 import { BIOME_INKS } from './render/palette';
 import { Renderer } from './render/renderer';
 import { View } from './render/view';
+import { BALL_R, FLOOR, ROWS } from './sim/constants';
 import { traceShot, type Trace } from './sim/trace';
+import type { SimEvent } from './sim/types';
 import { Sim } from './sim/world';
 import { mountDebug } from './ui/debug';
 import { Hud } from './ui/hud';
@@ -28,11 +31,20 @@ fx.enabledShake = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let sim = new Sim(Number(params.get('seed')) || newSeed());
 let best = load<number>('best', 0);
-let aimAngle: number | null = null;
+let aimAngle = Math.PI / 2;
 let trace: Trace | null = null;
 let time = 0;
 let fast = false;
 let showHitboxes = false;
+/** Hits this volley, for rising pitch. */
+let volleyHits = 0;
+
+const sfx = new Sfx();
+const haptics = new Haptics();
+sfx.enabled = load<boolean>('sound', true);
+// Browsers only allow audio after a user gesture.
+addEventListener('pointerdown', () => sfx.unlock(), { capture: true });
+addEventListener('keydown', () => sfx.unlock(), { capture: true });
 
 applyInks();
 
@@ -42,10 +54,11 @@ const loop = new Loop(
     time += realDt;
     const events = sim.drainEvents();
     fx.consume(events);
+    feedback(events);
     if (events.some((e) => e.type === 'over')) onGameOver();
     fx.update(realDt, sim);
     if (sim.phase === 'aim' && loop.speed !== 1 && !fast) loop.speed = 1;
-    trace = aimAngle !== null && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimAngle, 1) : null;
+    trace = sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimAngle, 1) : null;
     renderer.draw({ sim, fx, trace, best, time, showHitboxes });
     hud.update(sim, loop.speed);
     updateDebug?.(1 / Math.max(realDt, 1e-3));
@@ -53,16 +66,78 @@ const loop = new Loop(
 );
 
 const hud = new Hud(uiRoot, {
-  onSpeed: (s) => (loop.speed = s),
+  onFire: () => fire(),
+  onToggleSound: () => {
+    sfx.enabled = !sfx.enabled;
+    save('sound', sfx.enabled);
+    if (sfx.enabled) sfx.click();
+    return sfx.enabled;
+  },
+  onSpeed: (s) => {
+    loop.speed = s;
+    sfx.click();
+  },
   onRecall: () => sim.recall(),
   onRestart: () => restart(),
 });
 
+hud.setSound(sfx.enabled);
+
 new AimInput(view, canvas, {
   canAim: () => sim.phase === 'aim',
+  launcher: () => [sim.launchX, FLOOR - BALL_R],
+  angle: () => aimAngle,
   onAim: (a) => (aimAngle = a),
-  onFire: (a) => sim.fire(a),
+  onFire: () => fire(),
 });
+
+function fire(): void {
+  if (!sim.fire(aimAngle)) return;
+  volleyHits = 0;
+  sfx.fire();
+  haptics.buzz(12);
+}
+
+/** Sound, vibration and hit-stop for sim events. */
+function feedback(events: SimEvent[]): void {
+  for (const e of events) {
+    switch (e.type) {
+      case 'launch':
+        sfx.launch();
+        break;
+      case 'wall':
+        sfx.wall();
+        break;
+      case 'hit':
+        volleyHits++;
+        if (e.killed) {
+          sfx.kill(fx.combo);
+          haptics.buzz(10);
+          if (fx.combo > 0 && fx.combo % 5 === 0) {
+            sfx.combo(fx.combo / 5);
+            loop.hold(0.07);
+            haptics.buzz([20, 30, 20], 0);
+          } else loop.hold(0.025);
+        } else sfx.hit(volleyHits);
+        break;
+      case 'orb':
+        sfx.orb();
+        haptics.buzz(15);
+        break;
+      case 'drop':
+        sfx.drop();
+        if (sim.lowestRow >= ROWS - 2) {
+          sfx.heartbeat();
+          haptics.buzz([30, 120, 30], 0);
+        }
+        break;
+      case 'over':
+        sfx.over();
+        haptics.buzz([60, 40, 140], 0);
+        break;
+    }
+  }
+}
 
 const updateDebug = debug
   ? mountDebug(uiRoot, {
