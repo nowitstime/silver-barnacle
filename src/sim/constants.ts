@@ -28,6 +28,8 @@ export const MIN_VY_FRACTION = 0.14;
 export const SETTLE_TIME = 0.28;
 export const DROP_TIME = 0.34;
 
+/** Pixel size of a brick spanning n cells. */
+export const span = (n: number) => n * CELL - INSET * 2;
 export const brickX = (c: number) => c * CELL + INSET;
 export const brickY = (r: number) => TOP + r * CELL + INSET;
 export const cellCenterX = (c: number) => c * CELL + CELL / 2;

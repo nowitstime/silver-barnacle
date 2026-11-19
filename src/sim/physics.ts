@@ -1,5 +1,5 @@
 import { circleRect, reflect, type Contact } from './collision';
-import { BALL_R, BALL_SPEED, BRICK, COLS, FLOOR, MIN_VY_FRACTION, TOP, W, CELL, brickX, brickY } from './constants';
+import { BALL_R, BALL_SPEED, COLS, FLOOR, MIN_VY_FRACTION, TOP, W, CELL, brickX, brickY, span } from './constants';
 import { gridKey, type Brick, type BrickGrid } from './types';
 
 export interface Body {
@@ -9,20 +9,29 @@ export interface Body {
   vy: number;
 }
 
+/** Constant accelerations acting on a body (currents, heavy balls). */
+export interface Accel {
+  ax: number;
+  ay: number;
+}
+
+export const NO_ACCEL: Accel = { ax: 0, ay: 0 };
+
 export type StepResult =
   | { kind: 'wall'; x: number; y: number; ceiling: boolean }
   | { kind: 'brick'; brick: Brick; x: number; y: number; contact: Contact }
   | { kind: 'floor' }
   | null;
 
-/** Keep the ball from travelling almost horizontally forever. */
+/** Keep the ball from travelling almost horizontally forever. Preserves its current speed. */
 export function unloop(b: Body): void {
-  const min = BALL_SPEED * MIN_VY_FRACTION;
+  const speed = Math.hypot(b.vx, b.vy) || BALL_SPEED;
+  const min = speed * MIN_VY_FRACTION;
   if (Math.abs(b.vy) < min) {
     b.vy = (b.vy < 0 ? -1 : 1) * min;
     const s = Math.hypot(b.vx, b.vy);
-    b.vx *= BALL_SPEED / s;
-    b.vy *= BALL_SPEED / s;
+    b.vx *= speed / s;
+    b.vy *= speed / s;
   }
 }
 
@@ -34,12 +43,17 @@ export function bounce(b: Body, c: Contact): void {
   unloop(b);
 }
 
+export const brickRect = (b: Brick): [number, number, number, number] => [brickX(b.c), brickY(b.r), span(b.w), span(b.h)];
+
 /**
  * Advance one body by h seconds. Walls bounce automatically. A brick contact is reported
  * but NOT resolved: the caller decides whether to `bounce` or pass through.
- * `skip` lets a ball ignore a brick it's already passing through.
  */
-export function stepBody(b: Body, h: number, grid: BrickGrid, skip?: (brick: Brick) => boolean): StepResult {
+export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_ACCEL): StepResult {
+  if (accel.ax || accel.ay) {
+    b.vx += accel.ax * h;
+    b.vy += accel.ay * h;
+  }
   b.x += b.vx * h;
   b.y += b.vy * h;
 
@@ -66,8 +80,9 @@ export function stepBody(b: Body, h: number, grid: BrickGrid, skip?: (brick: Bri
     for (let c = c0; c <= c1; c++) {
       if (c < 0 || c >= COLS) continue;
       const brick = grid.get(gridKey(c, r));
-      if (!brick || skip?.(brick)) continue;
-      const hit = circleRect(b.x, b.y, BALL_R, brickX(c), brickY(r), BRICK, BRICK, b.vx, b.vy);
+      if (!brick) continue;
+      const [rx, ry, rw, rh] = brickRect(brick);
+      const hit = circleRect(b.x, b.y, BALL_R, rx, ry, rw, rh, b.vx, b.vy);
       if (!hit) continue;
       return { kind: 'brick', brick, x: hit.px, y: hit.py, contact: hit };
     }

@@ -58,9 +58,11 @@ describe('rows', () => {
       expect(row.bricks.length).toBeLessThan(COLS);
       const cols = new Set(row.bricks.map((b) => b.c));
       expect(cols.size).toBe(row.bricks.length);
-      expect(row.orb).not.toBeNull();
-      expect(cols.has(row.orb!)).toBe(false);
-      for (const b of row.bricks) expect(b.hp).toBeGreaterThanOrEqual(level);
+      const orb = row.items.find((i) => i.kind === 'orb');
+      expect(orb).toBeDefined();
+      expect(cols.has(orb!.c)).toBe(false);
+      for (const it of row.items) expect(cols.has(it.c)).toBe(false);
+      for (const b of row.bricks) if (b.kind === 'normal') expect(b.hp).toBeGreaterThanOrEqual(level);
     }
   });
 });
@@ -72,7 +74,7 @@ describe('trace', () => {
     expect(t.contacts[0][0]).toBeCloseTo(W / 2, 3);
   });
   it('stops at the first brick in the way', () => {
-    const brick: Brick = { id: 1, c: 3, r: 5, hp: 1, maxHp: 1, kind: 'normal', burn: 0 };
+    const brick: Brick = { id: 1, c: 3, r: 5, w: 1, h: 1, hp: 1, maxHp: 1, kind: 'normal', burn: 0, frozen: false, hitThisTurn: false };
     const grid = new Map([[gridKey(3, 5), brick]]);
     const t = traceShot(grid, W / 2, Math.PI / 2);
     expect(t.contacts[0][1]).toBeCloseTo(brickY(5) + BRICK + BALL_R, 0);

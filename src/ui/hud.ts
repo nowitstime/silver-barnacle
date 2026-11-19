@@ -7,96 +7,71 @@ const SPEEDS = [1, 2, 4];
 
 export interface HudHandlers {
   onFire: () => void;
-  onToggleSound: () => boolean;
+  onPause: () => void;
   onSpeed: (speed: number) => void;
   onRecall: () => void;
-  onRestart: () => void;
 }
 
-/** DOM controls that sit over the canvas. */
+/** In-run DOM controls that sit over the canvas. */
 export class Hud {
+  private root: HTMLElement;
   private fire: HTMLButtonElement;
   private ff: HTMLButtonElement;
   private recall: HTMLButtonElement;
-  private over: HTMLElement;
-  private overDepth: HTMLElement;
-  private overBest: HTMLElement;
-  private overNew: HTMLElement;
+  private pause: HTMLButtonElement;
+  private hint: HTMLElement;
+  visible = false;
 
-  constructor(root: HTMLElement, private h: HudHandlers) {
-    root.innerHTML = `
-      <button class="icon-btn" id="sound" type="button" aria-pressed="true" aria-label="Sound">♪</button>
+  constructor(parent: HTMLElement, private h: HudHandlers) {
+    this.root = document.createElement('div');
+    this.root.className = 'hud';
+    this.root.hidden = true;
+    this.root.innerHTML = `
+      <button class="icon-btn pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
+      <p class="hint" id="hint" hidden>Drag left or right to aim · tap to point · then Fire</p>
       <button class="fire" id="fire" type="button">Fire</button>
       <div class="turn-controls">
         <button class="pill" id="recall" type="button" hidden>Recall</button>
         <button class="pill" id="ff" type="button" hidden aria-label="Fast forward">▶▶ 1×</button>
-      </div>
-      <div class="overlay" id="over" hidden>
-        <div class="sheet" role="dialog" aria-labelledby="over-title">
-          <p class="eyebrow">Run over</p>
-          <h2 id="over-title">Depth <span id="over-depth">0</span></h2>
-          <p class="sub">Best <span id="over-best">0</span> <span class="new" id="over-new" hidden>New best!</span></p>
-          <dl class="totals" id="over-totals"></dl>
-          <button class="btn-primary" id="restart" type="button">Play again</button>
-        </div>
       </div>`;
-    this.fire = root.querySelector('#fire')!;
-    this.ff = root.querySelector('#ff')!;
-    this.fire.addEventListener('click', () => this.h.onFire());
-    const sound = root.querySelector<HTMLButtonElement>('#sound')!;
-    sound.addEventListener('click', () => {
-      const on = this.h.onToggleSound();
-      sound.setAttribute('aria-pressed', String(on));
-      sound.classList.toggle('off', !on);
-    });
-    this.recall = root.querySelector('#recall')!;
-    this.over = root.querySelector('#over')!;
-    this.overDepth = root.querySelector('#over-depth')!;
-    this.overBest = root.querySelector('#over-best')!;
-    this.overNew = root.querySelector('#over-new')!;
+    parent.appendChild(this.root);
+    this.fire = this.root.querySelector('#fire')!;
+    this.ff = this.root.querySelector('#ff')!;
+    this.recall = this.root.querySelector('#recall')!;
+    this.pause = this.root.querySelector('#pause')!;
+    this.hint = this.root.querySelector('#hint')!;
 
+    this.fire.addEventListener('click', () => this.h.onFire());
+    this.pause.addEventListener('click', () => this.h.onPause());
     this.ff.addEventListener('click', () => {
       const cur = Number(this.ff.dataset.speed ?? 1);
-      const next = SPEEDS[(SPEEDS.indexOf(cur) + 1) % SPEEDS.length];
-      this.h.onSpeed(next);
+      this.h.onSpeed(SPEEDS[(SPEEDS.indexOf(cur) + 1) % SPEEDS.length]);
     });
     this.recall.addEventListener('click', () => this.h.onRecall());
-    root.querySelector('#restart')!.addEventListener('click', () => this.h.onRestart());
     // Buttons must not start an aim drag on the canvas underneath.
-    for (const el of root.querySelectorAll('button')) el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    for (const el of this.root.querySelectorAll('button')) el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
 
-  update(sim: Sim, speed: number): void {
+  show(on: boolean): void {
+    this.visible = on;
+    this.root.hidden = !on;
+  }
+
+  showHint(on: boolean): void {
+    this.hint.hidden = !on;
+  }
+
+  update(sim: Sim, speed: number, blocked: boolean): void {
+    if (!this.visible) return;
     const inVolley = sim.phase === 'fire' || sim.phase === 'run';
-    this.fire.hidden = sim.phase !== 'aim' || !this.over.hidden;
+    this.fire.hidden = sim.phase !== 'aim' || blocked;
     this.ff.hidden = !(inVolley && (sim.turnTime > FF_AFTER || speed > 1));
     this.recall.hidden = !(inVolley && sim.turnTime > RECALL_AFTER);
+    this.pause.hidden = sim.phase === 'over';
     if (this.ff.dataset.speed !== String(speed)) {
       this.ff.dataset.speed = String(speed);
       this.ff.textContent = `▶▶ ${speed}×`;
       this.ff.classList.toggle('on', speed > 1);
     }
-  }
-
-  setSound(on: boolean): void {
-    const b = document.querySelector<HTMLButtonElement>('#sound');
-    b?.setAttribute('aria-pressed', String(on));
-    b?.classList.toggle('off', !on);
-  }
-
-  showOver(depth: number, best: number, isNew: boolean, totals?: { kills: number; damage: number; bestCombo: number }): void {
-    const t = this.over.querySelector('#over-totals')!;
-    t.innerHTML = totals
-      ? `<div><dt>Bricks broken</dt><dd>${totals.kills}</dd></div><div><dt>Damage</dt><dd>${totals.damage.toLocaleString()}</dd></div><div><dt>Best combo</dt><dd>${totals.bestCombo}</dd></div>`
-      : '';
-    this.overDepth.textContent = String(depth);
-    this.overBest.textContent = String(best);
-    this.overNew.hidden = !isNew;
-    this.over.hidden = false;
-    this.over.querySelector<HTMLButtonElement>('#restart')!.focus();
-  }
-
-  hideOver(): void {
-    this.over.hidden = true;
   }
 }

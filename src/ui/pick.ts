@@ -8,7 +8,7 @@ export interface PickView {
   next?: string;
 }
 
-const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' } as const;
+const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', cursed: 'Cursed' } as const;
 
 /** Upgrade choice screen: tap a card to select it, tap Take (or the same card again) to confirm. */
 export class PickScreen {

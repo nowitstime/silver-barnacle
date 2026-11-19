@@ -1,32 +1,43 @@
 import { COLS } from './constants';
 import { randInt, shuffle, type Rng } from '../core/rng';
+import { BRICKS, rollKind, type BrickKind, type ItemKind, type SpawnTuning } from '../content/bricks';
 
 export interface RowSpec {
-  bricks: { c: number; hp: number }[];
-  orb: number | null;
+  bricks: { c: number; hp: number; kind: BrickKind }[];
+  items: { c: number; kind: ItemKind }[];
 }
 
 /** Hand-made row shapes, mixed in with random rows so layouts stay interesting. */
-const PATTERNS: { name: string; minLevel: number; cols: (rng: Rng) => number[] }[] = [
-  // A full wall with one gap.
-  { name: 'wall', minLevel: 8, cols: (rng) => { const gap = randInt(rng, 0, COLS - 1); return range().filter((c) => c !== gap); } },
-  // Every other column.
-  { name: 'pillars', minLevel: 4, cols: (rng) => range().filter((c) => c % 2 === (rng() < 0.5 ? 0 : 1)) },
-  // Both edges, open middle.
-  { name: 'edges', minLevel: 4, cols: () => [0, 1, COLS - 2, COLS - 1] },
-  // A solid block in the middle.
-  { name: 'center', minLevel: 6, cols: () => [2, 3, 4] },
+const PATTERNS: { minLevel: number; cols: (rng: Rng) => number[] }[] = [
+  { minLevel: 8, cols: (rng) => { const gap = randInt(rng, 0, COLS - 1); return range().filter((c) => c !== gap); } },
+  { minLevel: 4, cols: (rng) => { const odd = rng() < 0.5 ? 1 : 0; return range().filter((c) => c % 2 === odd); } },
+  { minLevel: 4, cols: () => [0, 1, COLS - 2, COLS - 1] },
+  { minLevel: 6, cols: () => [2, 3, 4] },
 ];
 
 const range = () => Array.from({ length: COLS }, (_, i) => i);
 
+export interface RowOptions extends SpawnTuning {
+  biome: number;
+  hpMult: number;
+}
+
 /**
  * Generate the row that enters at the top. `level` starts at 1 and goes up by one every turn.
- * HP roughly tracks the level (and grows a little per biome); so does the ball count if you collect every orb.
+ * Every row has one +ball orb if there's room; lasers and portals show up deeper down.
  */
-export function generateRow(rng: Rng, level: number, biome = 0): RowSpec {
-  const hpScale = 1 + 0.12 * biome;
-  const hpFor = (tough: boolean) => Math.max(1, Math.round(level * hpScale * (tough ? 2 : 1)));
+/**
+ * HP of a normal brick at a given depth. Grows a bit faster than linearly, and jumps with each biome,
+ * so it keeps pace with your ball count and upgrades.
+ */
+export function brickHp(level: number, biome: number): number {
+  return level * (1 + level / HP_CURVE) * (1 + BIOME_HP * biome);
+}
+export const HP_CURVE = 60;
+export const BIOME_HP = 0.2;
+
+export function generateRow(rng: Rng, level: number, o: RowOptions = { biome: 0, hpMult: 1, hazardMult: 1, bombMult: 1 }): RowSpec {
+  const baseHp = (tough: boolean) => brickHp(level, o.biome) * o.hpMult * (tough ? 2 : 1);
 
   let brickCols: number[];
   let free: number[];
@@ -43,6 +54,18 @@ export function generateRow(rng: Rng, level: number, biome = 0): RowSpec {
     brickCols = cols.slice(0, n);
     free = cols.slice(n);
   }
-  const bricks = brickCols.map((c) => ({ c, hp: hpFor(level >= 5 && rng() < 0.2) }));
-  return { bricks, orb: free.length ? free[0] : null };
+  const bricks = brickCols.map((c) => {
+    const kind = rollKind(rng, level, o);
+    const tough = kind === 'normal' && level >= 5 && rng() < 0.2;
+    const mult = kind === 'normal' ? 1 : kind === 'popper' ? 0 : BRICKS[kind as keyof typeof BRICKS].hp;
+    const hp = kind === 'popper' ? 1 : Math.max(1, Math.round(baseHp(tough) * mult));
+    return { c, hp, kind };
+  });
+  const items: RowSpec['items'] = [];
+  if (free.length) items.push({ c: free.shift()!, kind: 'orb' });
+  if (free.length && level >= 6 && rng() < 0.07) items.push({ c: free.shift()!, kind: rng() < 0.5 ? 'laserH' : 'laserV' });
+  if (free.length >= 2 && level >= 16 && rng() < 0.05) {
+    items.push({ c: free.shift()!, kind: 'portal' }, { c: free.shift()!, kind: 'portal' });
+  }
+  return { bricks, items };
 }

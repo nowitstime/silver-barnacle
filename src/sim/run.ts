@@ -1,36 +1,20 @@
-/** Rows (turns) in each biome. Early biomes are short, later ones longer. */
+/** Rows in each biome before its mini-boss. Early biomes are short, later ones longer. */
 export const BIOME_ROWS = [12, 16, 20, 24, 28];
 export const BIOME_COUNT = BIOME_ROWS.length;
-/** Length of each biome once the main run is over (endless preview until the final boss lands in M7). */
+/** Biome length once the main run is over (endless preview until the final boss lands in M7). */
 const ENDLESS_ROWS = 28;
 
-export interface BiomeSpan {
-  /** 0-based biome number. Keeps counting past the last biome; use `% BIOME_COUNT` for visuals. */
-  index: number;
-  /** Turn at which this biome starts. */
-  start: number;
-  length: number;
-}
+export const biomeLength = (i: number) => (i < BIOME_COUNT ? BIOME_ROWS[i] : ENDLESS_ROWS);
 
-export function biomeAt(turn: number): BiomeSpan {
-  let start = 0;
-  for (let i = 0; ; i++) {
-    const length = i < BIOME_COUNT ? BIOME_ROWS[i] : ENDLESS_ROWS;
-    if (turn < start + length) return { index: i, start, length };
-    start += length;
-  }
-}
+/** Each biome changes how the game plays. */
+export type Gimmick = 'none' | 'dark' | 'current' | 'ice' | 'heat';
+export const GIMMICKS: Gimmick[] = ['none', 'dark', 'current', 'ice', 'heat'];
+export const gimmickFor = (biome: number): Gimmick => GIMMICKS[biome % GIMMICKS.length];
 
-export type PickKind = 'mid' | 'biome';
-
-/**
- * Called after `turn` turns have been completed. Returns which upgrade pick (if any) happens now:
- * a small one halfway through each biome, and a big one when a biome is cleared.
- */
-export function pickAfter(turn: number): PickKind | null {
-  if (turn <= 0) return null;
-  const prev = biomeAt(turn - 1);
-  if (turn === prev.start + prev.length) return 'biome';
-  if (turn === prev.start + Math.floor(prev.length / 2)) return 'mid';
-  return null;
-}
+export const GIMMICK_TEXT: Record<Gimmick, string> = {
+  none: '',
+  dark: 'Darkness: you only see bricks near your balls',
+  current: 'Current: a drift pushes balls sideways, and flips each turn',
+  ice: 'Ice: balls speed up on every wall bounce. Frozen bricks shrug off the first hit',
+  heat: 'Heat: bricks you don’t hit regrow HP. Bombs are common',
+};

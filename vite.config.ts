@@ -33,6 +33,8 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['tests/**/*.test.ts'],
+    // `npm run balance` runs the slow bot simulations instead of the unit tests.
+    include: process.env.BALANCE ? ['balance/**/*.test.ts'] : ['tests/**/*.test.ts'],
+    testTimeout: process.env.BALANCE ? 60 * 60 * 1000 : 5000,
   },
 });

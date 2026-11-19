@@ -15,7 +15,16 @@ export interface FloatText {
   x: number; y: number; text: string; big: boolean; life: number; max: number;
   /** Print in the secondary ink. */
   alt: boolean;
+  /** A plain damage number (can be hidden in settings). */
+  number: boolean;
 }
+
+export interface Beam { kind: 'laserH' | 'laserV'; x: number; y: number; width: number; life: number; max: number }
+
+const HAZARD_LABEL: Partial<Record<string, string>> = {
+  popper: 'POP!', anchor: 'HEAVY', balloon: 'FLOATY', sponge: 'GULP', shrinker: 'SHRUNK',
+};
+const IMMUNE_LABEL: Record<string, string> = { steel: '', ice: 'CRACK', lantern: 'NO EFFECT', shield: 'BLOCKED' };
 
 export interface Ring {
   x: number; y: number; radius: number; life: number; max: number; ink: 0 | 1;
@@ -37,6 +46,8 @@ export class Fx {
   texts: FloatText[] = [];
   rings: Ring[] = [];
   zaps: Zap[] = [];
+  beams: Beam[] = [];
+  private lastImmune = 0;
   banner: Banner | null = null;
   bricks = new Map<number, BrickFx>();
   trails = new Map<number, number[]>();
@@ -82,10 +93,61 @@ export class Fx {
             if (this.combo >= COMBO_SHOW) this.comboPop = 1;
             this.kick(2.5 + Math.min(this.combo, 10) * 0.25);
           }
+          if (e.brick.kind === 'boss') this.kick(e.killed ? 10 : 1.2);
           if (e.crit) this.text(e.x, e.y - 6, `${e.damage}!`, true);
-          else if (!e.killed || e.source === 'burn') this.text(e.x, e.y, String(e.damage), false, e.source === 'burn');
+          else if (!e.killed || e.source === 'burn') this.text(e.x, e.y, String(e.damage), false, e.source === 'burn', true);
           break;
         }
+        case 'immune': {
+          const label = IMMUNE_LABEL[e.reason];
+          this.burst(e.x, e.y, 2, 40, 0.2, 1);
+          if (label && performance.now() - this.lastImmune > 250) {
+            this.lastImmune = performance.now();
+            this.text(e.x, e.y - 4, label, false, true);
+          }
+          if (e.reason === 'ice') this.burst(e.x, e.y, 8, 90, 0.4, 0, false, 300, true);
+          break;
+        }
+        case 'explode':
+          this.rings.push({ x: e.x, y: e.y, radius: e.radius * 1.4, life: 0.4, max: 0.4, ink: 1 });
+          this.rings.push({ x: e.x, y: e.y, radius: e.radius, life: 0.3, max: 0.3, ink: 0 });
+          this.burst(e.x, e.y, 22, 220, 0.6, 1, true, 300, true);
+          this.kick(5);
+          break;
+        case 'laser':
+          this.beams.push({ kind: e.kind, x: e.x, y: e.y, width: e.width, life: 0.35, max: 0.35 });
+          this.kick(3);
+          break;
+        case 'portal':
+          this.rings.push({ x: e.x1, y: e.y1, radius: 16, life: 0.3, max: 0.3, ink: 0 });
+          this.rings.push({ x: e.x2, y: e.y2, radius: 16, life: 0.3, max: 0.3, ink: 1 });
+          break;
+        case 'hazard': {
+          const label = HAZARD_LABEL[e.kind];
+          if (label) this.text(e.x, e.y - 8, label, true);
+          if (e.kind === 'popper') {
+            this.burst(e.x, e.y, 16, 160, 0.5, 1, true, 200);
+            this.rings.push({ x: e.x, y: e.y, radius: 20, life: 0.3, max: 0.3, ink: 1 });
+            this.kick(4);
+          }
+          break;
+        }
+        case 'spawn':
+          this.rings.push({ x: cellCenterX(e.c), y: cellCenterY(e.r), radius: 18, life: 0.3, max: 0.3, ink: 0 });
+          break;
+        case 'heal':
+          this.text(cellCenterX(e.brick.c) + (e.brick.w - 1) * 18, cellCenterY(e.brick.r), `+${e.amount}`, e.brick.kind === 'boss');
+          break;
+        case 'bounty':
+          this.text(e.x, e.y - 10, '+1 BALL', true);
+          break;
+        case 'boss':
+          this.showBanner(e.name.toUpperCase(), e.tell, 2.8);
+          this.kick(6);
+          break;
+        case 'bossDown':
+          this.showBanner(`${e.name.toUpperCase()} DOWN`, 'Biome cleared', 2);
+          break;
         case 'zap':
           this.zaps.push({ ...e, life: 0.22, max: 0.22, seed: Math.random() * 1000 });
           break;
@@ -98,7 +160,8 @@ export class Fx {
           break;
         case 'shield':
           this.kick(7);
-          this.showBanner('SHIELD!', 'The bottom rows are cleared', 1.4);
+          if (e.kind === 'wind') this.showBanner('SECOND WIND', 'The bottom 3 rows are wiped. This only happens once.', 1.8);
+          else this.showBanner('SHIELD!', 'The bottom rows are cleared', 1.4);
           break;
         case 'wall':
           this.squash.set(e.ballId, 1);
@@ -107,7 +170,7 @@ export class Fx {
         case 'orb':
           this.burst(e.x, e.y, 16, 150, 0.6, 1, true, 0);
           this.rings.push({ x: e.x, y: e.y, radius: 22, life: 0.4, max: 0.4, ink: 1 });
-          this.text(e.x, e.y - 4, '+1', true);
+          this.text(e.x, e.y - 4, e.extra ? '+2' : '+1', true);
           break;
         case 'land':
           this.burst(e.x, FLOOR - 1, 3, 40, 0.25, 0, false, 200);
@@ -139,6 +202,8 @@ export class Fx {
     this.texts = this.texts.filter((t) => t.life > 0);
     for (const r of this.rings) r.life -= dt;
     for (const z of this.zaps) z.life -= dt;
+    for (const b of this.beams) b.life -= dt;
+    this.beams = this.beams.filter((b) => b.life > 0);
     this.zaps = this.zaps.filter((z) => z.life > 0);
     if (this.banner && (this.banner.life -= dt) <= 0) this.banner = null;
     this.rings = this.rings.filter((r) => r.life > 0);
@@ -202,10 +267,10 @@ export class Fx {
     }
   }
 
-  text(x: number, y: number, text: string, big = false, alt = big): void {
+  text(x: number, y: number, text: string, big = false, alt = big, number = false): void {
     if (this.texts.length > 60 && !big) return;
     const life = big ? 0.85 : 0.4;
-    this.texts.push({ x, y, text, big, life, max: life, alt });
+    this.texts.push({ x, y, text, big, life, max: life, alt, number });
   }
 
   showBanner(title: string, sub: string, seconds = 2.2): void {
@@ -217,6 +282,7 @@ export class Fx {
     this.texts = [];
     this.rings = [];
     this.zaps = [];
+    this.beams = [];
     this.banner = null;
     this.bricks.clear();
     this.trails.clear();

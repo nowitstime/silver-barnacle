@@ -1,13 +1,17 @@
+import { isHazard } from '../content/bricks';
 import {
-  BALL_R, BRICK, CELL, DROP_TIME, FLOOR, H, ROWS, TOP, W, brickX, brickY, cellCenterX, cellCenterY,
+  BALL_R, CELL, DROP_TIME, FLOOR, H, ROWS, TOP, W, brickX, brickY, cellCenterX, cellCenterY, span,
 } from '../sim/constants';
 import type { Trace } from '../sim/trace';
+import type { Ball, Brick, Item } from '../sim/types';
 import type { Sim } from '../sim/world';
+import { bossFor } from '../content/bosses';
 import { COMBO_SHOW, type Fx } from './fx';
 import { BIOME_INKS, type Inks } from './palette';
 import type { View } from './view';
 
 const FONT = '"Space Mono", ui-monospace, Menlo, monospace';
+const TAU = Math.PI * 2;
 const easeOutBack = (x: number) => {
   const c1 = 1.70158, c3 = c1 + 1;
   return 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2;
@@ -20,12 +24,15 @@ export interface RenderState {
   best: number;
   time: number;
   showHitboxes: boolean;
+  /** Show small damage numbers. */
+  numbers: boolean;
 }
 
 /** Draws the game in the Risograph style: paper, two multiplying inks, halftone and misregistration. */
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private bgCache: { key: string; canvas: HTMLCanvasElement } | null = null;
+  private dark: HTMLCanvasElement | null = null;
 
   constructor(private view: View) {
     this.ctx = view.canvas.getContext('2d')!;
@@ -47,12 +54,15 @@ export class Renderer {
     ctx.save();
     if (s.fx.shake > 0) ctx.translate((Math.random() - 0.5) * s.fx.shake, (Math.random() - 0.5) * s.fx.shake);
 
+    const off = s.sim.phase === 'drop' ? -(1 - easeOutBack(Math.min(1, s.sim.phaseTime / DROP_TIME))) * CELL : 0;
+    if (s.sim.gimmick === 'current') this.drawCurrent(s, inks);
     this.drawDanger(s, inks);
     this.drawFloor(inks, s.sim);
-    const off = s.sim.phase === 'drop' ? -(1 - easeOutBack(Math.min(1, s.sim.phaseTime / DROP_TIME))) * CELL : 0;
+    this.drawItems(s, inks, off);
     this.drawBricks(s, inks, off);
-    this.drawOrbs(s, inks, off);
+    if (s.sim.gimmick === 'dark') this.drawDarkness(s, inks);
     if (s.trace) this.drawTrace(s.trace, inks);
+    this.drawBeams(s, inks);
     this.drawBalls(s, inks);
     this.drawLauncher(s, inks);
     this.drawParticles(s, inks);
@@ -67,63 +77,7 @@ export class Renderer {
     this.drawBanner(s, inks);
   }
 
-  /** Jagged lightning between two points, re-randomised every frame so it crackles. */
-  private drawZaps(s: RenderState, inks: Inks): void {
-    const { ctx } = this;
-    ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.lineJoin = 'round';
-    for (const z of s.fx.zaps) {
-      const f = z.life / z.max;
-      for (const [ink, off, w] of [[inks.i1, 1, 2.5], [inks.i2, 0, 1.6]] as const) {
-        ctx.strokeStyle = ink;
-        ctx.globalAlpha = f;
-        ctx.lineWidth = w;
-        ctx.beginPath();
-        ctx.moveTo(z.x1 + off, z.y1);
-        const n = 6;
-        for (let i = 1; i < n; i++) {
-          const t = i / n;
-          const jx = (Math.random() - 0.5) * 9, jy = (Math.random() - 0.5) * 9;
-          ctx.lineTo(z.x1 + (z.x2 - z.x1) * t + jx + off, z.y1 + (z.y2 - z.y1) * t + jy);
-        }
-        ctx.lineTo(z.x2 + off, z.y2);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  /** Big two-ink title card, e.g. a new biome. */
-  private drawBanner(s: RenderState, inks: Inks): void {
-    const b = s.fx.banner;
-    if (!b) return;
-    const { ctx } = this;
-    const age = b.max - b.life;
-    const a = Math.min(1, age * 4, b.life * 2.5);
-    const slide = Math.max(0, 1 - age * 5) * 30;
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = inks.paper;
-    ctx.globalAlpha = a * 0.85;
-    ctx.fillRect(0, H * 0.38, W, 64);
-    ctx.globalAlpha = a;
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.font = `700 26px ${FONT}`;
-    ctx.fillStyle = inks.i1;
-    ctx.fillText(b.title, W / 2 - slide + 2, H * 0.38 + 26);
-    ctx.fillStyle = inks.i2;
-    ctx.fillText(b.title, W / 2 - slide, H * 0.38 + 24);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.font = `400 10px ${FONT}`;
-    ctx.fillStyle = inks.i1;
-    ctx.fillText(b.sub, W / 2 + slide, H * 0.38 + 48);
-    ctx.restore();
-  }
-
-  // ---- background ----
+  // ---- background and biome effects ----
 
   private background(inks: Inks): HTMLCanvasElement {
     const { view } = this;
@@ -144,7 +98,72 @@ export class Renderer {
     return c;
   }
 
-  // ---- world ----
+  /** The Deep: faint chevrons drifting the way the current pushes. */
+  private drawCurrent(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    const dir = Math.sign(s.sim.current);
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.strokeStyle = inks.i1;
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = 1.5;
+    const shift = ((s.time * 22 * dir) % 36 + 36) % 36;
+    for (let r = 0; r < ROWS; r++) {
+      const y = TOP + r * CELL + CELL / 2;
+      for (let x = -36 + shift + (r % 2) * 18; x < W + 36; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(x - 3 * dir, y - 5);
+        ctx.lineTo(x + 3 * dir, y);
+        ctx.lineTo(x - 3 * dir, y + 5);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Caverns: everything is in shadow except near balls, the launcher and the aim laser.
+   * Drawn at half resolution with a capped number of lights to keep phones at 60fps.
+   */
+  private drawDarkness(s: RenderState, inks: Inks): void {
+    const { ctx, view } = this;
+    const k = 0.5;
+    const w = Math.ceil(view.canvas.width * k), h = Math.ceil(view.canvas.height * k);
+    if (!this.dark || this.dark.width !== w || this.dark.height !== h) {
+      this.dark = document.createElement('canvas');
+      this.dark.width = w;
+      this.dark.height = h;
+    }
+    const g = this.dark.getContext('2d')!;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, w, h);
+    g.setTransform(view.scale * k, 0, 0, view.scale * k, view.offX * k, view.offY * k);
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = inks.i1;
+    g.globalAlpha = 0.84;
+    g.fillRect(0, TOP, W, FLOOR - TOP);
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'destination-out';
+    const light = (x: number, y: number, r: number) => {
+      const grad = g.createRadialGradient(x, y, r * 0.25, x, y, r);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    light(s.sim.launchX, FLOOR, 60);
+    const flying = s.sim.balls.filter((b) => b.state === 'flying');
+    const step = Math.max(1, Math.ceil(flying.length / 24));
+    for (let i = 0; i < flying.length; i += step) light(flying[i].x, flying[i].y, flying[i].fire ? 70 : 48);
+    if (s.trace) for (let i = 0; i < s.trace.points.length; i += 5) light(s.trace.points[i][0], s.trace.points[i][1], 28);
+    for (const r of s.fx.rings.slice(-12)) light(r.x, r.y, r.radius * 2);
+    for (const it of s.sim.items) if (it.kind === 'orb') light(cellCenterX(it.c), cellCenterY(it.r), 16);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(this.dark, 0, 0, view.canvas.width, view.canvas.height);
+    ctx.restore();
+  }
 
   private drawFloor(inks: Inks, sim: Sim): void {
     const { ctx } = this;
@@ -157,7 +176,6 @@ export class Renderer {
     ctx.moveTo(0, FLOOR + 0.5);
     ctx.lineTo(W, FLOOR + 0.5);
     ctx.stroke();
-    // Danger: the row a brick must not cross.
     if (sim.lowestRow >= ROWS - 1) {
       ctx.setLineDash([]);
       ctx.strokeStyle = inks.i2;
@@ -168,50 +186,193 @@ export class Renderer {
     ctx.restore();
   }
 
+  // ---- bricks ----
+
   private drawBricks(s: RenderState, inks: Inks, off: number): void {
-    const { ctx } = this;
     const ref = Math.max(1, s.sim.level * 1.5);
     for (const b of s.sim.bricks) {
-      const fx = s.fx.bricks.get(b.id);
-      const flash = fx?.flash ?? 0;
-      const k = 1 + (fx?.wobble ?? 0) * 0.1;
-      const x = brickX(b.c), y = brickY(b.r) + off;
-      const ratio = Math.min(1, b.hp / ref);
-      const alpha = 0.28 + ratio * 0.67;
-      ctx.save();
-      ctx.translate(x + BRICK / 2, y + BRICK / 2);
-      ctx.scale(k, k);
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = flash > 0.3 ? inks.i2 : inks.i1;
-      ctx.fillRect(-BRICK / 2, -BRICK / 2, BRICK, BRICK);
-      ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = inks.i2;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-BRICK / 2 + 1.8, -BRICK / 2 + 1.2, BRICK - 1.5, BRICK - 1.5);
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = alpha > 0.62 ? inks.paper : inks.i1;
-      const label = String(b.hp);
-      ctx.font = `700 ${label.length > 3 ? 10 : label.length > 2 ? 11 : 13}px ${FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, 0, 1);
-      if (b.burn > 0) this.drawFlames(inks, s.time, b.id);
-      ctx.restore();
+      if (b.kind === 'boss') this.drawBoss(s, inks, b, off);
+      else this.drawBrick(s, inks, b, off, ref);
     }
+  }
+
+  private drawBrick(s: RenderState, inks: Inks, b: Brick, off: number, ref: number): void {
+    const { ctx } = this;
+    const fx = s.fx.bricks.get(b.id);
+    const flash = fx?.flash ?? 0;
+    const k = 1 + (fx?.wobble ?? 0) * 0.1;
+    const size = span(1);
+    const x = brickX(b.c), y = brickY(b.r) + off;
+    const half = size / 2;
+    const hazard = isHazard(b.kind);
+    const steel = b.kind === 'steel';
+    const ratio = steel ? 1 : Math.min(1, b.hp / ref);
+    const alpha = steel ? 0.9 : hazard ? 0.2 + ratio * 0.45 : 0.28 + ratio * 0.67;
+
+    ctx.save();
+    ctx.translate(x + half, y + half);
+    ctx.scale(k, k);
+    ctx.globalCompositeOperation = 'multiply';
+
+    // Body.
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = flash > 0.3 ? inks.i2 : hazard ? inks.i2 : inks.i1;
+    if (hazard) {
+      sawtooth(ctx, half, 5, 2.2);
+      ctx.fill();
+    } else ctx.fillRect(-half, -half, size, size);
+
+    // Outline (hazards: jagged; armored: double; others: offset print).
+    ctx.globalAlpha = 0.95;
+    ctx.lineWidth = 1.5;
+    if (hazard) {
+      ctx.strokeStyle = inks.i1;
+      sawtooth(ctx, half, 5, 2.2);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = inks.i2;
+      ctx.strokeRect(-half + 1.8, -half + 1.2, size - 1.5, size - 1.5);
+      if (b.kind === 'armored') {
+        ctx.strokeStyle = inks.i1;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-half + 4, -half + 4, size - 8, size - 8);
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    const dark = alpha > 0.62;
+    const ink = dark ? inks.paper : inks.i1;
+    const glyph = this.glyph(b.kind, ink, inks);
+    if (b.kind !== 'normal' && b.kind !== 'steel') {
+      // Symbol on top, small HP below.
+      ctx.save();
+      ctx.translate(0, -5);
+      glyph();
+      ctx.restore();
+      if (b.kind !== 'popper') this.hpLabel(b.hp, 0, 9, 9, ink);
+    } else if (steel) {
+      glyph();
+    } else this.hpLabel(b.hp, 0, 1, 13, ink);
+
+    if (b.frozen) this.drawFrost(inks, half);
+    if (b.burn > 0) this.drawFlames(inks, s.time, b.id);
+    ctx.restore();
+  }
+
+  private hpLabel(hp: number, x: number, y: number, max: number, color: string): void {
+    const { ctx } = this;
+    const label = hp >= 10000 ? `${Math.round(hp / 1000)}k` : String(hp);
+    ctx.fillStyle = color;
+    ctx.font = `700 ${label.length > 3 ? max - 3 : label.length > 2 ? max - 2 : max}px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+  }
+
+  /** Small symbols drawn in brick-local space, centred on 0,0, about 12px across. */
+  private glyph(kind: Brick['kind'], ink: string, inks: Inks): () => void {
+    const { ctx } = this;
+    const line = (pts: number[][], close = false) => {
+      ctx.beginPath();
+      pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+      if (close) ctx.closePath();
+    };
+    return () => {
+      ctx.strokeStyle = ink;
+      ctx.fillStyle = ink;
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      switch (kind) {
+        case 'bomb':
+          ctx.beginPath(); ctx.arc(0, 1.5, 4.5, 0, TAU); ctx.fill();
+          line([[2.5, -2.5], [5, -5.5]]); ctx.stroke();
+          ctx.fillStyle = inks.i2; ctx.beginPath(); ctx.arc(5.5, -6, 1.6, 0, TAU); ctx.fill();
+          break;
+        case 'armored':
+          line([[0, -5.5], [5, -3.5], [4, 3], [0, 5.5], [-4, 3], [-5, -3.5]], true); ctx.stroke();
+          break;
+        case 'splitter':
+          ctx.setLineDash([2, 2]); line([[0, -6], [0, 6]]); ctx.stroke(); ctx.setLineDash([]);
+          line([[-5, -2], [-2, 0], [-5, 2]]); ctx.stroke();
+          line([[5, -2], [2, 0], [5, 2]]); ctx.stroke();
+          break;
+        case 'steel':
+          ctx.lineWidth = 2;
+          line([[-6, -6], [6, 6]]); ctx.stroke();
+          line([[6, -6], [-6, 6]]); ctx.stroke();
+          break;
+        case 'popper':
+          star(ctx, 0, 5, 8, 3.2, 8); ctx.fill();
+          break;
+        case 'anchor':
+          line([[0, -5.5], [0, 5]]); ctx.stroke();
+          line([[-3, -3], [3, -3]]); ctx.stroke();
+          ctx.beginPath(); ctx.arc(0, 1, 5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+          break;
+        case 'balloon':
+          ctx.beginPath(); ctx.ellipse(0, -1.5, 3.8, 4.6, 0, 0, TAU); ctx.stroke();
+          line([[0, 3], [-1.5, 5], [1, 6.5]]); ctx.stroke();
+          break;
+        case 'sponge':
+          for (const [px, py, r] of [[-3, -2, 1.6], [2.5, -3, 1.2], [1, 2, 1.8], [-3, 3.5, 1]]) {
+            ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
+          }
+          break;
+        case 'shrinker':
+          line([[-6, -6], [-2, -2]]); ctx.stroke(); line([[-2, -5], [-2, -2], [-5, -2]]); ctx.stroke();
+          line([[6, 6], [2, 2]]); ctx.stroke(); line([[2, 5], [2, 2], [5, 2]]); ctx.stroke();
+          break;
+        case 'spawner':
+          ctx.fillRect(-5, -5, 4, 4); ctx.fillRect(1, 1, 4, 4);
+          line([[3, -5], [3, -1]]); ctx.stroke(); line([[1, -3], [5, -3]]); ctx.stroke();
+          break;
+        case 'sprinter':
+          line([[-4, -5], [0, -1.5], [4, -5]]); ctx.stroke();
+          line([[-4, 0], [0, 3.5], [4, 0]]); ctx.stroke();
+          break;
+        default:
+          break;
+      }
+    };
+  }
+
+  /** Frostline: an icy crust, cracked off by the first hit. */
+  private drawFrost(inks: Inks, half: number): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-half, -half, half * 2, half * 2);
+    ctx.clip();
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = inks.paper;
+    ctx.lineWidth = 1.2;
+    for (let d = -half * 2; d <= half * 2; d += 7) {
+      ctx.beginPath();
+      ctx.moveTo(d - half, half);
+      ctx.lineTo(d + half, -half);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = inks.i2;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 2]);
+    ctx.strokeRect(-half + 1, -half + 1, half * 2 - 2, half * 2 - 2);
+    ctx.restore();
   }
 
   /** Little ink flames licking up a burning brick (drawn in brick-local space). */
   private drawFlames(inks: Inks, time: number, seed: number): void {
     const { ctx } = this;
+    const size = span(1);
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
     ctx.fillStyle = inks.i2;
     for (let i = 0; i < 3; i++) {
       const t = (time * 1.6 + i / 3 + (seed % 7) * 0.13) % 1;
       const x = (i - 1) * 9 + Math.sin(time * 5 + i + seed) * 2;
-      const y = BRICK / 2 - t * BRICK * 0.9;
+      const y = size / 2 - t * size * 0.9;
       ctx.globalAlpha = (1 - t) * 0.8;
       ctx.beginPath();
       ctx.moveTo(x, y - 6 * (1 - t) - 2);
@@ -222,25 +383,154 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawOrbs(s: RenderState, inks: Inks, off: number): void {
+  private drawBoss(s: RenderState, inks: Inks, b: Brick, off: number): void {
     const { ctx } = this;
-    const k = 1 + Math.sin(s.time * 6) * 0.1;
-    for (const o of s.sim.orbs) {
-      ctx.save();
-      ctx.translate(cellCenterX(o.c), cellCenterY(o.r) + off);
-      ctx.scale(k, k);
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.strokeStyle = inks.i2;
-      ctx.lineWidth = 2.5;
+    const fx = s.fx.bricks.get(b.id);
+    const flash = fx?.flash ?? 0;
+    const k = 1 + (fx?.wobble ?? 0) * 0.05;
+    const w = span(b.w), h = span(b.h);
+    const x = brickX(b.c), y = brickY(b.r) + off;
+    const st = b.boss!;
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.scale(k, k);
+    // Body: dense halftone over a solid fill, offset print.
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = flash > 0.3 ? inks.i2 : inks.i1;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = inks.i2;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-w / 2 + 2.5, -h / 2 + 2, w - 2, h - 2);
+    // Teeth along the bottom edge.
+    ctx.fillStyle = inks.paper;
+    ctx.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 5; i++) {
+      const tx = -w / 2 + 8 + i * ((w - 16) / 4);
       ctx.beginPath();
-      ctx.arc(0, 0, 8, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = inks.i1;
-      ctx.fillRect(-1.2, -4.5, 2.4, 9);
-      ctx.fillRect(-4.5, -1.2, 9, 2.4);
+      ctx.moveTo(tx - 3, h / 2 - 12);
+      ctx.lineTo(tx + 3, h / 2 - 12);
+      ctx.lineTo(tx, h / 2 - 6);
+      ctx.fill();
+    }
+    // Eyes that follow the nearest ball (or the launcher).
+    const target = s.sim.balls.find((bb) => bb.state === 'flying') ?? { x: s.sim.launchX, y: FLOOR };
+    for (const ex of [-12, 12]) {
+      const cx = x + w / 2 + ex, cy = y + h / 2 - 10;
+      const a = Math.atan2(target.y - cy, target.x - cx);
+      ctx.fillStyle = inks.paper;
+      ctx.beginPath(); ctx.arc(ex, -10, 6, 0, TAU); ctx.fill();
+      ctx.fillStyle = inks.i2;
+      ctx.beginPath(); ctx.arc(ex + Math.cos(a) * 2.5, -10 + Math.sin(a) * 2.5, 2.8, 0, TAU); ctx.fill();
+    }
+    this.hpLabel(b.hp, 0, 9, 13, inks.paper);
+
+    // Gimmick tells.
+    ctx.globalCompositeOperation = 'multiply';
+    switch (st.id) {
+      case 'glacier': {
+        ctx.fillStyle = inks.i2;
+        const t = 5;
+        const sides: [number, number, number, number][] = [
+          [-w / 2 - t, -h / 2 - t, w + t * 2, t], [w / 2, -h / 2 - t, t, h + t * 2],
+          [-w / 2 - t, h / 2, w + t * 2, t], [-w / 2 - t, -h / 2 - t, t, h + t * 2],
+        ];
+        ctx.fillRect(...sides[st.side]);
+        break;
+      }
+      case 'lantern': {
+        ctx.strokeStyle = inks.i2;
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(s.time * 4);
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.arc(0, 0, w * 0.75, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
+        break;
+      }
+      case 'leviathan': {
+        ctx.fillStyle = inks.i2;
+        const ax = (w / 2 + 6) * st.dir;
+        ctx.beginPath();
+        ctx.moveTo(ax, -6); ctx.lineTo(ax + 7 * st.dir, 0); ctx.lineTo(ax, 6);
+        ctx.fill();
+        break;
+      }
+      case 'anvil': {
+        const need = b.maxHp * 0.2;
+        const prog = Math.min(1, st.turnDamage / need);
+        ctx.fillStyle = inks.i2;
+        ctx.fillRect(-w / 2, h / 2 + 3, w * prog, 3);
+        ctx.strokeStyle = inks.i1;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-w / 2, h / 2 + 3, w, 3);
+        break;
+      }
+      case 'brood': {
+        ctx.fillStyle = inks.i2;
+        for (const [ex, ey] of [[-w / 2 - 4, -8], [w / 2 + 4, 4], [-w / 2 - 4, 10]]) {
+          ctx.beginPath(); ctx.ellipse(ex, ey, 2.5, 3.2, 0, 0, TAU); ctx.fill();
+        }
+        break;
+      }
+    }
+    if (b.burn > 0) this.drawFlames(inks, s.time, b.id);
+    ctx.restore();
+  }
+
+  // ---- items ----
+
+  private drawItems(s: RenderState, inks: Inks, off: number): void {
+    const { ctx } = this;
+    const pulse = 1 + Math.sin(s.time * 6) * 0.1;
+    for (const it of s.sim.items) {
+      ctx.save();
+      ctx.translate(cellCenterX(it.c), cellCenterY(it.r) + off);
+      ctx.globalCompositeOperation = 'multiply';
+      this.drawItem(it, inks, pulse, s.time);
       ctx.restore();
     }
   }
+
+  private drawItem(it: Item, inks: Inks, pulse: number, time: number): void {
+    const { ctx } = this;
+    switch (it.kind) {
+      case 'orb':
+        ctx.scale(pulse, pulse);
+        ctx.strokeStyle = inks.i2;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
+        ctx.fillStyle = inks.i1;
+        ctx.fillRect(-1.2, -4.5, 2.4, 9);
+        ctx.fillRect(-4.5, -1.2, 9, 2.4);
+        break;
+      case 'laserH':
+      case 'laserV': {
+        if (it.kind === 'laserV') ctx.rotate(Math.PI / 2);
+        ctx.globalAlpha = it.used ? 0.35 : 1;
+        ctx.strokeStyle = inks.i2;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 8, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = inks.i1;
+        ctx.beginPath();
+        ctx.moveTo(-6, 0); ctx.lineTo(6, 0);
+        ctx.moveTo(-6, 0); ctx.lineTo(-3, -3); ctx.moveTo(-6, 0); ctx.lineTo(-3, 3);
+        ctx.moveTo(6, 0); ctx.lineTo(3, -3); ctx.moveTo(6, 0); ctx.lineTo(3, 3);
+        ctx.stroke();
+        break;
+      }
+      case 'portal':
+        ctx.rotate(time * 2 * (it.id % 2 ? 1 : -1));
+        for (const [r, ink] of [[9, inks.i2], [6, inks.i1], [3, inks.i2]] as const) {
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 1.5); ctx.stroke();
+        }
+        break;
+    }
+  }
+
+  // ---- shots and balls ----
 
   private drawTrace(t: Trace, inks: Inks): void {
     const { ctx } = this;
@@ -253,20 +543,14 @@ export class Renderer {
       if (dist < 11) continue;
       dist = 0;
       ctx.fillStyle = inks.i2;
-      ctx.beginPath();
-      ctx.arc(x1, y1, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x1, y1, 2, 0, TAU); ctx.fill();
       ctx.fillStyle = inks.i1;
-      ctx.beginPath();
-      ctx.arc(x1 + 1, y1 + 0.7, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x1 + 1, y1 + 0.7, 2, 0, TAU); ctx.fill();
     }
     for (const [x, y] of t.contacts) {
       ctx.strokeStyle = inks.i2;
       ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, BALL_R, 0, TAU); ctx.stroke();
     }
     ctx.restore();
   }
@@ -282,13 +566,9 @@ export class Renderer {
     ctx.translate(x, y);
     if (moving) ctx.rotate(Math.atan2(vy, vx));
     ctx.fillStyle = inks.i1;
-    ctx.beginPath();
-    ctx.ellipse(1.2, 0.8, BALL_R * sx, BALL_R * sy, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(1.2, 0.8, BALL_R * sx, BALL_R * sy, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = inks.i2;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, BALL_R * sx, BALL_R * sy, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, BALL_R * sx, BALL_R * sy, 0, 0, TAU); ctx.fill();
     ctx.restore();
   }
 
@@ -301,52 +581,87 @@ export class Renderer {
       ctx.fillStyle = inks.i2;
       for (let i = 0; i < n; i += 2) {
         ctx.globalAlpha = (i / n) * 0.6;
-        ctx.beginPath();
-        ctx.arc(tr[i * 2], tr[i * 2 + 1], 1.6, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(tr[i * 2], tr[i * 2 + 1], 1.6, 0, TAU); ctx.fill();
       }
     }
     ctx.globalAlpha = 1;
     for (const b of s.sim.balls) {
-      if (b.state === 'flying') {
-        if (b.fire) {
-          ctx.strokeStyle = inks.i2;
-          ctx.lineWidth = 1.5;
-          ctx.globalAlpha = 0.6 + 0.4 * Math.sin(s.time * 30 + b.id);
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, BALL_R * 1.9, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-        }
-        if (b.copy) ctx.globalAlpha = 0.7;
-        this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0, b.fire ? 1.35 : b.copy ? 0.75 : 1);
-        ctx.globalAlpha = 1;
-      }
+      if (b.state === 'held') continue;
+      if (b.state === 'flying') this.drawFlyingBall(s, inks, b);
       else this.ball(b.x, b.y, inks);
     }
     ctx.restore();
   }
 
+  private drawFlyingBall(s: RenderState, inks: Inks, b: Ball): void {
+    const { ctx } = this;
+    const ring = (r: number, w: number, dash?: number[]) => {
+      ctx.strokeStyle = inks.i2;
+      ctx.lineWidth = w;
+      if (dash) ctx.setLineDash(dash);
+      ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+    };
+    if (b.fire) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(s.time * 30 + b.id);
+      ring(BALL_R * 1.9, 1.5);
+      ctx.globalAlpha = 1;
+    }
+    if (b.golden) ring(BALL_R * 1.6, 1.2, [2, 2]);
+    if (b.slow) {
+      ctx.globalAlpha = 0.6;
+      ring(BALL_R * 2.1, 1);
+      ctx.globalAlpha = 1;
+    }
+    if (b.heavy) {
+      ctx.strokeStyle = inks.i1;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y + BALL_R + 2); ctx.lineTo(b.x, b.y + BALL_R + 7); ctx.stroke();
+    }
+    if (b.copy) ctx.globalAlpha = 0.7;
+    const scale = b.fire ? 1.35 : b.copy ? 0.75 : b.shrunk ? 0.65 : 1;
+    this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0, scale);
+    ctx.globalAlpha = 1;
+  }
+
   private drawLauncher(s: RenderState, inks: Inks): void {
     const { ctx } = this;
     const sim = s.sim;
-    const showBall = sim.phase === 'aim' || sim.phase === 'drop' || sim.phase === 'over' ||
-      (sim.phase === 'fire' && sim.ballsInFlight > sim.balls.filter((b) => b.state === 'flying').length);
+    const firing = sim.phase === 'fire' || sim.phase === 'run';
+    const count = firing ? sim.unfired : sim.ballCount;
+    const showBall = !firing || sim.unfired > 0;
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    if (showBall) this.ball(sim.launchX, FLOOR - BALL_R, inks, 0, 0, 0, 1 + s.fx.launcherKick * 0.45);
+    if (showBall && sim.phase !== 'settle') this.ball(sim.launchX, FLOOR - BALL_R, inks, 0, 0, 0, 1 + s.fx.launcherKick * 0.45);
     ctx.restore();
-    let count = sim.ballCount;
-    if (sim.phase === 'fire' || sim.phase === 'run') {
-      count = sim.ballsInFlight - sim.balls.filter((b) => b.state === 'flying').length;
-    }
-    if (count > 0) {
+    if (count > 0 && sim.phase !== 'settle') {
       ctx.fillStyle = inks.i1;
       ctx.font = `700 11px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`×${count}`, Math.max(16, Math.min(W - 16, sim.launchX)), FLOOR + 15);
     }
+  }
+
+  // ---- effects ----
+
+  private drawBeams(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    for (const b of s.fx.beams) {
+      const f = b.life / b.max;
+      const thick = CELL * b.width * (0.4 + 0.6 * f);
+      ctx.globalAlpha = f * 0.8;
+      ctx.fillStyle = inks.i2;
+      if (b.kind === 'laserH') ctx.fillRect(0, b.y - thick / 2, W, thick);
+      else ctx.fillRect(b.x - thick / 2, TOP, thick, FLOOR - TOP);
+      ctx.fillStyle = inks.i1;
+      ctx.globalAlpha = f;
+      if (b.kind === 'laserH') ctx.fillRect(0, b.y - 1, W, 2);
+      else ctx.fillRect(b.x - 1, TOP, 2, FLOOR - TOP);
+    }
+    ctx.restore();
   }
 
   private drawParticles(s: RenderState, inks: Inks): void {
@@ -363,9 +678,7 @@ export class Renderer {
         ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
         ctx.restore();
       } else {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
       }
     }
     ctx.restore();
@@ -380,9 +693,33 @@ export class Renderer {
       ctx.globalAlpha = (1 - f) * 0.9;
       ctx.strokeStyle = r.ink ? inks.i2 : inks.i1;
       ctx.lineWidth = 3 * (1 - f) + 0.5;
-      ctx.beginPath();
-      ctx.arc(r.x, r.y, r.radius * (0.3 + f * 0.9), 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.radius * (0.3 + f * 0.9), 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** Jagged lightning between two points, re-randomised every frame so it crackles. */
+  private drawZaps(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.lineJoin = 'round';
+    for (const z of s.fx.zaps) {
+      const f = z.life / z.max;
+      for (const [ink, off, w] of [[inks.i1, 1, 2.5], [inks.i2, 0, 1.6]] as const) {
+        ctx.strokeStyle = ink;
+        ctx.globalAlpha = f;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(z.x1 + off, z.y1);
+        const n = 6;
+        for (let i = 1; i < n; i++) {
+          const t = i / n;
+          ctx.lineTo(z.x1 + (z.x2 - z.x1) * t + (Math.random() - 0.5) * 9 + off, z.y1 + (z.y2 - z.y1) * t + (Math.random() - 0.5) * 9);
+        }
+        ctx.lineTo(z.x2 + off, z.y2);
+        ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -403,10 +740,86 @@ export class Renderer {
       const r = 2.4 * k * k * d;
       if (r < 0.3) continue;
       for (let x = 3; x < W; x += 6) {
-        ctx.beginPath();
-        ctx.arc(x + ((y / 6) % 2) * 3, y, r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(x + ((y / 6) % 2) * 3, y, r, 0, TAU); ctx.fill();
       }
+    }
+    ctx.restore();
+  }
+
+  private drawTexts(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    for (const t of s.fx.texts) {
+      if (!t.big && !s.numbers && t.number) continue;
+      const f = t.life / t.max;
+      const k = t.big ? 1 + Math.max(0, f - 0.72) * 2.6 : 1;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, f * 2.2);
+      ctx.translate(t.x, t.y);
+      ctx.scale(k, k);
+      ctx.font = `700 ${t.big ? 16 : 10}px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = inks.paper;
+      ctx.strokeText(t.text, 0, 0);
+      ctx.fillStyle = t.alt ? inks.i2 : inks.i1;
+      ctx.fillText(t.text, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  private drawHitboxes(s: RenderState): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,0,0,.7)';
+    ctx.lineWidth = 0.5;
+    for (const b of s.sim.bricks) ctx.strokeRect(brickX(b.c), brickY(b.r), span(b.w), span(b.h));
+    for (const b of s.sim.balls) {
+      ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, TAU); ctx.stroke();
+    }
+    ctx.strokeRect(0, TOP, W, FLOOR - TOP);
+    ctx.restore();
+  }
+
+  // ---- HUD, combo, banners ----
+
+  private drawHud(s: RenderState, inks: Inks): void {
+    const { ctx } = this;
+    const sim = s.sim;
+    ctx.fillStyle = inks.i1;
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 11px ${FONT}`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`DEPTH ${sim.level}`, 34, 13);
+    ctx.font = `400 10px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`BEST ${Math.max(s.best, sim.level)}`, W / 2 + 20, 13);
+    if (sim.shields > 0) {
+      ctx.textAlign = 'right';
+      ctx.font = `700 10px ${FONT}`;
+      ctx.fillStyle = inks.i2;
+      ctx.fillText(`◆${sim.shields}`, W - 44, 13);
+    }
+    const boss = sim.boss;
+    ctx.textAlign = 'left';
+    ctx.font = `700 8px ${FONT}`;
+    const label = boss ? bossFor(sim.biome).name.toUpperCase() : inks.name.toUpperCase();
+    ctx.fillStyle = boss ? inks.i2 : inks.i1;
+    ctx.fillText(label, 10, 27);
+    const x0 = 14 + ctx.measureText(label).width, x1 = W - 10;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = inks.i1;
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(x0, boss ? 25 : 26, x1 - x0, boss ? 4 : 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = inks.i2;
+    if (boss) ctx.fillRect(x0, 25, (x1 - x0) * Math.max(0, boss.hp / boss.maxHp), 4);
+    else {
+      ctx.fillRect(x0, 26, (x1 - x0) * sim.biomeProgress, 2);
+      ctx.fillStyle = inks.i1;
+      ctx.fillRect(x0 + (x1 - x0) * 0.5 - 0.5, 24, 1, 6);
     }
     ctx.restore();
   }
@@ -432,80 +845,75 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawTexts(s: RenderState, inks: Inks): void {
+  /** Big two-ink title card (a new biome, a boss) with a wrapped subtitle. */
+  private drawBanner(s: RenderState, inks: Inks): void {
+    const b = s.fx.banner;
+    if (!b) return;
     const { ctx } = this;
-    for (const t of s.fx.texts) {
-      const f = t.life / t.max;
-      const k = t.big ? 1 + Math.max(0, f - 0.72) * 2.6 : 1;
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, f * 2.2);
-      ctx.translate(t.x, t.y);
-      ctx.scale(k, k);
-      ctx.font = `700 ${t.big ? 16 : 10}px ${FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = inks.paper;
-      ctx.strokeText(t.text, 0, 0);
-      ctx.fillStyle = t.alt ? inks.i2 : inks.i1;
-      ctx.fillText(t.text, 0, 0);
-      ctx.restore();
-    }
-  }
-
-  private drawHitboxes(s: RenderState): void {
-    const { ctx } = this;
+    const age = b.max - b.life;
+    const a = Math.min(1, age * 4, b.life * 2.5);
+    const slide = Math.max(0, 1 - age * 5) * 30;
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,0,0,.7)';
-    ctx.lineWidth = 0.5;
-    for (const b of s.sim.bricks) ctx.strokeRect(brickX(b.c), brickY(b.r), BRICK, BRICK);
-    for (const b of s.sim.balls) {
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.strokeRect(0, TOP, W, FLOOR - TOP);
-    ctx.restore();
-  }
-
-  // ---- HUD ----
-
-  private drawHud(s: RenderState, inks: Inks): void {
-    const { ctx } = this;
-    ctx.fillStyle = inks.i1;
-    ctx.textBaseline = 'middle';
-    ctx.font = `700 11px ${FONT}`;
-    ctx.textAlign = 'left';
-    ctx.fillText(`DEPTH ${s.sim.level}`, 10, 13);
     ctx.font = `400 10px ${FONT}`;
+    const lines = wrap(ctx, b.sub, W - 32);
+    const top = H * 0.36;
+    const height = 50 + lines.length * 13;
+    ctx.globalAlpha = a * 0.88;
+    ctx.fillStyle = inks.paper;
+    ctx.fillRect(0, top, W, height);
+    ctx.globalAlpha = a;
     ctx.textAlign = 'center';
-    ctx.fillText(`BEST ${Math.max(s.best, s.sim.level)}`, W / 2, 13);
-    if (s.sim.shields > 0) {
-      ctx.textAlign = 'right';
-      ctx.font = `700 10px ${FONT}`;
-      ctx.fillStyle = inks.i2;
-      ctx.fillText(`◆${s.sim.shields}`, W - 44, 13);
-    }
-    // Biome name and progress through it.
-    ctx.fillStyle = inks.i1;
-    ctx.textAlign = 'left';
-    ctx.font = `700 8px ${FONT}`;
-    const name = inks.name.toUpperCase();
-    ctx.fillText(name, 10, 27);
-    const x0 = 14 + ctx.measureText(name).width, x1 = W - 10;
-    ctx.save();
+    ctx.textBaseline = 'middle';
     ctx.globalCompositeOperation = 'multiply';
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(x0, 26, x1 - x0, 2);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = inks.i2;
-    ctx.fillRect(x0, 26, (x1 - x0) * s.sim.biomeProgress, 2);
-    // Tick marking the halfway pick.
+    ctx.font = `700 ${b.title.length > 12 ? 20 : 26}px ${FONT}`;
     ctx.fillStyle = inks.i1;
-    ctx.fillRect(x0 + (x1 - x0) * 0.5 - 0.5, 24, 1, 6);
+    ctx.fillText(b.title, W / 2 - slide + 2, top + 26);
+    ctx.fillStyle = inks.i2;
+    ctx.fillText(b.title, W / 2 - slide, top + 24);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.font = `400 10px ${FONT}`;
+    ctx.fillStyle = inks.i1;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2 + slide, top + 48 + i * 13));
     ctx.restore();
   }
+}
+
+/** A square outline with a sawtooth edge: the shared shape language for every hazard brick. */
+function sawtooth(ctx: CanvasRenderingContext2D, half: number, teeth: number, depth: number): void {
+  const step = (half * 2) / teeth;
+  ctx.beginPath();
+  ctx.moveTo(-half, -half);
+  for (let i = 0; i < teeth; i++) { ctx.lineTo(-half + step * (i + 0.5), -half + depth); ctx.lineTo(-half + step * (i + 1), -half); }
+  for (let i = 0; i < teeth; i++) { ctx.lineTo(half - depth, -half + step * (i + 0.5)); ctx.lineTo(half, -half + step * (i + 1)); }
+  for (let i = 0; i < teeth; i++) { ctx.lineTo(half - step * (i + 0.5), half - depth); ctx.lineTo(half - step * (i + 1), half); }
+  for (let i = 0; i < teeth; i++) { ctx.lineTo(-half + depth, half - step * (i + 0.5)); ctx.lineTo(-half, half - step * (i + 1)); }
+  ctx.closePath();
+}
+
+function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, ro: number, ri: number, n: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < n * 2; i++) {
+    const q = i % 2 ? ri : ro;
+    const a = (i * Math.PI) / n - Math.PI / 2;
+    ctx.lineTo(cx + Math.cos(a) * q, cy - 5 + Math.sin(a) * q);
+  }
+  ctx.closePath();
+}
+
+function wrap(ctx: CanvasRenderingContext2D, text: string, width: number): string[] {
+  if (!text) return [];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let line = '';
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > width && line) {
+      lines.push(line);
+      line = w;
+    } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 function halftone(
@@ -519,7 +927,7 @@ function halftone(
       const r = maxDot * (1 - d * d);
       if (r < 0.3) continue;
       g.beginPath();
-      g.arc(x, y, r, 0, Math.PI * 2);
+      g.arc(x, y, r, 0, TAU);
       g.fill();
     }
   }

@@ -1,5 +1,5 @@
 import { BALL_R, BALL_SPEED, FLOOR, STEP } from './constants';
-import { bounce, stepBody } from './physics';
+import { bounce, stepBody, NO_ACCEL, type Accel } from './physics';
 import type { BrickGrid } from './types';
 
 export interface Trace {
@@ -11,16 +11,19 @@ export interface Trace {
 
 /**
  * Predict a shot's path without touching the world, up to `maxContacts` bounces.
- * Uses the exact same physics as real balls, so the laser never lies.
+ * Uses the exact same physics as real balls (including currents), so the laser never lies.
+ * `maxContacts` of 0 or less draws only a short stub.
  */
 export function traceShot(
-  grid: BrickGrid, x: number, angle: number, maxContacts = 1, sampleEvery = 5, maxSteps = 4000,
+  grid: BrickGrid, x: number, angle: number, maxContacts = 1, accel: Accel = NO_ACCEL,
+  sampleEvery = 5, maxSteps = 4000,
 ): Trace {
   const b = { x, y: FLOOR - BALL_R, vx: Math.cos(angle) * BALL_SPEED, vy: -Math.sin(angle) * BALL_SPEED };
   const points: [number, number][] = [[b.x, b.y]];
   const contacts: [number, number][] = [];
-  for (let i = 1; i < maxSteps; i++) {
-    const res = stepBody(b, STEP, grid);
+  const steps = maxContacts <= 0 ? 40 : maxSteps;
+  for (let i = 1; i < steps; i++) {
+    const res = stepBody(b, STEP, grid, accel);
     if (i % sampleEvery === 0) points.push([b.x, b.y]);
     if (res?.kind === 'floor') break;
     if (res?.kind === 'brick') bounce(b, res.contact);

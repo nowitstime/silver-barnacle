@@ -19,6 +19,7 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     <button type="button" data-a="hit">Hitboxes</button>
     <button type="button" data-a="seed">New seed</button>
     <button type="button" data-a="pick">Skip to pick</button>
+    <select data-a="place" aria-label="Place brick"><option value="">Place brick…</option>${['armored','bomb','splitter','steel','popper','anchor','balloon','sponge','shrinker','spawner','sprinter'].map((k) => `<option>${k}</option>`).join('')}</select>
     <select data-a="grant" aria-label="Grant upgrade"><option value="">Grant upgrade…</option>${hooks.upgrades.map((id) => `<option>${id}</option>`).join('')}</select>`;
   root.appendChild(el);
   const stats = el.querySelector<HTMLElement>('.debug-stats')!;
@@ -32,7 +33,13 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     if (a === 'seed') hooks.restart();
     if (a === 'pick') hooks.sim().debugSkipToPick();
   });
-  el.querySelector('select')!.addEventListener('change', (e) => {
+  el.querySelector('select[data-a=place]')!.addEventListener('change', (e) => {
+    const sel = e.target as HTMLSelectElement;
+    const sim = hooks.sim();
+    if (sel.value && sim.phase === 'aim') sim.debugPlace(sel.value as never, Math.floor(Math.random() * 7), 1 + Math.floor(Math.random() * 3), 8);
+    sel.value = '';
+  });
+  el.querySelector('select[data-a=grant]')!.addEventListener('change', (e) => {
     const sel = e.target as HTMLSelectElement;
     if (sel.value) hooks.sim().debugGrant(sel.value);
     sel.value = '';

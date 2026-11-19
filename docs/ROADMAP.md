@@ -53,28 +53,31 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - 🟨 **Done when:** a 3-biome run with meaningful build choices
 
 ## M4: Menus and shell *(make it feel like a real game)*
-- ⬜ Title screen with animated background
-- ⬜ Class select (Striker, Juggler, Ricochet) with signature perks
-- ⬜ HUD polish, pause menu with current build
-- ⬜ Run summary and local high scores
-- ⬜ Settings (volume, haptics, shake, damage numbers, reset data)
-- ⬜ App icon and splash in the chosen art style; "update available" toast
+- ✅ Title screen with a self-playing demo behind it, Continue / New run / Settings, top 5 runs
+- ✅ Class select with signature perks (all 5 classes, see M6)
+- ✅ Pause menu (also on leaving the app) with your current build and an Abandon option
+- ✅ Run summary: depth, biome reached, bricks, damage, best combo, bosses, upgrades taken, rank; top-10 local scores
+- ✅ Settings: sound, vibration, screen shake, damage numbers, reset all data (with a confirm tap)
+- ✅ First-run aiming hint; "update available" toast
+- ⬜ Final app icon and splash (waits for a name, M9)
 
 ## M5: Bricks, hazards and biome gimmicks *(depth and variety)*
-- ⬜ Helpful bricks: Bomb, Line Laser, Armored, Splitter, Steel, Portals
-- ⬜ Hazards: Popper, Anchor, Balloon, Sponge, Shrinker, Spawner, Sprinter
-- ⬜ All 5 biomes with their gimmicks (Darkness, Current, Ice, Heat)
-- ⬜ Biome lengths follow the curve (12 / 16 / 20 / 24 / 28 rows)
-- ⬜ Mini-boss at the end of each biome (5 bosses)
-- ⬜ Hazard visuals don't rely on color alone
+- ✅ Helpful bricks: Bomb, Armored, Splitter, Steel; items: Line Lasers (row or column) and Portal pairs
+- ✅ Hazards: Popper, Anchor, Balloon, Sponge, Shrinker, Spawner, Sprinter
+- ✅ Bricks are introduced gradually by depth (armored and bombs from depth 4 … spawners and sprinters from 40)
+- ✅ Biome gimmicks: Caverns darkness, The Deep's flipping current (the laser accounts for it), Frostline ice (balls speed up, frozen bricks), Forge heat (untouched bricks regrow, more bombs)
+- ✅ Biome lengths follow the curve (12 / 16 / 20 / 24 / 28 rows)
+- ✅ A 2×2 mini-boss at the end of each biome: Brood Mother, Lantern, Leviathan, Glacier, Anvil. Beating it gives the big pick
+- ✅ Hazards share a jagged sawtooth outline and every special brick has its own symbol, so nothing relies on color alone
 
 ## M6: The upgrade expansion *(the replayability engine)*
-- ⬜ 35+ upgrades across all 4 rarities, including legendaries
-- ⬜ Stacking upgrades, depth-weighted rarity odds
-- ⬜ Mid-biome common pick (or loot bricks, whichever we choose)
-- ⬜ Classes 4 and 5 (Bomber, Gambler)
-- ⬜ Maybe: cursed upgrades, named synergy combos
-- ⬜ **Headless balance bot**: simulate many runs, chart where they die
+- ✅ 39 upgrades: 10 common, 14 rare, 7 epic, 4 legendary, plus 3 cursed
+- ✅ Stacking upgrades, depth-weighted rarity odds
+- ✅ Mid-biome pick (from M3)
+- ✅ Classes 4 and 5: Bomber (Payload) and Gambler (Wildcard: 4 cards, one cursed)
+- ✅ Cursed upgrades (Gambler only). Synergies come from upgrades combining, no named combos yet
+- ✅ **Headless balance bot** (`npm run balance`): plays full runs, writes [balance.md](./balance.md)
+- ✅ First tuning pass: brick HP now grows faster than depth and +20% per biome; boss HP follows the same curve
 
 ## M7: Final boss, win and endless
 - ⬜ Multi-phase final boss in The Core
@@ -106,8 +109,7 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| Loot bricks as an extra pick source? (mid-biome picks are in) | M6 |
-| Should brick HP also scale with ball count? | M6 |
+| Loot bricks as an extra pick source? (mid-biome picks are in) | M9 |
+| Should brick HP also scale with ball count? (not needed so far, per the bot) | M9 |
 | Final boss phases | M7 |
-| Cursed upgrades: yes or no? | M6 |
 | Game name | M9 |

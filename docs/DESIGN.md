@@ -7,6 +7,11 @@ Clear the final boss to win, then keep going in optional endless mode.
 
 Status: **draft**. Anything marked ❓ is still open.
 
+> **As built:** the exact lists live in code and win over this doc when they differ:
+> bricks in `src/content/bricks.ts`, bosses in `src/content/bosses.ts`, classes in `src/content/classes.ts`,
+> upgrades in `src/content/upgrades.ts`. Line Lasers and Portals ended up as non-solid *items* (like orbs)
+> rather than bricks. Upgrades change a shared set of stats instead of using an event bus.
+
 ---
 
 ## 1. Decisions so far
@@ -22,7 +27,7 @@ Status: **draft**. Anything marked ❓ is still open.
 | Structure | 5 biomes that get longer as you go, a mini-boss at the end of each, then the final boss, then optional endless |
 | Upgrades | Pick 1 of 3 cards, with rarity tiers. Shared pool. Synergies come out of how upgrades combine |
 | Active abilities | None. All passive (the aim laser can be upgraded) |
-| Classes | All unlocked while testing. Different starting stats plus one unique signature perk |
+| Classes | 5 classes, all unlocked while testing: Striker, Juggler, Ricochet, Bomber, Gambler. Different starting balls/stats plus one signature perk |
 | Meta progression | Unlocks only (no permanent stat boosts) |
 | Saving | Autosave every turn and resume after closing. High scores, unlocks and settings stored in localStorage |
 | Art style | **Risograph**: paper stock plus two inks per biome, multiply blending, halftone, grain |
@@ -183,7 +188,7 @@ Explicit named combos can be added later as a bonus.
 - **Fractal**: split balls can split again (Mitosis plus Prism goes wild)
 - **Second Wind**: once per run, when you would lose, clear the bottom 3 rows instead
 
-**Cursed (❓ maybe)**: strong upgrades with a downside, offered now and then. Example: "+2 balls, but Poppers appear twice as often."
+**Cursed** ✅: strong upgrades with a downside. Only the Gambler sees them (one per pick): Blood Pact, Overgrowth, Tunnel Vision.
 
 ---
 

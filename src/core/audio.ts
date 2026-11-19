@@ -157,6 +157,32 @@ export class Sfx {
     const notes = big ? [0, 4, 7, 12, 16] : [0, 4, 7];
     notes.forEach((n, i) => this.tone({ freq: this.st(523, n), dur: 0.14, vol: 0.06, wave: 'square', delay: i * 0.08 }));
   }
+  immune(): void { this.tone({ freq: 300, to: 240, dur: 0.05, vol: 0.04, wave: 'square' }); }
+  explode(): void {
+    this.burst(0.35, 0.22, 1800);
+    this.tone({ freq: 120, to: 40, dur: 0.3, vol: 0.16, wave: 'sine' });
+  }
+  laser(): void {
+    this.tone({ freq: 2200, to: 400, dur: 0.18, vol: 0.06, wave: 'sawtooth' });
+    this.tone({ freq: 1100, to: 200, dur: 0.18, vol: 0.05, wave: 'square' });
+  }
+  portal(): void { this.tone({ freq: 400, to: 1600, dur: 0.12, vol: 0.05, wave: 'sine' }); }
+  hazard(kind: string): void {
+    if (kind === 'popper') { this.burst(0.12, 0.2, 5000); this.tone({ freq: 900, to: 200, dur: 0.1, vol: 0.08, wave: 'square' }); }
+    else if (kind === 'anchor') this.tone({ freq: 220, to: 70, dur: 0.25, vol: 0.1, wave: 'triangle' });
+    else if (kind === 'balloon') this.tone({ freq: 300, to: 900, dur: 0.3, vol: 0.06, wave: 'sine' });
+    else if (kind === 'sponge') this.tone({ freq: 500, to: 150, dur: 0.15, vol: 0.08, wave: 'sine' });
+    else this.tone({ freq: 800, to: 300, dur: 0.15, vol: 0.06, wave: 'triangle' });
+  }
+  bossRoar(): void {
+    this.tone({ freq: 90, to: 55, dur: 0.9, vol: 0.18, wave: 'sawtooth' });
+    this.tone({ freq: 92, to: 50, dur: 0.9, vol: 0.12, wave: 'square', delay: 0.05 });
+    this.burst(0.8, 0.12, 900);
+  }
+  bossDown(): void {
+    this.burst(0.7, 0.25, 2500);
+    [0, 4, 7, 12, 16, 19, 24].forEach((n, i) => this.tone({ freq: this.st(392, n), dur: 0.16, vol: 0.06, wave: 'square', delay: 0.15 + i * 0.07 }));
+  }
   click(): void { this.tone({ freq: 900, dur: 0.03, vol: 0.04, wave: 'square' }); }
 }
 
