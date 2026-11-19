@@ -342,3 +342,27 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .win-inner .totals { grid-template-columns: repeat(4, 1fr); margin: 0; }
 .credits { border-top: 2px dashed var(--i1); padding-top: 12px; font-size: 12px; line-height: 1.5; }
 .credits p { margin: 4px 0; }
+
+.class-card.locked { opacity: 0.55; border-style: dashed; cursor: not-allowed; }
+.class-card.locked .cballs { display: none; }
+.earned { text-align: left; border-top: 2px dashed var(--i2); padding-top: 10px; }
+.earned p { margin: 4px 0; font-size: 12px; line-height: 1.45; }
+.unlock { display: inline-block; color: var(--i2); font-weight: 700; font-size: 11px; }
+.coll-inner { text-align: left; }
+.coll-inner h2 { text-align: center; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.tab { font-size: 12px; font-weight: 700; padding: 6px 10px; background: var(--paper); color: var(--i1); border: 2px solid var(--i1); }
+.tab[aria-selected="true"] { background: var(--i1); color: var(--paper); box-shadow: 2px 2px 0 var(--i2); }
+.coll { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.coll li { display: grid; gap: 2px; padding: 6px 0 6px 10px; border-left: 3px solid var(--i1); font-size: 12px; line-height: 1.4; }
+.coll li b { font-size: 13px; }
+.coll li small { font-weight: 400; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.08em; font-size: 9px; margin-left: 4px; }
+.coll li.todo { opacity: 0.55; border-left-style: dashed; }
+.coll li[data-rarity="epic"], .coll li[data-rarity="legendary"], .coll li[data-rarity="cursed"] { border-left-color: var(--i2); }
+.skins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.skin { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; background: var(--paper); color: var(--i1); border: 2px solid var(--i1); font-size: 12px; }
+.skin canvas { width: 48px; height: 48px; }
+.skin small { font-size: 9px; opacity: 0.8; line-height: 1.3; }
+.skin[aria-pressed="true"] { box-shadow: 3px 3px 0 var(--i2); outline: 2px solid var(--i1); outline-offset: 2px; }
+.skin[disabled] { opacity: 0.5; border-style: dashed; cursor: not-allowed; }
+.stats-grid { grid-template-columns: repeat(3, 1fr) !important; text-align: center; }

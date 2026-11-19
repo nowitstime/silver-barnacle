@@ -8,6 +8,8 @@ import { Loop } from './core/loop';
 import { addScore, bestDepth, endlessBest, loadScores } from './core/scores';
 import { loadSettings, saveSettings, type Settings } from './core/settings';
 import { load, save } from './core/storage';
+import { ProfileStore } from './core/profile';
+import { ACHIEVEMENTS, type RunFacts } from './content/achievements';
 import type { ClassId } from './content/classes';
 import { UPGRADES } from './content/upgrades';
 import { Fx } from './render/fx';
@@ -39,6 +41,7 @@ const fx = new Fx();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let settings: Settings = loadSettings();
+const profile = new ProfileStore();
 const sfx = new Sfx();
 const haptics = new Haptics();
 applySettings();
@@ -83,7 +86,8 @@ const loop = new Loop(
     trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.accel) : null;
     if (mode === 'run') autosave();
     const r0 = performance.now();
-    renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers });
+    renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers, skin: profile.skin });
+    if (mode === 'run' && !loop.paused) track(realDt);
     perf.render = performance.now() - r0;
     if (debug) {
       perf.frames.push({ dt: realDt * 1000, game: gameDt * 1000, sim: perf.sim, render: perf.render, balls: sim.balls.length,
@@ -135,13 +139,19 @@ const menus = new Menus(uiRoot, {
       for (const k of Object.keys(localStorage)) if (k.startsWith('bricks:')) localStorage.removeItem(k);
     } catch { /* ignore */ }
     settings = loadSettings();
+    profile.reset();
     applySettings();
     best = 0;
     toast('All data erased.', undefined, 2500);
     showTitle();
   },
+  onSkin: (id) => {
+    profile.p.skin = id;
+    profile.save();
+    fx.trailLen = profile.skin === 'comet' ? 20 : 9;
+  },
   click: () => sfx.click(),
-}, settings);
+}, settings, profile);
 
 new AimInput(view, canvas, {
   canAim: () => mode === 'run' && sim.phase === 'aim' && !pick.open && !menus.open,
@@ -204,8 +214,9 @@ function demoStep(dt: number, events: SimEvent[]): void {
 
 function startRun(classId: ClassId): void {
   const seed = Number(params.get('seed')) || newSeed();
+  if (!profile.classUnlocked(classId)) classId = 'striker';
   save('class', classId);
-  sim = new Sim(seed, { classId });
+  sim = new Sim(seed, { classId, locked: profile.lockedUpgrades() });
   demoRunning = false;
   beginRun();
   fx.showBanner(inksFor(0).name.toUpperCase(), 'Depth 1 · break bricks, grab orbs, don’t let them reach the bottom', 2.4);
@@ -226,6 +237,7 @@ function continueRun(): void {
 
 function beginRun(): void {
   mode = 'run';
+  resetTracking();
   fx.reset();
   menus.hide();
   pick.hide();
@@ -271,6 +283,8 @@ function showPick(): void {
   pick.show(
     { kind: sim.offer.kind, ids: sim.offer.ids, owned: sim.upgrades, next: nextBiome },
     (i) => {
+      const id = sim.offer?.ids[i];
+      if (id) profile.seeUpgrade(id);
       sim.choose(i);
       sfx.orb();
       haptics.buzz(20);
@@ -300,6 +314,11 @@ function summaryView(rank: number) {
 /** Record the run's score and show the summary (after losing, or ending a won run). */
 function finishRun(delay = 0): void {
   save(SAVE_KEY, null);
+  const st = profile.p.stats;
+  st.runs++;
+  st.deepest = Math.max(st.deepest, sim.level);
+  achievementsCheck();
+  profile.save();
   const depth = sim.level;
   const rank = addScore({
     depth, classId: sim.classId, biome: sim.biome, kills: sim.totals.kills, bosses: sim.totals.bosses,
@@ -307,7 +326,7 @@ function finishRun(delay = 0): void {
   });
   best = Math.max(best, depth);
   save('best', best);
-  const summary = summaryView(rank);
+  const summary = { ...summaryView(rank), earned: [...runEarned] };
   setTimeout(() => {
     hud.show(false);
     menus.showSummary(summary);
@@ -338,6 +357,7 @@ function feedback(events: SimEvent[]): void {
           } else if (calm) loop.hold(0.025);
         } else if (e.source === 'ball') sfx.hit(volleyHits);
         if (e.crit) {
+          profile.p.stats.crits++;
           sfx.crit();
           if (calm) loop.hold(0.04);
           haptics.buzz(14);
@@ -355,10 +375,16 @@ function feedback(events: SimEvent[]): void {
         break;
       case 'laser': sfx.laser(); haptics.buzz(15); break;
       case 'portal': sfx.portal(); break;
-      case 'hazard': sfx.hazard(e.kind); haptics.buzz(20); break;
+      case 'hazard':
+        if (e.kind === 'popper' && !sim.stats.hazardProof) profile.p.stats.pops++;
+        sfx.hazard(e.kind);
+        haptics.buzz(20);
+        break;
       case 'orb': sfx.orb(); haptics.buzz(15); break;
       case 'bounty': sfx.orb(); break;
       case 'drop':
+        noticeBricks();
+        achievementsCheck();
         sfx.drop();
         if (sim.lowestRow >= ROWS - 2) {
           sfx.heartbeat();
@@ -371,6 +397,7 @@ function feedback(events: SimEvent[]): void {
         haptics.buzz([60, 40, 60, 40, 120], 0);
         break;
       case 'bossDown':
+        runFacts.bossesBeaten.push(e.name);
         sfx.bossDown();
         loop.hold(0.12, 0);
         haptics.buzz([80, 40, 160], 0);
@@ -384,6 +411,11 @@ function feedback(events: SimEvent[]): void {
         haptics.buzz([50, 30, 50], 0);
         break;
       case 'win':
+        runFacts.bossesBeaten.push('The Core');
+        profile.p.stats.wins++;
+        if (!profile.p.stats.classWins.includes(sim.classId)) profile.p.stats.classWins.push(sim.classId);
+        runFacts.won = true;
+        achievementsCheck();
         sfx.bossDown();
         sfx.fanfare(true);
         fx.showBanner('THE CORE IS BROKEN', 'You win', 3);
@@ -407,6 +439,67 @@ function feedback(events: SimEvent[]): void {
     }
   }
 }
+
+// ---- lifetime stats and achievements ----
+
+let runFacts: RunFacts = newFacts();
+let runEarned: string[] = [];
+let lastTotals = { kills: 0, damage: 0, bosses: 0 };
+let saveTimer = 0;
+
+function newFacts(): RunFacts {
+  return { classId: sim.classId, depth: 1, bossesBeaten: [], won: sim.won, bestCombo: 0, maxBalls: 0, upgrades: {} };
+}
+
+function resetTracking(): void {
+  runFacts = newFacts();
+  runEarned = [];
+  lastTotals = { kills: sim.totals.kills, damage: sim.totals.damage, bosses: sim.totals.bosses };
+  fx.trailLen = profile.skin === 'comet' ? 20 : 9;
+}
+
+/** Fold this frame's progress into lifetime stats. */
+function track(dt: number): void {
+  const st = profile.p.stats;
+  const t = sim.totals;
+  st.kills += t.kills - lastTotals.kills;
+  st.damage += t.damage - lastTotals.damage;
+  st.bosses += t.bosses - lastTotals.bosses;
+  lastTotals = { kills: t.kills, damage: t.damage, bosses: t.bosses };
+  st.time += dt;
+  st.bestCombo = Math.max(st.bestCombo, t.bestCombo);
+  st.maxBalls = Math.max(st.maxBalls, sim.ballCount);
+  st.deepest = Math.max(st.deepest, sim.level);
+  runFacts.depth = sim.level;
+  runFacts.bestCombo = t.bestCombo;
+  runFacts.maxBalls = Math.max(runFacts.maxBalls, sim.ballCount);
+  runFacts.upgrades = sim.upgrades;
+  saveTimer += dt;
+  if (saveTimer > 5) {
+    saveTimer = 0;
+    profile.save();
+  }
+}
+
+function achievementsCheck(): void {
+  for (const id of profile.check(runFacts)) {
+    runEarned.push(id);
+    const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+    toast(`★ ${a.name}`, undefined, 2600);
+    sfx.fanfare(false);
+  }
+}
+
+/** Note new brick kinds and bosses on the board (for the collection, and first-time tips). */
+function noticeBricks(): void {
+  for (const b of sim.bricks) {
+    const id = b.boss ? b.boss.id : b.kind;
+    if (id !== 'normal' && profile.seeBrick(id)) onFirstSight(id);
+  }
+}
+
+/** Hook for first-time tips (M9). */
+function onFirstSight(_id: string): void {}
 
 /** Briefly run the game in slow motion (big finishes). */
 let slowUntil = 0;
@@ -450,6 +543,7 @@ function adaptQuality(dt: number): void {
 }
 
 function applySettings(): void {
+  profile.unlockAll = settings.unlockAll;
   sfx.enabled = settings.sound;
   haptics.enabled = settings.haptics;
   fx.enabledShake = settings.shake && !reducedMotion;

@@ -26,6 +26,8 @@ export interface RenderState {
   showHitboxes: boolean;
   /** Show small damage numbers. */
   numbers: boolean;
+  /** Ball skin id. */
+  skin: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export class Renderer {
 
   draw(s: RenderState): void {
     const { ctx, view } = this;
+    this.skin = s.skin;
     const inks = this.inks(s.sim);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
@@ -600,6 +603,8 @@ export class Renderer {
     ctx.restore();
   }
 
+  private skin = 'ink';
+
   /** A ball printed in two inks, slightly out of register. Stretches along its motion and squashes on impact. */
   private ball(x: number, y: number, inks: Inks, vx = 0, vy = 0, squash = 0, scale = 1): void {
     const { ctx } = this;
@@ -607,13 +612,17 @@ export class Renderer {
     const stretch = moving ? 1.1 : 1;
     const sx = scale * stretch * (1 - squash * 0.35);
     const sy = (scale / stretch) * (1 + squash * 0.3);
+    const hollow = this.skin === 'hollow';
     ctx.save();
     ctx.translate(x, y);
     if (moving) ctx.rotate(Math.atan2(vy, vx));
-    ctx.fillStyle = inks.i1;
-    ctx.beginPath(); ctx.ellipse(1.2, 0.8, BALL_R * sx, BALL_R * sy, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = inks.i2;
-    ctx.beginPath(); ctx.ellipse(0, 0, BALL_R * sx, BALL_R * sy, 0, 0, TAU); ctx.fill();
+    ctx.scale(sx, sy);
+    ctx.lineWidth = 1.8 / Math.max(sx, sy);
+    for (const [ink, dx, dy] of [[inks.i1, 1.2, 0.8], [inks.i2, 0, 0]] as const) {
+      ctx.beginPath();
+      ballPath(ctx, dx / sx, dy / sy, BALL_R, this.skin);
+      if (hollow) { ctx.strokeStyle = ink; ctx.stroke(); } else { ctx.fillStyle = ink; ctx.fill(); }
+    }
     ctx.restore();
   }
 
@@ -652,14 +661,12 @@ export class Renderer {
   private drawBallsBatched(s: RenderState, inks: Inks, balls: Ball[]): void {
     const { ctx } = this;
     const r = (b: Ball) => BALL_R * (b.fire ? 1.35 : b.copy ? 0.75 : b.shrunk ? 0.65 : 1);
+    const hollow = this.skin === 'hollow';
+    ctx.lineWidth = 1.8;
     for (const [ink, dx, dy] of [[inks.i1, 1.2, 0.8], [inks.i2, 0, 0]] as const) {
-      ctx.fillStyle = ink;
       ctx.beginPath();
-      for (const b of balls) {
-        ctx.moveTo(b.x + dx + r(b), b.y + dy);
-        ctx.arc(b.x + dx, b.y + dy, r(b), 0, TAU);
-      }
-      ctx.fill();
+      for (const b of balls) ballPath(ctx, b.x + dx, b.y + dy, r(b), this.skin);
+      if (hollow) { ctx.strokeStyle = ink; ctx.stroke(); } else { ctx.fillStyle = ink; ctx.fill(); }
     }
     const rings = balls.filter((b) => b.state === 'flying' && (b.fire || b.golden));
     if (rings.length) {
@@ -1039,4 +1046,30 @@ function grainTile(): HTMLCanvasElement {
   g.putImageData(d, 0, 0);
   grainCanvas = c;
   return c;
+}
+
+/** Add one ball outline (in the chosen skin) to the current path. */
+export function ballPath(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, skin: string): void {
+  switch (skin) {
+    case 'star': {
+      const ro = r * 1.3, ri = r * 0.6;
+      for (let i = 0; i < 10; i++) {
+        const q = i % 2 ? ri : ro, a = (i * Math.PI) / 5 - Math.PI / 2;
+        if (i === 0) ctx.moveTo(x + Math.cos(a) * q, y + Math.sin(a) * q);
+        else ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q);
+      }
+      ctx.closePath();
+      break;
+    }
+    case 'square':
+      ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8);
+      break;
+    case 'spark':
+      ctx.moveTo(x, y - r * 1.35); ctx.lineTo(x + r * 0.9, y); ctx.lineTo(x, y + r * 1.35); ctx.lineTo(x - r * 0.9, y);
+      ctx.closePath();
+      break;
+    default:
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, TAU);
+  }
 }

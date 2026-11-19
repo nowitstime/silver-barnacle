@@ -187,11 +187,11 @@ const canTake = (u: UpgradeDef, owned: Record<string, number>) =>
 
 /** Offer different upgrades the player can still take. Wildcard adds a fourth, cursed card. */
 export function rollOffer(
-  rng: Rng, owned: Record<string, number>, biome: number, kind: 'mid' | 'biome', wildcard = false,
+  rng: Rng, owned: Record<string, number>, biome: number, kind: 'mid' | 'biome', wildcard = false, locked: string[] = [],
 ): string[] {
   const offer: string[] = [];
   for (let i = 0; i < 3; i++) {
-    const avail = UPGRADES.filter((u) => u.rarity !== 'cursed' && canTake(u, owned) && !offer.includes(u.id));
+    const avail = UPGRADES.filter((u) => u.rarity !== 'cursed' && canTake(u, owned) && !offer.includes(u.id) && !locked.includes(u.id));
     if (!avail.length) break;
     const rarities = RARITIES.filter((r) => avail.some((u) => u.rarity === r) && rarityWeight(r, biome, kind) > 0);
     const pool = rarities.length ? rarities : RARITIES.filter((r) => avail.some((u) => u.rarity === r));

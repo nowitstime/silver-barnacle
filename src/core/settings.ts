@@ -6,9 +6,11 @@ export interface Settings {
   shake: boolean;
   /** Small damage numbers on every hit. */
   numbers: boolean;
+  /** Testing: every class, upgrade and skin available. */
+  unlockAll: boolean;
 }
 
-const DEFAULTS: Settings = { sound: true, haptics: true, shake: true, numbers: true };
+const DEFAULTS: Settings = { sound: true, haptics: true, shake: true, numbers: true, unlockAll: true };
 
 export function loadSettings(): Settings {
   const s = { ...DEFAULTS, ...load<Partial<Settings>>('settings', {}) };

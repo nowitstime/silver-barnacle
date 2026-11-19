@@ -34,12 +34,15 @@ export interface Offer {
 
 export interface RunOptions {
   classId?: ClassId;
+  /** Upgrades not unlocked yet; never offered this run. */
+  locked?: string[];
 }
 
 export interface SaveData {
   v: number;
   seed: number;
   classId: ClassId;
+  locked?: string[];
   turn: number;
   nextId: number;
   ballCount: number;
@@ -72,6 +75,7 @@ export interface Totals {
 export class Sim {
   readonly seed: number;
   readonly classId: ClassId;
+  readonly locked: string[];
   private rowRng: Rng;
   private lootRng: Rng;
   private combatRng: Rng;
@@ -122,6 +126,7 @@ export class Sim {
   constructor(seed: number, opts: RunOptions = {}, save?: SaveData) {
     this.seed = seed;
     this.classId = save?.classId ?? opts.classId ?? 'striker';
+    this.locked = save?.locked ?? opts.locked ?? [];
     this.rowRng = stream(seed, 'rows');
     this.lootRng = stream(seed, 'loot');
     this.combatRng = stream(seed, 'combat');
@@ -421,7 +426,7 @@ export class Sim {
     }
     if (kind === 'biome') this.offeredMid = false;
     if (kind) {
-      this.offer = { kind, ids: rollOffer(this.lootRng, this.upgrades, kind === 'biome' ? this.biome - 1 : this.biome, kind, this.stats.wildcard) };
+      this.offer = { kind, ids: rollOffer(this.lootRng, this.upgrades, kind === 'biome' ? this.biome - 1 : this.biome, kind, this.stats.wildcard, this.locked) };
       if (this.offer.ids.length) {
         this.setPhase('pick');
         this.events.push({ type: 'pick', kind });
@@ -443,7 +448,7 @@ export class Sim {
     this.biome = ENDLESS_START;
     this.biomeRow = 0;
     this.offeredMid = false;
-    this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard) };
+    this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard, this.locked) };
     if (this.offer.ids.length) {
       this.setPhase('pick');
       this.events.push({ type: 'pick', kind: 'biome' });
@@ -928,6 +933,7 @@ export class Sim {
       v: SAVE_VERSION,
       seed: this.seed,
       classId: this.classId,
+      locked: [...this.locked],
       turn: this.turn,
       nextId: this.nextId,
       ballCount: this.ballCount,

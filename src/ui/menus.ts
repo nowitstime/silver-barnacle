@@ -1,5 +1,10 @@
 import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
-import { UPGRADE_BY_ID } from '../content/upgrades';
+import { ACHIEVEMENTS, SKINS, unlockSource } from '../content/achievements';
+import { BOSSES, CORE_BOSS } from '../content/bosses';
+import { BRICKS } from '../content/bricks';
+import { UPGRADES, UPGRADE_BY_ID } from '../content/upgrades';
+import type { ProfileStore } from '../core/profile';
+import { ballPath } from '../render/renderer';
 import type { Score } from '../core/scores';
 import type { Settings } from '../core/settings';
 import { biomeName as nameOf } from '../render/palette';
@@ -14,6 +19,7 @@ export interface MenuHandlers {
   onEndless: () => void;
   onEndRun: () => void;
   onResetData: () => void;
+  onSkin: (id: string) => void;
   /** Play a UI click. */
   click: () => void;
 }
@@ -39,6 +45,8 @@ export interface SummaryView {
   rank: number;
   best: number;
   won?: boolean;
+  /** Achievement ids earned during this run. */
+  earned?: string[];
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -51,7 +59,7 @@ export class Menus {
   private settings: Settings;
   private title: TitleView | null = null;
 
-  constructor(root: HTMLElement, private h: MenuHandlers, settings: Settings) {
+  constructor(root: HTMLElement, private h: MenuHandlers, settings: Settings, private profile: ProfileStore) {
     this.settings = { ...settings };
     this.el = document.createElement('div');
     this.el.className = 'menu';
@@ -102,13 +110,17 @@ export class Menus {
         <div class="stack">
           ${v.canContinue ? `<button class="btn-primary" id="m-continue" type="button" data-focus>Continue <small>${cls ? `${esc(cls)} · ` : ''}depth ${v.continueDepth}</small></button>` : ''}
           <button class="${v.canContinue ? 'btn-secondary' : 'btn-primary'}" id="m-new" type="button" ${v.canContinue ? '' : 'data-focus'}>New run</button>
-          <button class="btn-secondary" id="m-settings" type="button">Settings</button>
+          <div class="row">
+            <button class="btn-secondary" id="m-collection" type="button">Collection</button>
+            <button class="btn-secondary" id="m-settings" type="button">Settings</button>
+          </div>
         </div>
         ${this.scoresHtml(v.scores)}
       </div>`, 'title', null);
     this.on('#m-continue', () => this.h.onContinue());
     this.on('#m-new', () => this.showClassSelect(v.lastClass));
     this.on('#m-settings', () => this.showSettings(() => this.showTitle(v)));
+    this.on('#m-collection', () => this.showCollection('achievements'));
   }
 
   private scoresHtml(scores: Score[]): string {
@@ -126,20 +138,24 @@ export class Menus {
   // ---- class select ----
 
   showClassSelect(selected: ClassId): void {
-    let cur = selected;
+    let cur = this.profile.classUnlocked(selected) ? selected : 'striker';
     const back = () => this.title && this.showTitle(this.title);
     this.render(`
       <div class="sheet-inner">
         <p class="eyebrow">New run</p>
         <h2>Choose a class</h2>
         <div class="classes" role="radiogroup" aria-label="Class">
-          ${CLASSES.map((c) => `
-            <button class="class-card" type="button" role="radio" data-id="${c.id}" aria-checked="${c.id === cur}">
-              <span class="cname">${c.name}</span>
-              <span class="ctag">${c.tagline}</span>
+          ${CLASSES.map((c) => {
+            const open = this.profile.classUnlocked(c.id);
+            const how = unlockSource('class', c.id);
+            return `
+            <button class="class-card${open ? '' : ' locked'}" type="button" role="radio" data-id="${c.id}" aria-checked="${c.id === cur}" ${open ? '' : 'aria-disabled="true"'}>
+              <span class="cname">${open ? '' : '🔒 '}${c.name}</span>
+              <span class="ctag">${open ? c.tagline : `Unlock: ${esc(how?.desc ?? '')}`}</span>
               <span class="cballs">${'●'.repeat(c.startBalls)} <small>${c.startBalls} ball${c.startBalls > 1 ? 's' : ''}</small></span>
               <span class="cperk"><b>${c.perk}.</b> ${c.perkDesc}</span>
-            </button>`).join('')}
+            </button>`;
+          }).join('')}
         </div>
         <div class="row">
           <button class="btn-secondary" id="m-back" type="button">Back</button>
@@ -148,6 +164,7 @@ export class Menus {
       </div>`, 'classes-screen', back);
     this.el.querySelectorAll<HTMLButtonElement>('.class-card').forEach((card) => {
       card.addEventListener('click', () => {
+        if (card.classList.contains('locked')) return;
         if (cur === card.dataset.id) return this.h.onNewRun(cur);
         cur = card.dataset.id as ClassId;
         this.el.querySelectorAll('.class-card').forEach((c) => c.setAttribute('aria-checked', String(c === card)));
@@ -209,11 +226,12 @@ export class Menus {
           ${toggle('haptics', 'Vibration', 'Android only')}
           ${toggle('shake', 'Screen shake', 'Turn off if it makes you dizzy')}
           ${toggle('numbers', 'Damage numbers', 'Small numbers on every hit')}
+          ${toggle('unlockAll', 'Unlock everything', 'For testing: all classes, upgrades and skins, without earning them')}
         </div>
         <button class="btn-primary" id="m-done" type="button" data-focus>Done</button>
         <button class="btn-text danger" id="m-reset" type="button">Reset all data</button>
       </div>`, 'settings', back);
-    for (const key of ['sound', 'haptics', 'shake', 'numbers'] as (keyof Settings)[]) {
+    for (const key of ['sound', 'haptics', 'shake', 'numbers', 'unlockAll'] as (keyof Settings)[]) {
       this.el.querySelector<HTMLInputElement>(`#set-${key}`)!.addEventListener('change', (e) => {
         this.settings = { ...this.settings, [key]: (e.target as HTMLInputElement).checked };
         this.h.onSettings(this.settings);
@@ -224,8 +242,66 @@ export class Menus {
     reset.addEventListener('click', () => {
       if (reset.dataset.armed) return this.h.onResetData();
       reset.dataset.armed = '1';
-      reset.textContent = 'Tap again to erase scores, settings and your saved run';
+      reset.textContent = 'Tap again to erase scores, achievements, settings and your saved run';
     });
+  }
+
+  // ---- collection ----
+
+  showCollection(tab: 'achievements' | 'upgrades' | 'bricks' | 'skins' | 'stats'): void {
+    const pr = this.profile;
+    const tabs = [['achievements', 'Awards'], ['upgrades', 'Upgrades'], ['bricks', 'Bricks'], ['skins', 'Skins'], ['stats', 'Stats']] as const;
+    let body = '';
+    if (tab === 'achievements') {
+      body = `<p class="sub">${pr.p.achievements.length} of ${ACHIEVEMENTS.length} earned</p><ul class="coll">${ACHIEVEMENTS.map((a) => {
+        const got = pr.has(a.id);
+        return `<li class="${got ? 'got' : 'todo'}"><b>${got ? '★' : '☆'} ${esc(a.name)}</b><span>${esc(a.desc)}</span>${a.reward ? `<span class="unlock">${got ? 'Unlocked' : 'Unlocks'}: ${esc(rewardName(a.reward))}</span>` : ''}</li>`;
+      }).join('')}</ul>`;
+    } else if (tab === 'upgrades') {
+      const order = ['common', 'rare', 'epic', 'legendary', 'cursed'];
+      const list = [...UPGRADES].sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity));
+      body = `<p class="sub">Taken ${pr.p.seenUpgrades.length} of ${UPGRADES.length}</p><ul class="coll">${list.map((u) => {
+        const open = pr.upgradeUnlocked(u.id);
+        const seen = pr.p.seenUpgrades.includes(u.id);
+        const how = unlockSource('upgrade', u.id);
+        return `<li class="${seen ? 'got' : 'todo'}" data-rarity="${u.rarity}"><b>${open ? '' : '🔒 '}${esc(u.name)} <small>${u.rarity}</small></b><span>${open ? esc(u.desc(0)) : `Unlock: ${esc(how?.desc ?? '')}`}</span></li>`;
+      }).join('')}</ul>`;
+    } else if (tab === 'bricks') {
+      const all = [
+        ...Object.entries(BRICKS).map(([k, b]) => ({ id: k, name: b.name, desc: b.desc, tag: b.hazard ? 'hazard' : 'brick' })),
+        ...[...BOSSES, CORE_BOSS].map((b) => ({ id: b.id, name: b.name, desc: b.tell, tag: b.id === 'core' ? 'final boss' : 'boss' })),
+      ];
+      body = `<p class="sub">Met ${all.filter((b) => pr.p.seenBricks.includes(b.id)).length} of ${all.length}</p><ul class="coll">${all.map((b) => {
+        const seen = pr.p.seenBricks.includes(b.id);
+        return `<li class="${seen ? 'got' : 'todo'}"><b>${seen ? esc(b.name) : '???'} <small>${b.tag}</small></b><span>${seen ? esc(b.desc) : 'Not met yet.'}</span></li>`;
+      }).join('')}</ul>`;
+    } else if (tab === 'skins') {
+      body = `<div class="skins">${SKINS.map((k) => {
+        const open = pr.skinUnlocked(k.id);
+        const how = unlockSource('skin', k.id);
+        return `<button class="skin" type="button" data-skin="${k.id}" aria-pressed="${pr.skin === k.id}" ${open ? '' : 'disabled'}>
+          <canvas width="64" height="64" data-preview="${k.id}" aria-hidden="true"></canvas>
+          <b>${open ? '' : '🔒 '}${esc(k.name)}</b><small>${open ? (pr.skin === k.id ? 'Equipped' : 'Tap to equip') : esc(how?.desc ?? '')}</small></button>`;
+      }).join('')}</div>`;
+    } else {
+      const st = pr.p.stats;
+      const row = (k: string, v: string | number) => `<div><dt>${k}</dt><dd>${typeof v === 'number' ? v.toLocaleString() : v}</dd></div>`;
+      body = `<dl class="totals stats-grid">${row('Runs', st.runs)}${row('Wins', st.wins)}${row('Deepest', st.deepest)}${row('Bricks', st.kills)}${row('Damage', st.damage)}${row('Bosses', st.bosses)}${row('Best combo', st.bestCombo)}${row('Most balls', st.maxBalls)}${row('Crits', st.crits)}${row('Balls popped', st.pops)}${row('Time played', `${Math.floor(st.time / 3600)}h ${Math.floor((st.time % 3600) / 60)}m`)}${row('Classes won', `${st.classWins.length}/5`)}</dl>`;
+    }
+    this.render(`
+      <div class="sheet-inner coll-inner">
+        <h2>Collection</h2>
+        <div class="tabs" role="tablist">${tabs.map(([id, label]) => `<button type="button" role="tab" class="tab" data-tab="${id}" aria-selected="${id === tab}">${label}</button>`).join('')}</div>
+        ${body}
+        <button class="btn-primary" id="m-back" type="button" data-focus>Back</button>
+      </div>`, 'collection', () => this.title && this.showTitle(this.title));
+    this.el.querySelectorAll<HTMLButtonElement>('.tab').forEach((t) => t.addEventListener('click', () => this.showCollection(t.dataset.tab as typeof tab)));
+    this.on('#m-back', () => this.title && this.showTitle(this.title));
+    this.el.querySelectorAll<HTMLButtonElement>('.skin:not([disabled])').forEach((b) => b.addEventListener('click', () => {
+      this.h.onSkin(b.dataset.skin!);
+      this.showCollection('skins');
+    }));
+    this.el.querySelectorAll<HTMLCanvasElement>('canvas[data-preview]').forEach((c) => drawSkinPreview(c, c.dataset.preview!));
   }
 
   // ---- win ----
@@ -279,6 +355,10 @@ export class Menus {
           const u = UPGRADE_BY_ID.get(id)!;
           return `<span class="chip" data-rarity="${u.rarity}">${esc(u.name)}${n > 1 ? ` ×${n}` : ''}</span>`;
         }).join('')}</div>` : ''}
+        ${v.earned?.length ? `<section class="earned"><h3>New achievements</h3>${v.earned.map((id) => {
+          const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+          return `<p><b>★ ${esc(a.name)}</b> ${esc(a.desc)}${a.reward ? ` <span class="unlock">Unlocked: ${esc(rewardName(a.reward))}</span>` : ''}</p>`;
+        }).join('')}</section>` : ''}
         <div class="row">
           <button class="btn-secondary" id="m-menu" type="button">Menu</button>
           <button class="btn-primary" id="m-again" type="button" data-focus>Play again</button>
@@ -286,5 +366,25 @@ export class Menus {
       </div>`, 'summary', () => this.h.onToMenu());
     this.on('#m-menu', () => this.h.onToMenu());
     this.on('#m-again', () => this.h.onNewRun(v.classId));
+  }
+}
+
+function rewardName(r: { kind: string; id: string }): string {
+  if (r.kind === 'class') return `${CLASS_BY_ID.get(r.id as ClassId)?.name ?? r.id} class`;
+  if (r.kind === 'upgrade') return `${UPGRADE_BY_ID.get(r.id)?.name ?? r.id} upgrade`;
+  return `${SKINS.find((s) => s.id === r.id)?.name ?? r.id} ball skin`;
+}
+
+/** Little two-ink preview of a ball skin, in the current biome's inks. */
+function drawSkinPreview(c: HTMLCanvasElement, skin: string): void {
+  const g = c.getContext('2d')!;
+  const css = getComputedStyle(document.documentElement);
+  const i1 = css.getPropertyValue('--i1').trim(), i2 = css.getPropertyValue('--i2').trim();
+  g.clearRect(0, 0, 64, 64);
+  g.lineWidth = 3;
+  for (const [ink, dx] of [[i1, 2.5], [i2, 0]] as const) {
+    g.beginPath();
+    ballPath(g, 32 + dx, 32 + dx * 0.6, 14, skin);
+    if (skin === 'hollow') { g.strokeStyle = ink; g.stroke(); } else { g.fillStyle = ink; g.fill(); }
   }
 }

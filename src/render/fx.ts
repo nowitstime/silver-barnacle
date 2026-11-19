@@ -64,6 +64,8 @@ export class Fx {
   /** Fades the combo label out after the volley. */
   comboFade = 0;
   launcherKick = 0;
+  /** Trail length in points (the Comet skin doubles it). */
+  trailLen = 9;
   /** 0..1, how close bricks are to the bottom (drives the danger vignette). */
   danger = 0;
 
@@ -246,7 +248,7 @@ export class Fx {
       if (!tr) this.trails.set(b.id, (tr = []));
       if (b.state === 'flying') {
         tr.push(b.x, b.y);
-        if (tr.length > 18) tr.splice(0, 2);
+        if (tr.length > this.trailLen * 2) tr.splice(0, 2);
       } else if (tr.length) tr.splice(0, 2);
     }
     for (const id of this.trails.keys()) if (!alive.has(id)) this.trails.delete(id);
