@@ -2,7 +2,7 @@ import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
 import { UPGRADE_BY_ID } from '../content/upgrades';
 import type { Score } from '../core/scores';
 import type { Settings } from '../core/settings';
-import { BIOME_INKS } from '../render/palette';
+import { biomeName as nameOf } from '../render/palette';
 
 export interface MenuHandlers {
   onContinue: () => void;
@@ -11,6 +11,8 @@ export interface MenuHandlers {
   onAbandon: () => void;
   onToMenu: () => void;
   onSettings: (s: Settings) => void;
+  onEndless: () => void;
+  onEndRun: () => void;
   onResetData: () => void;
   /** Play a UI click. */
   click: () => void;
@@ -22,6 +24,7 @@ export interface TitleView {
   continueClass?: ClassId;
   scores: Score[];
   lastClass: ClassId;
+  endlessBest: number;
 }
 
 export interface SummaryView {
@@ -35,10 +38,11 @@ export interface SummaryView {
   upgrades: Record<string, number>;
   rank: number;
   best: number;
+  won?: boolean;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-const biomeName = (i: number) => BIOME_INKS[i % BIOME_INKS.length].name;
+const biomeName = nameOf;
 
 /** All full-screen menus. One overlay, re-rendered per screen. */
 export class Menus {
@@ -113,8 +117,9 @@ export class Menus {
       <section class="scores" aria-label="Best runs">
         <h2>Best runs</h2>
         <ol>${scores.slice(0, 5).map((s) => `
-          <li><span class="d">${s.depth}</span><span class="c">${esc(CLASS_BY_ID.get(s.classId)?.name ?? '')}</span><span class="b">${esc(biomeName(s.biome))}</span></li>`).join('')}
+          <li><span class="d">${s.depth}</span><span class="c">${esc(CLASS_BY_ID.get(s.classId)?.name ?? '')}</span><span class="b">${s.won ? '<b class="crown" title="Broke the Core">★</b> ' : ''}${esc(biomeName(s.biome))}</span></li>`).join('')}
         </ol>
+        ${this.title?.endlessBest ? `<p class="endless-best">Endless best: depth ${this.title.endlessBest}</p>` : ''}
       </section>`;
   }
 
@@ -223,6 +228,36 @@ export class Menus {
     });
   }
 
+  // ---- win ----
+
+  showWin(v: SummaryView): void {
+    const c = CLASS_BY_ID.get(v.classId)!;
+    this.render(`
+      <div class="sheet-inner win-inner">
+        <p class="eyebrow">Run complete</p>
+        <h2 class="big">The Core is broken</h2>
+        <p class="sub">${esc(c.name)} · depth ${v.depth} · ${v.bosses} bosses</p>
+        <dl class="totals">
+          <div><dt>Bricks</dt><dd>${v.kills.toLocaleString()}</dd></div>
+          <div><dt>Damage</dt><dd>${v.damage.toLocaleString()}</dd></div>
+          <div><dt>Best combo</dt><dd>${v.bestCombo}</dd></div>
+          <div><dt>Upgrades</dt><dd>${Object.values(v.upgrades).reduce((a, n) => a + n, 0)}</dd></div>
+        </dl>
+        <p class="sub">Keep going in endless mode: the five biomes come back, tougher every lap. Or end the run here and bank the win.</p>
+        <div class="row">
+          <button class="btn-secondary" id="m-end" type="button">End run</button>
+          <button class="btn-primary" id="m-endless" type="button" data-focus>Keep going</button>
+        </div>
+        <section class="credits">
+          <h3>Credits</h3>
+          <p>Designed by you, built with Claude. Every brick, ink, sound and shake is generated in code: no image or audio files.</p>
+          <p>Set in Space Mono. Printed in two inks per biome.</p>
+        </section>
+      </div>`, 'win', null);
+    this.on('#m-endless', () => this.h.onEndless());
+    this.on('#m-end', () => this.h.onEndRun());
+  }
+
   // ---- run summary ----
 
   showSummary(v: SummaryView): void {
@@ -231,7 +266,7 @@ export class Menus {
     const isBest = v.rank === 0;
     this.render(`
       <div class="sheet-inner summary-inner">
-        <p class="eyebrow">Run over</p>
+        <p class="eyebrow">${v.won ? 'Run complete ★' : 'Run over'}</p>
         <h2 class="big">Depth ${v.depth}</h2>
         <p class="sub">${esc(c.name)} · reached ${esc(biomeName(v.biome))}${isBest ? ' · <span class="new">New best!</span>' : v.rank > 0 ? ` · #${v.rank + 1} best run` : ` · best ${v.best}`}</p>
         <dl class="totals">

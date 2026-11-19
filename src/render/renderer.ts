@@ -7,7 +7,7 @@ import type { Ball, Brick, Item } from '../sim/types';
 import type { Sim } from '../sim/world';
 import { bossFor } from '../content/bosses';
 import { COMBO_SHOW, type Fx } from './fx';
-import { BIOME_INKS, type Inks } from './palette';
+import { biomeName, inksFor, type Inks } from './palette';
 import type { View } from './view';
 
 const FONT = '"Space Mono", ui-monospace, Menlo, monospace';
@@ -50,7 +50,7 @@ export class Renderer {
   }
 
   inks(sim: Sim): Inks {
-    return BIOME_INKS[sim.biome % BIOME_INKS.length];
+    return inksFor(sim.biome);
   }
 
   draw(s: RenderState): void {
@@ -419,8 +419,9 @@ export class Renderer {
     // Teeth along the bottom edge.
     ctx.fillStyle = inks.paper;
     ctx.globalCompositeOperation = 'source-over';
-    for (let i = 0; i < 5; i++) {
-      const tx = -w / 2 + 8 + i * ((w - 16) / 4);
+    const teeth = b.w > 2 ? 7 : 5;
+    for (let i = 0; i < teeth; i++) {
+      const tx = -w / 2 + 8 + i * ((w - 16) / (teeth - 1));
       ctx.beginPath();
       ctx.moveTo(tx - 3, h / 2 - 12);
       ctx.lineTo(tx + 3, h / 2 - 12);
@@ -429,15 +430,17 @@ export class Renderer {
     }
     // Eyes that follow the nearest ball (or the launcher).
     const target = s.sim.balls.find((bb) => bb.state === 'flying') ?? { x: s.sim.launchX, y: FLOOR };
-    for (const ex of [-12, 12]) {
-      const cx = x + w / 2 + ex, cy = y + h / 2 - 10;
+    const eyeY = -h / 2 + 18, eyeR = b.w > 2 ? 9 : 6;
+    const eyes = b.w > 2 ? [-24, 0, 24] : [-12, 12];
+    for (const ex of eyes) {
+      const cx = x + w / 2 + ex, cy = y + h / 2 + eyeY;
       const a = Math.atan2(target.y - cy, target.x - cx);
       ctx.fillStyle = inks.paper;
-      ctx.beginPath(); ctx.arc(ex, -10, 6, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, TAU); ctx.fill();
       ctx.fillStyle = inks.i2;
-      ctx.beginPath(); ctx.arc(ex + Math.cos(a) * 2.5, -10 + Math.sin(a) * 2.5, 2.8, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex + Math.cos(a) * eyeR * 0.4, eyeY + Math.sin(a) * eyeR * 0.4, eyeR * 0.47, 0, TAU); ctx.fill();
     }
-    this.hpLabel(b.hp, 0, 9, 13, inks.paper);
+    this.hpLabel(b.hp, 0, b.h > 2 ? 12 : 9, b.w > 2 ? 16 : 13, inks.paper);
 
     // Gimmick tells.
     switch (st.id) {
@@ -476,6 +479,38 @@ export class Renderer {
         ctx.strokeStyle = inks.i1;
         ctx.lineWidth = 1;
         ctx.strokeRect(-w / 2, h / 2 + 3, w, 3);
+        break;
+      }
+      case 'core': {
+        if (st.phase === 1) {
+          ctx.fillStyle = inks.i2;
+          const t = 6;
+          const sides: [number, number, number, number][] = [
+            [-w / 2 - t, -h / 2 - t, w + t * 2, t], [w / 2, -h / 2 - t, t, h + t * 2],
+            [-w / 2 - t, h / 2, w + t * 2, t], [-w / 2 - t, -h / 2 - t, t, h + t * 2],
+          ];
+          ctx.fillRect(...sides[st.side]);
+          ctx.fillRect(...sides[(st.side + 2) % 4]);
+        } else if (st.phase === 2) {
+          ctx.strokeStyle = inks.i2;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.5 + 0.5 * Math.sin(s.time * 6);
+          ctx.strokeRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10);
+          ctx.globalAlpha = 1;
+        } else {
+          // Meltdown: cracks and a hot glow.
+          ctx.strokeStyle = inks.paper;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-w / 2 + 6, -h / 2 + 30); ctx.lineTo(-6, 4); ctx.lineTo(-14, h / 2 - 16);
+          ctx.moveTo(w / 2 - 8, -h / 2 + 8); ctx.lineTo(10, -2); ctx.lineTo(20, 18);
+          ctx.stroke();
+          ctx.strokeStyle = inks.i2;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = 0.4 + 0.4 * Math.sin(s.time * 14);
+          ctx.strokeRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8);
+          ctx.globalAlpha = 1;
+        }
         break;
       }
       case 'brood': {
@@ -860,7 +895,9 @@ export class Renderer {
     const boss = sim.boss;
     ctx.textAlign = 'left';
     ctx.font = `700 8px ${FONT}`;
-    const label = boss ? bossFor(sim.biome).name.toUpperCase() : inks.name.toUpperCase();
+    const label = boss
+      ? `${bossFor(sim.biome).name.toUpperCase()}${boss.boss?.id === 'core' ? ` · ${boss.boss.phase}/3` : ''}`
+      : biomeName(sim.biome).toUpperCase();
     ctx.fillStyle = boss ? inks.i2 : inks.i1;
     ctx.fillText(label, 10, 27);
     const x0 = 14 + ctx.measureText(label).width, x1 = W - 10;

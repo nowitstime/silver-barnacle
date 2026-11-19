@@ -1,5 +1,5 @@
 import { stream, type Rng } from '../core/rng';
-import { bossFor } from '../content/bosses';
+import { CORE_PHASES, bossFor } from '../content/bosses';
 import { isHazard } from '../content/bricks';
 import { CLASS_BY_ID, type ClassId } from '../content/classes';
 import { UPGRADE_BY_ID, computeStats, rollOffer, type Stats } from '../content/upgrades';
@@ -10,7 +10,7 @@ import {
 } from './constants';
 import { bounce, stepBody, type Accel } from './physics';
 import { brickHp, generateRow } from './rows';
-import { biomeLength, gimmickFor, type Gimmick } from './run';
+import { CORE, ENDLESS_START, biomeLength, endlessHazards, endlessHp, gimmickFor, type Gimmick } from './run';
 import {
   gridKey, type Ball, type Brick, type BrickGrid, type BrickKind, type DamageSource, type Item, type Phase, type SimEvent,
 } from './types';
@@ -46,6 +46,7 @@ export interface SaveData {
   launchX: number;
   shields: number;
   windUsed: boolean;
+  won?: boolean;
   biome: number;
   biomeRow: number;
   bossActive: boolean;
@@ -340,11 +341,12 @@ export class Sim {
     // Boss defeated: the board pauses for a breather before the biome pick.
     if (this.bossActive && !this.boss) {
       this.bossActive = false;
-      this.bossCleared = true;
+      if (this.biome === CORE) this.coreBroken = true;
+      else this.bossCleared = true;
     }
     const skipRow = this.stats.slowDrop && this.turn % 2 === 1 && !this.bossActive && !this.bossCleared;
     if (!skipRow) this.shiftDown(1);
-    if (this.bossCleared || skipRow) {
+    if (this.bossCleared || this.coreBroken || skipRow) {
       // no new row
     } else if (this.bossActive) {
       this.spawnBossOrb();
@@ -360,7 +362,11 @@ export class Sim {
   }
 
   private shiftDown(n: number): void {
-    for (const b of this.bricks) b.r += n;
+    for (const b of this.bricks) {
+      // The Core holds its ground until its last phase.
+      if (b.boss?.id === 'core' && b.boss.phase < 3) continue;
+      b.r += n;
+    }
     for (const i of this.items) i.r += n;
     this.rebuildGrid();
     // Sprinters take an extra step when there's room.
@@ -377,6 +383,12 @@ export class Sim {
   }
 
   private afterDrop(): void {
+    if (this.coreBroken) {
+      this.coreBroken = false;
+      this.won = true;
+      this.setPhase('won');
+      return;
+    }
     if (this.lowestRow >= ROWS) {
       if (this.shields > 0 || (this.stats.secondWind && !this.windUsed)) {
         const wind = this.shields <= 0;
@@ -421,22 +433,46 @@ export class Sim {
     this.setPhase('aim');
   }
   private offeredMid = false;
+  private coreBroken = false;
+  /** The Core has been broken this run (the run can continue into endless). */
+  won = false;
+
+  /** After winning: carry on into endless, starting with a big upgrade pick. */
+  continueEndless(): boolean {
+    if (this.phase !== 'won') return false;
+    this.biome = ENDLESS_START;
+    this.biomeRow = 0;
+    this.offeredMid = false;
+    this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard) };
+    if (this.offer.ids.length) {
+      this.setPhase('pick');
+      this.events.push({ type: 'pick', kind: 'biome' });
+    } else {
+      this.offer = null;
+      this.setPhase('aim');
+      this.events.push({ type: 'biome', index: this.biome });
+    }
+    return true;
+  }
 
   // ---- bosses ----
 
   private spawnBoss(): void {
     const def = bossFor(this.biome);
-    // Make room: the boss is two rows tall.
-    this.shiftDown(1);
-    const c = 1 + Math.floor(this.rowRng() * (COLS - 3));
-    for (const b of [...this.bricks]) if (b.r <= 1 && b.c + b.w > c && b.c < c + 2) this.removeBrick(b);
-    const hp = Math.round(brickHp(this.level, this.biome) * (12 + 3 * this.biome) * this.stats.hpMult);
+    const core = def.id === 'core';
+    const size = core ? 3 : 2;
+    // Make room at the top for the boss.
+    this.shiftDown(size - 1);
+    const c = core ? 2 : 1 + Math.floor(this.rowRng() * (COLS - 3));
+    for (const b of [...this.bricks]) if (b.r < size && b.c + b.w > c && b.c < c + size) this.removeBrick(b);
+    const tier = core ? 45 : 12 + 3 * Math.min(this.biome, 4);
+    const hp = Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * tier * this.stats.hpMult * endlessHp(this.biome));
     this.bricks.push({
-      id: this.nextId++, c, r: 0, w: 2, h: 2, hp, maxHp: hp, kind: 'boss', burn: 0, frozen: false, hitThisTurn: false,
-      boss: { id: def.id, side: 0, dir: this.rowRng() < 0.5 ? -1 : 1, turnDamage: 0 },
+      id: this.nextId++, c, r: 0, w: size, h: size, hp, maxHp: hp, kind: 'boss', burn: 0, frozen: false, hitThisTurn: false,
+      boss: { id: def.id, side: 0, dir: this.rowRng() < 0.5 ? -1 : 1, turnDamage: 0, phase: 1 },
     });
     this.bossActive = true;
-    this.events.push({ type: 'boss', name: def.name, tell: def.tell });
+    this.events.push({ type: 'boss', name: def.name, tell: core ? CORE_PHASES[1] : def.tell });
   }
 
   private spawnBossOrb(): void {
@@ -471,6 +507,15 @@ export class Sim {
       }
       case 'glacier':
         st.side = (st.side + 1) % 4;
+        break;
+      case 'core':
+        if (st.phase === 1) st.side = (st.side + 1) % 4;
+        if (st.phase === 2) {
+          for (let i = 0; i < 3; i++) {
+            const cell = this.freeAround(b);
+            if (cell) this.addBrick(cell[0], cell[1], Math.max(1, Math.round(brickHp(this.level, CORE) * 0.7 * this.stats.hpMult)), 'normal');
+          }
+        }
         break;
       case 'anvil':
         if (st.turnDamage > 0 && st.turnDamage < b.maxHp * 0.2 && b.hp < b.maxHp) {
@@ -697,10 +742,25 @@ export class Sim {
         this.events.push({ type: 'immune', brick, x, y, reason: 'shield' });
         return false;
       }
+      if (brick.boss.id === 'core') {
+        const st = brick.boss;
+        if (st.phase === 1 && contact && (sideOf(contact) === st.side || sideOf(contact) === (st.side + 2) % 4)) {
+          this.events.push({ type: 'immune', brick, x, y, reason: 'shield' });
+          return false;
+        }
+        if (st.phase === 3) amount = Math.round(amount * 1.5);
+      }
     }
 
     const dealt = Math.min(amount, brick.hp);
     brick.hp -= amount;
+    if (brick.boss?.id === 'core' && brick.hp > 0) {
+      const phase = brick.hp <= brick.maxHp / 3 ? 3 : brick.hp <= (brick.maxHp * 2) / 3 ? 2 : 1;
+      if (phase !== brick.boss.phase) {
+        brick.boss.phase = phase;
+        this.events.push({ type: 'bossPhase', phase, text: CORE_PHASES[phase] });
+      }
+    }
     brick.hitThisTurn = true;
     if (brick.boss) brick.boss.turnDamage += dealt;
     this.totals.damage += dealt;
@@ -717,7 +777,8 @@ export class Sim {
       this.totals.bestCombo = Math.max(this.totals.bestCombo, this.killsThisVolley);
       if (brick.kind === 'boss') {
         this.totals.bosses++;
-        this.events.push({ type: 'bossDown', name: bossFor(this.biome).name });
+        if (brick.boss?.id === 'core') this.events.push({ type: 'win' });
+        else this.events.push({ type: 'bossDown', name: bossFor(this.biome).name });
       }
     }
     this.events.push({ type: 'hit', ballId: ball?.id ?? -1, brick, x, y, damage: amount, killed, crit, source });
@@ -830,7 +891,8 @@ export class Sim {
     const s = this.stats;
     const slowHp = s.slowDrop ? 1.6 : 1;
     const row = generateRow(this.rowRng, this.level, {
-      biome: this.biome, hpMult: s.hpMult * slowHp, hazardMult: s.hazardMult,
+      biome: Math.min(this.biome, CORE), hpMult: s.hpMult * slowHp * endlessHp(this.biome),
+      hazardMult: s.hazardMult * endlessHazards(this.biome),
       bombMult: this.gimmick === 'heat' ? 2.5 : 1,
     });
     const frozenChance = this.gimmick === 'ice' ? 0.3 : 0;
@@ -872,6 +934,7 @@ export class Sim {
       launchX: this.launchX,
       shields: this.shields,
       windUsed: this.windUsed,
+      won: this.won,
       biome: this.biome,
       biomeRow: this.biomeRow,
       bossActive: this.bossActive,
@@ -896,6 +959,7 @@ export class Sim {
     this.launchX = d.launchX;
     this.shields = d.shields;
     this.windUsed = d.windUsed;
+    this.won = !!d.won;
     this.biome = d.biome;
     this.biomeRow = d.biomeRow;
     this.bossActive = d.bossActive;
@@ -909,7 +973,7 @@ export class Sim {
     this.lootRng.state = d.rng.loot;
     this.combatRng.state = d.rng.combat;
     this.totals = { ...d.stats };
-    this.phase = this.offer ? 'pick' : 'aim';
+    this.phase = this.offer ? 'pick' : this.won && this.biome === CORE ? 'won' : 'aim';
     this.rebuildGrid();
   }
 
@@ -935,6 +999,14 @@ export class Sim {
       this.turn += target - this.biomeRow;
       this.biomeRow = target;
     }
+  }
+
+  /** Jump to the end of a biome so its boss arrives next turn (for testing). */
+  debugJumpToBoss(biome = this.biome): void {
+    if (this.phase !== 'aim' || this.bossActive) return;
+    this.biome = biome;
+    this.biomeRow = biomeLength(biome);
+    this.offeredMid = true;
   }
 
   /** Put a brick of any kind in the top row (for testing). */

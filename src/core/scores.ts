@@ -9,6 +9,8 @@ export interface Score {
   bosses: number;
   /** ms since epoch */
   date: number;
+  /** Broke The Core. */
+  won?: boolean;
 }
 
 const KEY = 'scores';
@@ -31,4 +33,9 @@ export function addScore(s: Score): number {
 
 export function bestDepth(): number {
   return loadScores()[0]?.depth ?? load<number>('best', 0);
+}
+
+/** Deepest depth reached by a run that broke the Core and kept going. */
+export function endlessBest(): number {
+  return Math.max(0, ...loadScores().filter((s) => s.won).map((s) => s.depth));
 }

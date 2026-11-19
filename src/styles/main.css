@@ -335,3 +335,10 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .chip[data-rarity="cursed"] { border-style: dashed; border-color: var(--i2); }
 .card[data-rarity="cursed"] { border-style: dashed; border-color: var(--i2); box-shadow: 3px 3px 0 var(--i1); background-image: repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, var(--i2) 14%, transparent) 6px 8px); }
 .card[data-rarity="cursed"] .rarity { color: var(--i2); font-weight: 700; }
+
+.crown { color: var(--i2); }
+.endless-best { margin: 8px 0 0; font-size: 12px; text-align: left; }
+.win-inner h2.big { font-size: 32px; line-height: 1.05; }
+.win-inner .totals { grid-template-columns: repeat(4, 1fr); margin: 0; }
+.credits { border-top: 2px dashed var(--i1); padding-top: 12px; font-size: 12px; line-height: 1.5; }
+.credits p { margin: 4px 0; }

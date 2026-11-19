@@ -11,6 +11,8 @@ export interface BossState {
   dir: number;
   /** Damage taken this turn (Anvil). */
   turnDamage: number;
+  /** The Core: current phase, 1–3. */
+  phase: number;
 }
 
 export interface Brick {
@@ -81,7 +83,7 @@ export interface Ball {
 export type BrickGrid = Map<number, Brick>;
 export const gridKey = (c: number, r: number) => r * 64 + c;
 
-export type Phase = 'aim' | 'fire' | 'run' | 'settle' | 'drop' | 'pick' | 'over';
+export type Phase = 'aim' | 'fire' | 'run' | 'settle' | 'drop' | 'pick' | 'won' | 'over';
 
 export type DamageSource = 'ball' | 'chain' | 'splash' | 'burn' | 'bomb' | 'laser' | 'void';
 
@@ -110,6 +112,8 @@ export type SimEvent =
   | { type: 'shield'; kind: 'shield' | 'wind' }
   | { type: 'boss'; name: string; tell: string }
   | { type: 'bossDown'; name: string }
+  | { type: 'bossPhase'; phase: number; text: string }
+  | { type: 'win' }
   | { type: 'pick'; kind: 'mid' | 'biome' }
   | { type: 'biome'; index: number }
   | { type: 'over' };

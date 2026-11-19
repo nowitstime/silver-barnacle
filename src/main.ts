@@ -5,18 +5,18 @@ import { registerSW } from 'virtual:pwa-register';
 import { Haptics, Sfx } from './core/audio';
 import { AimInput } from './core/input';
 import { Loop } from './core/loop';
-import { addScore, bestDepth, loadScores } from './core/scores';
+import { addScore, bestDepth, endlessBest, loadScores } from './core/scores';
 import { loadSettings, saveSettings, type Settings } from './core/settings';
 import { load, save } from './core/storage';
 import type { ClassId } from './content/classes';
 import { UPGRADES } from './content/upgrades';
 import { Fx } from './render/fx';
-import { BIOME_INKS } from './render/palette';
+import { biomeName, inksFor } from './render/palette';
 import { Renderer } from './render/renderer';
 import { View } from './render/view';
 import { demoAngle } from './sim/bot';
 import { BALL_R, FLOOR, ROWS } from './sim/constants';
-import { GIMMICK_TEXT, gimmickFor } from './sim/run';
+import { GIMMICK_TEXT, endlessLap, gimmickFor } from './sim/run';
 import { traceShot, type Trace } from './sim/trace';
 import type { SimEvent } from './sim/types';
 import { Sim, type SaveData } from './sim/world';
@@ -77,7 +77,8 @@ const loop = new Loop(
     if (mode === 'run') feedback(events);
     else demoStep(realDt, events);
     fx.update(realDt, sim);
-    if (sim.phase === 'aim' && loop.speed !== 1 && !fast && mode === 'run') loop.speed = 1;
+    if (slowUntil && performance.now() > slowUntil) { slowUntil = 0; loop.speed = 1; }
+    if (sim.phase === 'aim' && loop.speed !== 1 && !fast && mode === 'run' && !slowUntil) loop.speed = 1;
     aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 16);
     trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.accel) : null;
     if (mode === 'run') autosave();
@@ -115,6 +116,15 @@ const menus = new Menus(uiRoot, {
     showTitle();
   },
   onToMenu: () => showTitle(),
+  onEndless: () => {
+    menus.hide();
+    sim.continueEndless();
+    hud.show(true);
+  },
+  onEndRun: () => {
+    // Bank the win and show the summary.
+    finishRun();
+  },
   onSettings: (s) => {
     settings = s;
     saveSettings(s);
@@ -162,6 +172,7 @@ function showTitle(): void {
     continueClass: s?.classId,
     scores: loadScores(),
     lastClass: load<ClassId>('class', 'striker'),
+    endlessBest: endlessBest(),
   });
 }
 
@@ -197,8 +208,7 @@ function startRun(classId: ClassId): void {
   sim = new Sim(seed, { classId });
   demoRunning = false;
   beginRun();
-  const inks = BIOME_INKS[0];
-  fx.showBanner(inks.name.toUpperCase(), 'Depth 1 · break bricks, grab orbs, don’t let them reach the bottom', 2.4);
+  fx.showBanner(inksFor(0).name.toUpperCase(), 'Depth 1 · break bricks, grab orbs, don’t let them reach the bottom', 2.4);
 }
 
 function continueRun(): void {
@@ -257,7 +267,7 @@ function fire(): void {
 
 function showPick(): void {
   if (!sim.offer || pick.open || menus.open) return;
-  const nextBiome = BIOME_INKS[sim.biome % BIOME_INKS.length].name;
+  const nextBiome = biomeName(sim.biome);
   pick.show(
     { kind: sim.offer.kind, ids: sim.offer.ids, owned: sim.upgrades, next: nextBiome },
     (i) => {
@@ -274,26 +284,38 @@ function autosave(): void {
   const p = sim.phase;
   if (p === lastSavedPhase) return;
   lastSavedPhase = p;
-  if (p === 'aim' || p === 'pick') save(SAVE_KEY, sim.toSave());
+  if (p === 'aim' || p === 'pick' || p === 'won') save(SAVE_KEY, sim.toSave());
   if (p === 'pick') showPick();
+  if (p === 'won') setTimeout(() => { if (sim.phase === 'won') { hud.show(false); menus.showWin(summaryView(-1)); } }, 1800);
 }
 
-function onGameOver(): void {
+function summaryView(rank: number) {
+  return {
+    depth: sim.level, biome: sim.biome, classId: sim.classId, kills: sim.totals.kills, damage: sim.totals.damage,
+    bestCombo: sim.totals.bestCombo, bosses: sim.totals.bosses, upgrades: { ...sim.upgrades }, rank, best,
+    won: sim.won,
+  };
+}
+
+/** Record the run's score and show the summary (after losing, or ending a won run). */
+function finishRun(delay = 0): void {
   save(SAVE_KEY, null);
   const depth = sim.level;
   const rank = addScore({
-    depth, classId: sim.classId, biome: sim.biome, kills: sim.totals.kills, bosses: sim.totals.bosses, date: Date.now(),
+    depth, classId: sim.classId, biome: sim.biome, kills: sim.totals.kills, bosses: sim.totals.bosses,
+    date: Date.now(), won: sim.won,
   });
   best = Math.max(best, depth);
   save('best', best);
-  const summary = {
-    depth, biome: sim.biome, classId: sim.classId, kills: sim.totals.kills, damage: sim.totals.damage,
-    bestCombo: sim.totals.bestCombo, bosses: sim.totals.bosses, upgrades: { ...sim.upgrades }, rank, best,
-  };
+  const summary = summaryView(rank);
   setTimeout(() => {
     hud.show(false);
     menus.showSummary(summary);
-  }, 900);
+  }, delay);
+}
+
+function onGameOver(): void {
+  finishRun(900);
 }
 
 /** Sound, vibration and hit-stop for sim events. */
@@ -354,11 +376,27 @@ function feedback(events: SimEvent[]): void {
         haptics.buzz([80, 40, 160], 0);
         break;
       case 'pick': sfx.fanfare(e.kind === 'biome'); break;
+      case 'bossPhase':
+        sfx.bossRoar();
+        fx.showBanner(`PHASE ${e.phase}`, e.text, 2.6);
+        fx.kick(7);
+        loop.hold(0.1, 0);
+        haptics.buzz([50, 30, 50], 0);
+        break;
+      case 'win':
+        sfx.bossDown();
+        sfx.fanfare(true);
+        fx.showBanner('THE CORE IS BROKEN', 'You win', 3);
+        fx.kick(10);
+        slowMo(1.4);
+        haptics.buzz([100, 50, 100, 50, 300], 0);
+        break;
       case 'biome': {
         applyInks();
-        const inks = BIOME_INKS[e.index % BIOME_INKS.length];
         const g = GIMMICK_TEXT[gimmickFor(e.index)];
-        fx.showBanner(inks.name.toUpperCase(), g || `Depth ${sim.level}`, g ? 3.4 : 2.2);
+        const lap = endlessLap(e.index);
+        const sub = lap ? `Endless lap ${lap}: bricks are tougher and hazards more common. ${g}` : g || `Depth ${sim.level}`;
+        fx.showBanner(biomeName(e.index).toUpperCase(), sub, g || lap ? 3.4 : 2.2);
         break;
       }
       case 'over':
@@ -368,6 +406,14 @@ function feedback(events: SimEvent[]): void {
         break;
     }
   }
+}
+
+/** Briefly run the game in slow motion (big finishes). */
+let slowUntil = 0;
+function slowMo(seconds: number): void {
+  if (reducedMotion) return;
+  slowUntil = performance.now() + seconds * 1000;
+  loop.speed = 0.3;
 }
 
 const updateDebug = debug

@@ -29,7 +29,7 @@ describe('run structure', () => {
   it('biomes follow the 12/16/20/24/28 curve, then stay long', () => {
     expect(BIOME_ROWS).toEqual([12, 16, 20, 24, 28]);
     expect(biomeLength(0)).toBe(12);
-    expect(biomeLength(7)).toBe(28);
+    expect(biomeLength(7)).toBe(24);
     expect(gimmickFor(0)).toBe('none');
     expect(gimmickFor(1)).toBe('dark');
     expect(gimmickFor(5)).toBe('none');

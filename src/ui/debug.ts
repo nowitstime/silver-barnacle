@@ -19,6 +19,8 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     <button type="button" data-a="hit">Hitboxes</button>
     <button type="button" data-a="seed">New seed</button>
     <button type="button" data-a="pick">Skip to pick</button>
+    <button type="button" data-a="boss">Boss next</button>
+    <button type="button" data-a="core">Go to Core</button>
     <select data-a="place" aria-label="Place brick"><option value="">Place brick…</option>${['armored','bomb','splitter','steel','popper','anchor','balloon','sponge','shrinker','spawner','sprinter'].map((k) => `<option>${k}</option>`).join('')}</select>
     <select data-a="grant" aria-label="Grant upgrade"><option value="">Grant upgrade…</option>${hooks.upgrades.map((id) => `<option>${id}</option>`).join('')}</select>`;
   root.appendChild(el);
@@ -32,6 +34,8 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     if (a === 'hit') hooks.setHitboxes((hit = !hit));
     if (a === 'seed') hooks.restart();
     if (a === 'pick') hooks.sim().debugSkipToPick();
+    if (a === 'boss') hooks.sim().debugJumpToBoss();
+    if (a === 'core') hooks.sim().debugJumpToBoss(5);
   });
   el.querySelector('select[data-a=place]')!.addEventListener('change', (e) => {
     const sel = e.target as HTMLSelectElement;
