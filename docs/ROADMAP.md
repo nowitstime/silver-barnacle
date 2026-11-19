@@ -7,23 +7,23 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ---
 
 ## M0: Skeleton and pipeline *(get it on the phone on day one)*
-- ⬜ Vite, TypeScript, ESLint/Prettier, Vitest
-- ⬜ Canvas that scales a 9:16 world to any screen, sharp on high-DPI phones
-- ⬜ `vite-plugin-pwa`: manifest, icons (placeholder), offline precache
-- ⬜ GitHub Action deploying to Pages
-- ⬜ **Done when:** I can open the URL on my phone, tap "Add to Home Screen", and it launches full screen and works offline
+- ✅ Vite, TypeScript (strict), Vitest. ESLint/Prettier skipped for now
+- ✅ Canvas that scales a 9:16 world to any screen, sharp on high-DPI phones
+- ✅ `vite-plugin-pwa`: manifest, icons (placeholder), offline precache
+- ✅ GitHub Action deploying to Pages
+- 🟨 **Done when:** I can open the URL on my phone, tap "Add to Home Screen", and it launches full screen and works offline
 
 ## M1: The core toy *(is bouncing balls fun?)*
-- ⬜ Fixed-timestep loop and seeded RNG
-- ⬜ Aim by dragging, with a laser to the first bounce
-- ⬜ Fire a stream of balls; bounce off walls, ceiling and bricks; collect them at the floor
-- ⬜ Bricks with HP numbers; they drop a row each turn; a new row spawns
-- ⬜ +Ball pickups
-- ⬜ Game over when a brick crosses the line; tap to restart
-- ⬜ Fast-forward and recall buttons; nudge for horizontal loops
-- ⬜ Debug panel (show hitboxes, set the seed, speed)
-- ⬜ Unit tests: collision, RNG
-- ⬜ **Done when:** an endless Ballz-like I'd actually play for 5 minutes
+- ✅ Fixed-timestep loop and seeded RNG
+- ✅ Aim by dragging, with a laser to the first bounce
+- ✅ Fire a stream of balls; bounce off walls, ceiling and bricks; collect them at the floor
+- ✅ Bricks with HP numbers; they drop a row each turn; a new row spawns
+- ✅ +Ball pickups
+- ✅ Game over when a brick crosses the line; tap to restart
+- ✅ Fast-forward and recall buttons; nudge for horizontal loops
+- ✅ Debug panel (show hitboxes, set the seed, speed)
+- ✅ Unit tests: collision, RNG
+- 🟨 **Done when:** an endless Ballz-like I'd actually play for 5 minutes
 
 ## M2: Juice pass #1 and sound *(make it feel amazing early, so every later feature feels good too)*
 - ⬜ Squash and stretch, hit flash, brick fragments, screen shake, hit-stop
@@ -31,7 +31,7 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 - ⬜ Ball trails
 - ⬜ ZzFX sound effects with rising combo pitch
 - ⬜ Haptics (Android)
-- ⬜ **Art direction test**: mock up 2 styles from DESIGN §9 and pick one
+- ✅ **Art direction test**: picked **Risograph** from the [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs)
 
 ## M3: The roguelike run *(first real "run")*
 - ⬜ Depth counter, biome progress bar
@@ -97,7 +97,6 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 ## Still open (decide before or during the milestone listed)
 | Question | Needed by |
 |---|---|
-| Art style: pick finalists from the [Art Style Lab](https://claude.ai/artifact/9mYfSuqwu9A1sXcB81RYBs) (A–F) | M2 |
 | How to add more picks (more than 5 per run is decided): mid-biome common pick, loot bricks, or both | M3 / M6 |
 | Should brick HP also scale with ball count? | M6 |
 | Final boss phases | M7 |

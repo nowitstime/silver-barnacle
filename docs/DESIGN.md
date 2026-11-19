@@ -25,6 +25,8 @@ Status: **draft**. Anything marked ❓ is still open.
 | Classes | All unlocked while testing. Different starting stats plus one unique signature perk |
 | Meta progression | Unlocks only (no permanent stat boosts) |
 | Saving | Autosave every turn and resume after closing. High scores, unlocks and settings stored in localStorage |
+| Art style | **Risograph**: paper stock plus two inks per biome, multiply blending, halftone, grain |
+| Aiming | Slingshot: press anywhere, pull back, release |
 | Juice | An absurd amount |
 | Audio | Generated sound effects (ZzFX / WebAudio) |
 | Haptics | Light vibration (Android only, because iOS Safari has no Vibration API) |
