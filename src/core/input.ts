@@ -17,20 +17,18 @@ const deg = Math.PI / 180;
 export const AIM_MIN = 10 * deg;
 export const clampAim = (a: number) => Math.max(AIM_MIN, Math.min(Math.PI - AIM_MIN, a));
 
-/** Radians of turn per CSS pixel of slow drag (~0.08° per pixel). */
-const BASE_SENSITIVITY = 0.08 * deg;
+/** Radians of turn per CSS pixel of slow drag (~0.16° per pixel) at the bottom of the screen. */
+const BASE_SENSITIVITY = 0.16 * deg;
 /** Movement (CSS px) below which a press counts as a tap. */
 const TAP_SLOP = 8;
 const TAP_MAX_MS = 300;
 /** Keyboard / nudge-button step. */
 export const NUDGE = 0.2 * deg;
-/** Moving the finger this far above where the drag started makes aiming 2× finer (up to 3×). */
-const PRECISION_PX = 90;
 
 /**
  * Two ways to aim, both anywhere on screen:
  * - Drag left/right like a dial. Slow drags are precise; fast flicks turn quicker.
- *   Slide your finger upward while dragging for extra-fine control.
+ *   Full speed near the bottom of the screen; the higher your finger, the finer the control.
  * - Quick tap: jump the aim to point at the tapped spot (touches below the launcher are mirrored up).
  * A separate Fire control confirms the shot.
  */
@@ -99,8 +97,11 @@ export class AimInput {
     this.speed += (Math.abs(dx) / dt - this.speed) * 0.35;
     // Gentle acceleration: precise when slow, quicker only on real flicks.
     const accel = 1 + Math.min(2.5, (this.speed / 0.9) ** 2);
-    // Finger higher than where the drag started = finer control.
-    const precision = 1 + Math.min(2, Math.max(0, this.startY - y) / PRECISION_PX);
+    // Finger position on screen sets the precision: full speed in the bottom quarter,
+    // getting finer as you go up, 3x finer from three-quarters of the way up.
+    const h = window.innerHeight || 800;
+    const up = Math.max(0, Math.min(1, (h * 0.75 - y) / (h * 0.5)));
+    const precision = 1 + 2 * up;
     // Dragging right turns the shot right (smaller angle).
     this.h.onAim(clampAim(this.h.angle() - (dx * BASE_SENSITIVITY * accel) / precision));
   }

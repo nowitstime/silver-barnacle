@@ -31,7 +31,7 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <button class="icon-btn pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
-      <p class="hint" id="hint" hidden>Drag left or right to aim (slide your finger up for fine control) · tap to point · ◀ ▶ to nudge · then Fire</p>
+      <p class="hint" id="hint" hidden>Drag left or right to aim (higher on the screen = finer) · tap to point · ◀ ▶ to nudge · then Fire</p>
       <div class="fire-row">
         <button class="nudge" id="nudge-l" type="button" aria-label="Turn aim left">◀</button>
         <button class="fire" id="fire" type="button">Fire</button>
