@@ -899,8 +899,8 @@ export class Sim {
     const critChance = s.critChance + s.critMass * Math.floor(this.ballCount / 10);
     const crit = overcharged || this.combatRng() < critChance;
     let dmg = this.ballDamage(ball, brick, crit);
-    // Acid: a share of the brick's max HP on top (bosses resist).
-    if (s.acid && brick.kind !== 'steel') dmg += Math.round(brick.maxHp * s.acid * (brick.boss ? 0.25 : 1));
+    // Acid: a share of the brick's remaining HP on top (bosses resist).
+    if (s.acid && brick.kind !== 'steel') dmg += Math.round(brick.hp * s.acid * (brick.boss ? 0.25 : 1));
     // Kindling: the brick burns for a share of this hit; Tinderbox doubles fires lit by crits.
     if (s.burn && brick.kind !== 'steel') brick.lit = true;
     if (s.tinder && crit) brick.taken = (brick.taken ?? 0) + dmg; // crits count double toward the fire

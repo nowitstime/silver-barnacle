@@ -15,8 +15,8 @@ export const endlessLap = (b: number): number => (b < ENDLESS_START ? 0 : Math.f
 
 export const biomeLength = (b: number): number => (b < CORE ? BIOME_ROWS[b] : b === CORE ? 0 : ENDLESS_ROWS);
 
-/** Endless laps stack: tougher bricks and more hazards every lap. */
-export const endlessHp = (b: number): number => 1.35 ** endlessLap(b);
+/** Endless gets tougher fast: brick HP +30% every endless biome (compounding), hazards every lap. */
+export const endlessHp = (b: number): number => (b < ENDLESS_START ? 1 : 1.3 ** (b - CORE));
 export const endlessHazards = (b: number): number => 1.3 ** endlessLap(b);
 
 /** Each biome changes how the game plays. */

@@ -2,7 +2,7 @@
  * Endgame report: which random builds can beat The Core, and how far past it they go.
  * The bot plays whole runs taking random cards, keeps going into endless after a win, and
  * has a much higher turn limit than the other reports so strong builds can show their ceiling.
- * Run with `npm run balance -- endgame` (RUNS=60, MAX_TURNS=450 by default). Writes docs/endgame-report.md.
+ * Run with `npm run balance -- endgame` (RUNS=60, MAX_TURNS=600 by default). Writes docs/endgame-report.md.
  * To use several cores: run SHARDS=4 SHARD=0..3 in parallel, then MERGE=4 to write the report.
  */
 import { it } from 'vitest';
@@ -16,25 +16,26 @@ import { CORE } from '../src/sim/run';
 
 const SEEDS = Number(process.env.RUNS ?? 60);
 const CANDIDATES = Number(process.env.CANDIDATES ?? 4);
-const MAX_TURNS = Number(process.env.MAX_TURNS ?? 450);
+const MAX_TURNS = Number(process.env.MAX_TURNS ?? 600);
 const SHARDS = Number(process.env.SHARDS ?? 1), SHARD = Number(process.env.SHARD ?? 0), MERGE = Number(process.env.MERGE ?? 0);
 const OUT = new URL('./.out/', import.meta.url);
 
-interface Result { seed: number; classId: ClassId; depth: number; won: boolean; capped: boolean; atCore: Record<string, number> | null; final: Record<string, number>; balls: number }
+interface Result { seed: number; classId: ClassId; depth: number; won: boolean; capped: boolean; atCore: Record<string, number> | null; atDeep: Record<string, number> | null; final: Record<string, number>; balls: number }
 
 function play(seed: number, classId: ClassId): Result {
   const sim = new Sim(seed, { classId });
   const rnd = mulberry32(seed ^ 0xe9d);
-  let turns = 0, atCore: Record<string, number> | null = null, won = false;
+  let turns = 0, atCore: Record<string, number> | null = null, atDeep: Record<string, number> | null = null, won = false;
   while (sim.phase !== 'over' && turns < MAX_TURNS) {
     if (!atCore && sim.biome >= CORE && sim.phase === 'aim') atCore = { ...sim.upgrades };
+    if (!atDeep && sim.biome >= 2 && sim.phase === 'aim') atDeep = { ...sim.upgrades };
     if (sim.phase === 'won') { won = true; if (!sim.continueEndless()) break; continue; }
     if (sim.phase === 'pick') { sim.choose(Math.floor(rnd() * sim.offer!.ids.length)); continue; }
     sim.fire(bestAngle(sim, CANDIDATES));
     finishTurn(sim);
     turns++;
   }
-  return { seed, classId, depth: sim.level, won: won || sim.won, capped: sim.phase !== 'over', atCore, final: { ...sim.upgrades }, balls: sim.ballCount };
+  return { seed, classId, depth: sim.level, won: won || sim.won, capped: sim.phase !== 'over', atCore, atDeep, final: { ...sim.upgrades }, balls: sim.ballCount };
 }
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
@@ -119,6 +120,33 @@ it('endgame report', async () => {
   lines.push('', '## Combos at The Core', '', 'A pair counts if runs holding both went deeper than runs holding only one of them.', '',
     '| Pair | Runs with both | Mean final depth | Better than either alone by |', '|---|---|---|---|');
   for (const p of pairs.slice(0, 15)) lines.push(`| ${name(p.a)} + ${name(p.b)} | ${p.n} | ${p.d.toFixed(0)} | +${p.lift.toFixed(0)} |`);
+
+  // Early game: cards held on reaching The Deep (biome 3). Which ones carry a run through the middle?
+  const deep = res.filter((r) => r.atDeep);
+  const deepCore = deep.filter((r) => r.atCore).length / Math.max(1, deep.length), deepDepth = avg(deep.map((r) => r.depth));
+  const early = [...new Set(deep.flatMap((r) => Object.keys(r.atDeep!).filter((k) => has(r.atDeep!, k))))]
+    .map((id) => ({ id, rs: deep.filter((r) => has(r.atDeep!, id)) })).filter((x) => x.rs.length >= 5)
+    .map((x) => ({ ...x, c: x.rs.filter((r) => r.atCore).length / x.rs.length, d: avg(x.rs.map((r) => r.depth)) }))
+    .sort((a, b) => b.c - a.c || b.d - a.d);
+  lines.push('', '## Early game: cards held on reaching The Deep', '',
+    `${deep.length} runs reached The Deep (biome 3); ${pct(deep.filter((r) => r.atCore).length, deep.length)} of them went on to reach The Core, mean final depth ${deepDepth.toFixed(0)}. Cards seen in at least 5 of those runs.`, '',
+    '| Card | Runs holding it | Reached The Core | Mean final depth |', '|---|---|---|---|');
+  for (const x of early) lines.push(`| ${name(x.id)} | ${x.rs.length} | ${Math.round(x.c * 100)}% (${x.c >= deepCore ? '+' : ''}${Math.round((x.c - deepCore) * 100)}) | ${x.d.toFixed(0)} |`);
+  const ep: { a: string; b: string; n: number; c: number; lift: number }[] = [];
+  const eids = early.map((x) => x.id);
+  const reach = (rs: Result[]) => rs.filter((r) => r.atCore).length / Math.max(1, rs.length);
+  for (let i = 0; i < eids.length; i++) for (let j = i + 1; j < eids.length; j++) {
+    const a = eids[i], b = eids[j];
+    const both = deep.filter((r) => has(r.atDeep!, a) && has(r.atDeep!, b));
+    const onlyA = deep.filter((r) => has(r.atDeep!, a) && !has(r.atDeep!, b));
+    const onlyB = deep.filter((r) => !has(r.atDeep!, a) && has(r.atDeep!, b));
+    if (both.length < 4 || onlyA.length < 3 || onlyB.length < 3) continue;
+    ep.push({ a, b, n: both.length, c: reach(both), lift: reach(both) - Math.max(reach(onlyA), reach(onlyB)) });
+  }
+  ep.sort((x, y) => y.lift - x.lift);
+  lines.push('', '### Early combos', '', 'Pairs held on reaching The Deep that got to The Core more often than either card alone.', '',
+    '| Pair | Runs with both | Reached The Core | Better than either alone by |', '|---|---|---|---|');
+  for (const p of ep.slice(0, 12)) lines.push(`| ${name(p.a)} + ${name(p.b)} | ${p.n} | ${Math.round(p.c * 100)}% | +${Math.round(p.lift * 100)} pts |`);
   lines.push('');
   writeFileSync(new URL('../docs/endgame-report.md', import.meta.url), lines.join('\n'));
   console.log(lines.join('\n'));

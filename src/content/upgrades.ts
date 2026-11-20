@@ -72,7 +72,7 @@ export interface Stats {
   hazardMult: number;
   /** Multiplies new brick HP. */
   hpMult: number;
-  /** Share of a brick's max HP every ball hit also deals (Acid). */
+  /** Share of a brick's remaining HP every ball hit also deals (Acid). */
   acid: number;
   /** Crits light double fires; burning bricks take +25% from balls (Tinderbox). */
   tinder: boolean;
@@ -184,7 +184,7 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'glass', name: 'Glass Cannon', rarity: 'legendary', max: 1, desc: () => 'Triple damage. You lose all shields and can never gain more.', apply: (s) => { s.glassCannon = true; } }),
   U({ id: 'wind', name: 'Second Wind', rarity: 'legendary', max: 1, desc: () => 'Once per run, when you would lose, the bottom 3 rows are wiped instead.', apply: (s) => { s.secondWind = true; } }),
   U({ id: 'singularity', name: 'Singularity', rarity: 'legendary', max: 1, desc: () => 'At the end of every turn, the toughest brick on the board collapses into nothing (not bosses or steel).', apply: (s) => { s.singularity = 1; } }),
-  U({ id: 'acid', name: 'Acid', rarity: 'rare', max: 3, desc: (n) => `Every ball hit also eats ${(1.5 * (n + 1)).toFixed(1)}% of the brick\u2019s max HP. Good in any build.`, apply: (s, n) => { s.acid += 0.015 * n; } }),
+  U({ id: 'acid', name: 'Acid', rarity: 'rare', max: 3, desc: (n) => `Every ball hit also eats ${(1.5 * (n + 1)).toFixed(1)}% of the brick\u2019s remaining HP. Best on fresh, tough bricks.`, apply: (s, n) => { s.acid += 0.015 * n; } }),
   U({ id: 'tinder', name: 'Tinderbox', rarity: 'rare', max: 1, desc: () => 'Crit damage counts double toward fires, and burning bricks take +25% damage from your balls.', apply: (s) => { s.tinder = true; } }),
   U({ id: 'chainreact', name: 'Chain Reaction', rarity: 'epic', max: 1, desc: () => 'Bricks killed by an explosion explode too.', apply: (s) => { s.chainReaction = true; } }),
   U({ id: 'conductor', name: 'Conductor', rarity: 'rare', max: 2, desc: () => 'Every lightning zap (Chain Lightning, Static) jumps to one more brick.', apply: (s, n) => { s.conduct += n; } }),
