@@ -24,15 +24,28 @@ function empty(seed = 1): Sim {
 }
 
 describe('priority hazards', () => {
-  it('a Shielder makes its neighbours immune until it breaks', () => {
-    const sim = empty(2);
-    sim.debugPlace('shielder', 0, 4, 999);
-    sim.debugPlace('normal', 3, 4, 50);
-    sim.debugPlace('shielder', 3, 3, 999);
-    const events = turn(sim);
-    const shieldedHits = events.filter((e) => e.type === 'immune' && e.reason === 'shield');
-    expect(shieldedHits.length).toBeGreaterThan(0);
-    expect(sim.bricks.find((b) => b.kind === 'normal')!.hp).toBe(50);
+  it('a Shielder cuts ball damage to its neighbours, but never to zero', () => {
+    const shielded = empty(2), open = empty(2);
+    for (const sim of [shielded, open]) { sim.debugAddBalls(5); for (let i = 0; i < 9; i++) sim.debugGrant('heavy'); sim.debugPlace('normal', 3, 4, 100000); }
+    shielded.debugPlace('shielder', 3, 3, 99999);
+    const events = turn(shielded);
+    turn(open);
+    expect(events.some((e) => e.type === 'immune' && e.reason === 'shielded')).toBe(true);
+    const lost = (sim: Sim) => 100000 - sim.bricks.find((b) => b.kind === 'normal')!.hp;
+    expect(lost(shielded)).toBeGreaterThan(0);
+    expect(lost(shielded)).toBeLessThan(lost(open) * 0.5);
+  });
+
+  it('a walled-in Shielder cluster can always be broken eventually', () => {
+    const sim = empty(3);
+    sim.debugAddBalls(10);
+    // A Shielder in the corner, sealed off by the bricks it protects.
+    sim.debugPlace('shielder', 0, 0, 30);
+    sim.debugPlace('normal', 1, 0, 60);
+    sim.debugPlace('normal', 0, 1, 60);
+    let guard = 0;
+    while (sim.bricks.some((b) => b.r <= 2) && sim.phase !== 'over' && guard++ < 12) turn(sim, Math.PI - 0.5);
+    expect(sim.bricks.filter((b) => b.c <= 1 && (b.kind === 'shielder' || b.hp === 60)).length).toBeLessThan(3);
   });
 
   it('a Healer restores its neighbours each turn', () => {

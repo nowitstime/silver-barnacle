@@ -34,7 +34,7 @@ export const BRICKS: Record<Exclude<BrickKind, 'normal' | 'boss' | 'loot'>, Bric
   shrinker: { name: 'Shrinker', desc: 'Shrinks the ball that hits it: half damage, but small enough to slip through tighter gaps.', hazard: true, from: 24, weight: 5, hp: 0.6 },
   spawner: { name: 'Spawner', desc: 'Grows a new brick next to itself every turn.', hazard: true, from: 40, weight: 4, hp: 1 },
   sprinter: { name: 'Sprinter', desc: 'Moves down two rows per turn instead of one.', hazard: true, from: 40, weight: 4, hp: 0.5 },
-  shielder: { name: 'Shielder', desc: 'Its neighbours are immune to damage until it breaks. Take it out first.', hazard: true, from: 14, weight: 4, hp: 0.8 },
+  shielder: { name: 'Shielder', desc: 'Its neighbours take only a quarter of your balls\u2019 damage while it lives. Explosions, lightning, lasers, splash and fire ignore the shield. Take it out first.', hazard: true, from: 14, weight: 4, hp: 0.8 },
   healer: { name: 'Healer', desc: 'Restores its neighbours\u2019 HP every turn.', hazard: true, from: 14, weight: 4, hp: 0.7 },
   fuse: { name: 'Fuse', desc: 'Counts down from 3. At zero it lunges two rows down, then starts again.', hazard: true, from: 18, weight: 4, hp: 0.8 },
   thief: { name: 'Thief', desc: 'If it survives 2 turns it steals one of your balls for good, then starts again.', hazard: true, from: 22, weight: 3, hp: 0.6 },

@@ -551,6 +551,7 @@ function momentTips(e: SimEvent): void {
   if (e.type === 'bloom' && profile.tip('bloom')) tips.show('Bricks you leave alone sprout blooms in Meadow. Break a bloom for an extra ball.');
   if (e.type === 'tide' && profile.tip('tide')) tips.show('The tide shifts every brick one column. It comes more often deeper into The Deep.');
   if (e.type === 'lava' && profile.tip('lava')) tips.show('Lava raised the danger line. Watch for the dashed warning: it shows where lava will reach next turn.');
+  if (e.type === 'immune' && e.reason === 'shielded' && profile.tip('shielded')) tips.show('That brick is protected by a Shielder (dashed link): your balls only deal 25% to it. Break the Shielder, or use explosions, lightning, lasers, splash or fire, which ignore shields.');
   if (e.type === 'steal' && profile.tip('steal')) tips.show('A Thief stole a ball. The badge on a Thief or Fuse counts down the turns until it acts.');
 }
 

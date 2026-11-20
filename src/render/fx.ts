@@ -25,7 +25,7 @@ export interface Beam { kind: 'laserH' | 'laserV'; x: number; y: number; width: 
 const HAZARD_LABEL: Partial<Record<string, string>> = {
   popper: 'POP!', anchor: 'HEAVY', balloon: 'FLOATY', sponge: 'GULP', shrinker: 'SHRUNK',
 };
-const IMMUNE_LABEL: Record<string, string> = { steel: '', ice: 'CRACK', lantern: 'NO EFFECT', shield: 'BLOCKED' };
+const IMMUNE_LABEL: Record<string, string> = { steel: '', ice: 'CRACK', lantern: 'NO EFFECT', shield: 'BLOCKED', shielded: 'SHIELDED −75%' };
 
 export interface Ring {
   x: number; y: number; radius: number; life: number; max: number; ink: 0 | 1;

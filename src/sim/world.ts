@@ -24,6 +24,8 @@ const CURRENT_FORCE = 70;
 /** Seconds a sponge holds balls before bursting. */
 const SPONGE_HOLD = 2.0;
 const BALLOON_STICK = 0.8;
+/** Share of ball damage that gets through a Shielder's protection. */
+const SHIELD_FACTOR = 0.25;
 const FLOAT_LIFT = 650;
 const ANCHOR_PULL = 520;
 const ANCHOR_RANGE = 80;
@@ -884,9 +886,11 @@ export class Sim {
       this.events.push({ type: 'immune', brick, x, y, reason: 'steel' });
       return false;
     }
-    if (brick.kind !== 'shielder' && !brick.boss && this.shielded(brick)) {
-      this.events.push({ type: 'immune', brick, x, y, reason: 'shield' });
-      return false;
+    // Shielded bricks take a quarter of direct ball damage; indirect damage (explosions, lightning,
+    // lasers, splash, fire) ignores shields. Never fully immune, so a walled-in Shielder can't deadlock a run.
+    if (source === 'ball' && brick.kind !== 'shielder' && !brick.boss && this.shielded(brick)) {
+      amount = Math.max(1, Math.round(amount * SHIELD_FACTOR));
+      this.events.push({ type: 'immune', brick, x, y, reason: 'shielded' });
     }
     if (brick.frozen) {
       brick.frozen = false;
