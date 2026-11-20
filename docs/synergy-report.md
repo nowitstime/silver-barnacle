@@ -4,31 +4,36 @@ Same 30 seeds and classes, played twice by the bot: once taking random cards, on
 
 | Picker | Median depth | Mean depth | Median bosses | Wins |
 |---|---|---|---|---|
-| random | 71 | 77 | 2 | 6/30 |
-| synergy | 78 | 76 | 3 | 4/30 |
+| random | 76 | 82 | 2 | 8/30 |
+| synergy | 68 | 78 | 2 | 6/30 |
 
-Synergy picker went deeper on **16 of 30** seeds.
+Synergy picker went deeper on **11 of 30** seeds.
 
 ## Synergy runs by main themes
 
 | Themes | Runs | Median depth |
 |---|---|---|
-| damage+bank | 4 | 130 |
-| damage+crit | 2 | 125 |
-| general+explosion | 1 | 122 |
-| lightning+bank | 2 | 107 |
-| crit+damage | 3 | 105 |
-| damage+general | 1 | 101 |
-| crit+multi | 1 | 84 |
-| crit+general | 3 | 80 |
-| general+defense | 1 | 78 |
-| multi+general | 1 | 71 |
-| general+fire | 1 | 60 |
-| crit+bank | 1 | 51 |
-| general+crit | 3 | 49 |
-| crit+fire | 1 | 46 |
-| general+damage | 1 | 41 |
-| bank+damage | 1 | 40 |
-| fire+defense | 1 | 40 |
-| crit+defense | 1 | 36 |
-| fire+general | 1 | 32 |
+| damage+explosion | 1 | 143 |
+| lightning+bank | 2 | 129 |
+| damage+bank | 2 | 128 |
+| crit+damage | 2 | 128 |
+| damage+general | 2 | 121 |
+| multi+lightning | 1 | 120 |
+| crit+fire | 2 | 105 |
+| multi+general | 1 | 78 |
+| crit+bank | 1 | 73 |
+| damage+crit | 3 | 68 |
+| crit+multi | 1 | 63 |
+| general+explosion | 1 | 61 |
+| fire+defense | 1 | 61 |
+| fire+general | 1 | 60 |
+| general+crit | 1 | 59 |
+| crit+general | 3 | 58 |
+| general+fire | 1 | 46 |
+| bank+damage | 2 | 40 |
+| defense+general | 1 | 39 |
+| general+multi | 1 | 36 |
+
+## Reading (run 4, current version)
+
+Across four runs, picking for synergy has not beaten random picks (11–16 of 30 seeds each time). Focused offense builds (lightning + bank, crit + damage, explosions) do reach 105–143, so the engines exist, but committing to a theme isn't rewarded enough to beat a random mix of strong cards. Next step: explicit payoffs for committing, such as a bonus once you own 3+ cards of a theme, and theme-based physics cards.
