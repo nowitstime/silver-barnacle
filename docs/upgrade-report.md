@@ -4,52 +4,60 @@
 
 **Score** = how many more rows runs survived after taking the upgrade, compared with the average pick made in the same biome. Positive is strong, negative is weak. Treat anything with fewer than 6 picks as noise.
 
-Overall median depth: 55. Wins: 0/50.
+Overall median depth: 61. Wins: 1/50.
 
 | Upgrade | Rarity | Picks | Score | Median depth of runs with it |
 |---|---|---|---|---|
-| Second Wind | legendary | 1 | +73.2 | 143 |
-| Heavier Balls | common | 1 | +51.6 | 116 |
-| Wide Beam | rare | 4 | +28.4 | 143 |
-| Pierce | rare | 9 | +20.4 | 87 |
-| Mercy Kill | rare | 10 | +19.8 | 115 |
-| Ricochet Rush | rare | 14 | +16.7 | 77 |
-| Bounty | rare | 5 | +15.7 | 84 |
-| Time Dilation | epic | 7 | +14.9 | 115 |
-| Mitosis | epic | 7 | +13.0 | 116 |
-| Thick Skin | common | 5 | +12.3 | 57 |
-| The Ceiling Is Lava | legendary | 4 | +11.8 | 106 |
-| Last Stand | epic | 6 | +7.3 | 77 |
-| Glass Cannon | legendary | 2 | +6.3 | 131 |
-| Lucky Orbs | common | 5 | +5.4 | 77 |
-| Hazard Suit | rare | 9 | +5.0 | 57 |
-| Sharp Eye | common | 4 | +3.7 | 73 |
-| Critical Mass | epic | 7 | +2.8 | 141 |
-| Brutal | common | 4 | +2.6 | 80 |
-| Guardian | epic | 6 | -1.7 | 80 |
-| Short Fuse | common | 18 | -5.4 | 52 |
-| Extra Balls | common | 11 | -6.9 | 63 |
-| Volatile | epic | 11 | -7.5 | 84 |
-| Long Sight | common | 4 | -10.8 | 52 |
-| First Blood | rare | 12 | -11.1 | 56 |
-| Kindling | rare | 6 | -12.5 | 55 |
-| Wildfire | rare | 6 | -12.8 | 57 |
-| Momentum | rare | 10 | -18.0 | 55 |
-| Overcharge | rare | 8 | -18.2 | 55 |
-| Chain Lightning | rare | 5 | -19.6 | 56 |
-| Singularity | legendary | 1 | -21.2 | 106 |
-| Can Opener | common | 2 | -21.4 | 68 |
-| Echo | epic | 2 | -23.2 | 57 |
-| Splash | rare | 2 | -25.8 | 37 |
-| Dense Core | common | 5 | -27.2 | 44 |
-| Static | rare | 2 | -27.6 | 44 |
+| Wide Beam | rare | 2 | +41.8 | 185 |
+| Brutal | common | 5 | +23.6 | 79 |
+| Ricochet Rush | rare | 12 | +23.1 | 82 |
+| Static | rare | 5 | +20.0 | 139 |
+| Volatile | epic | 10 | +12.2 | 85 |
+| Thick Skin | common | 8 | +11.8 | 79 |
+| Lucky Orbs | common | 10 | +11.5 | 82 |
+| Mercy Kill | rare | 7 | +10.2 | 63 |
+| Guardian | epic | 7 | +9.2 | 79 |
+| Kindling | rare | 6 | +8.4 | 98 |
+| First Blood | rare | 12 | +5.7 | 75 |
+| Time Dilation | epic | 7 | +5.6 | 91 |
+| Hazard Suit | rare | 7 | +5.1 | 44 |
+| Critical Mass | epic | 7 | +0.6 | 85 |
+| Singularity | legendary | 0 | – | – |
+| Wildfire | rare | 9 | -2.0 | 61 |
+| The Ceiling Is Lava | legendary | 5 | -2.0 | 79 |
+| Extra Balls | common | 9 | -2.6 | 61 |
+| Momentum | rare | 11 | -2.6 | 70 |
+| Bounty | rare | 6 | -3.1 | 63 |
+| Second Wind | legendary | 2 | -3.5 | 144 |
+| Heavier Balls | common | 3 | -4.8 | 79 |
+| Short Fuse | common | 14 | -6.7 | 61 |
+| Pierce | rare | 10 | -7.3 | 63 |
+| Sharp Eye | common | 4 | -10.8 | 91 |
+| Overcharge | rare | 8 | -13.0 | 61 |
+| Glass Cannon | legendary | 3 | -13.2 | 61 |
+| Mitosis | epic | 8 | -13.3 | 63 |
+| Last Stand | epic | 5 | -14.6 | 78 |
+| Chain Lightning | rare | 4 | -18.6 | 79 |
+| Echo | epic | 2 | -19.4 | 63 |
+| Can Opener | common | 2 | -21.9 | 68 |
+| Long Sight | common | 7 | -22.0 | 45 |
+| Dense Core | common | 5 | -23.5 | 45 |
+| Splash | rare | 5 | -24.6 | 59 |
 
 ## By class
 
 | Class | Median depth | Wins |
 |---|---|---|
-| Striker | 47 | 0/10 |
-| Juggler | 55 | 0/10 |
-| Ricochet | 73 | 0/10 |
-| Bomber | 116 | 0/10 |
-| Gambler | 51 | 0/10 |
+| Striker | 75 | 1/10 |
+| Juggler | 52 | 0/10 |
+| Ricochet | 70 | 0/10 |
+| Bomber | 87 | 0/10 |
+| Gambler | 43 | 0/10 |
+
+## Tuning log
+
+**Pass 1** (after the first report): secondary damage now scales with the hit or with depth (Chain Lightning, Splash, Kindling, Static, Volatile). Buffed First Blood, Momentum, Overcharge, Extra Balls, Dense Core and Short Fuse. Trimmed Mercy Kill, Pierce and Time Dilation. Payload every 15th hit; Striker +40% damage. Result (this report): classes much closer (Bomber 116 → 87, Striker 47 → 75), elemental upgrades out of the cellar, median depth 55 → 61.
+
+**Noise warning:** between the two reports, single upgrades swung by about ±15 even with ~10 picks (Pierce +20 → −7, Mitosis +13 → −13). Only act on patterns that repeat.
+
+**Pass 2** (consistent across both reports): Ricochet Rush max 3 stacks (strong twice); Short Fuse also makes bombs more common (weak twice); Overcharge every 5th/3rd/2nd hit (weak twice); Gambler starts with 3 balls; Juggler's double-orb chance 40%. Long Sight scores badly only because the bot already sees every bounce, so it was left alone.

@@ -21,8 +21,8 @@ export const CLASSES: ClassDef[] = [
   },
   {
     id: 'juggler', name: 'Juggler', tagline: 'Lots of light balls.', startBalls: 4,
-    perk: 'Encore', perkDesc: 'One random ball in every volley is golden and deals double damage. Orbs have a 25% chance to give two balls.',
-    apply: (s) => { s.encore = true; s.luckyOrbs += 0.25; },
+    perk: 'Encore', perkDesc: 'One random ball in every volley is golden and deals double damage. Orbs have a 40% chance to give two balls.',
+    apply: (s) => { s.encore = true; s.luckyOrbs += 0.4; },
   },
   {
     id: 'ricochet', name: 'Ricochet', tagline: 'Every bounce counts.', startBalls: 2,
@@ -35,7 +35,7 @@ export const CLASSES: ClassDef[] = [
     apply: (s) => { s.payload = true; },
   },
   {
-    id: 'gambler', name: 'Gambler', tagline: 'More choices, more risk.', startBalls: 2,
+    id: 'gambler', name: 'Gambler', tagline: 'More choices, more risk.', startBalls: 3,
     perk: 'Wildcard', perkDesc: 'Upgrade picks offer 4 cards, but one of them is always cursed.',
     apply: (s) => { s.wildcard = true; },
   },

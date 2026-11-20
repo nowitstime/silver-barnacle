@@ -1139,7 +1139,7 @@ export class Sim {
     const row = generateRow(this.rowRng, this.level, {
       biome: Math.min(this.biome, CORE), hpMult: s.hpMult * slowHp * endlessHp(this.biome),
       hazardMult: s.hazardMult * endlessHazards(this.biome),
-      bombMult: this.gimmick === 'heat' ? 2.5 : 1,
+      bombMult: (this.gimmick === 'heat' ? 2.5 : 1) * (1 + s.fuse),
     });
     const frozenChance = this.gimmick === 'ice' ? 0.15 + 0.35 * this.intensity : 0;
     for (const b of row.bricks) {
