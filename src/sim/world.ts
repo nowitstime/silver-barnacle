@@ -357,8 +357,8 @@ export class Sim {
     const s = this.stats;
     // Burning bricks take damage.
     for (const b of [...this.bricks]) {
-      // Burn eats a share of max HP, so it keeps up with deep bricks (bosses burn slower).
-      if (b.burn > 0) this.damage(b, Math.max(1, Math.round(b.maxHp * 0.04 * b.burn * (b.boss ? 0.25 : 1))), cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
+      // A brick burns for a share of the hit that lit it (set when it was ignited).
+      if (b.burn > 0) this.damage(b, b.burn, cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
     }
     // Singularity: the weakest bricks collapse.
     if (s.singularity) {
@@ -699,8 +699,10 @@ export class Sim {
     if (s.static && this.combatRng() < s.static && this.bricks.length) {
       const target = this.bricks[Math.floor(this.combatRng() * this.bricks.length)];
       const tx = cellCenterX(target.c), ty = cellCenterY(target.r);
+      const amount = Math.max(1, Math.round((s.damage + ball.bonus) * s.dmgMult * 2));
       this.events.push({ type: 'zap', x1: x, y1: y, x2: tx, y2: ty });
-      this.damage(target, Math.max(s.damage * 3, Math.round(this.level * 0.5)), tx, ty, 'chain', null, false);
+      this.damage(target, amount, tx, ty, 'chain', null, false);
+      if (s.conduct) this.zap(target, 1, tx, ty, Math.max(1, Math.round(amount * 0.8)), s.conduct - 1);
     }
   }
 
@@ -829,8 +831,11 @@ export class Sim {
     const overcharged = s.overcharge > 0 && this.hitsThisVolley % s.overcharge === 0;
     const critChance = s.critChance + s.critMass * Math.floor(this.ballCount / 10);
     const crit = overcharged || this.combatRng() < critChance;
-    const dmg = this.ballDamage(ball, brick, crit);
-    if (s.burn && brick.kind !== 'steel') brick.burn = Math.max(brick.burn, s.burn);
+    let dmg = this.ballDamage(ball, brick, crit);
+    // Acid: a share of the brick's max HP on top (bosses resist).
+    if (s.acid && brick.kind !== 'steel') dmg += Math.round(brick.maxHp * s.acid * (brick.boss ? 0.25 : 1));
+    // Kindling: the brick burns for a share of this hit; Tinderbox doubles fires lit by crits.
+    if (s.burn && brick.kind !== 'steel') brick.burn = Math.max(brick.burn, Math.max(1, Math.round(dmg * 0.25 * s.burn * (s.tinder && crit ? 2 : 1))));
 
     const hitsBefore = this.totals.kills;
     const killed = this.damage(brick, dmg, x, y, 'ball', ball, crit, contact);
@@ -851,7 +856,7 @@ export class Sim {
         this.events.push({ type: 'split', x: ball.x, y: ball.y });
       }
     }
-    if (s.payload && this.hitsThisVolley % 15 === 0) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.2), x, y);
+    if (s.payload && this.hitsThisVolley % 15 === 0) this.explode(brick.c, brick.r, dmg * 2, x, y);
   }
 
   private ballDamage(ball: Ball, brick: Brick, crit: boolean): number {
@@ -862,6 +867,7 @@ export class Sim {
     if (ball.golden) dmg *= 2;
     if (ball.shrunk) dmg *= 0.5;
     if (s.lastStand > 1 && brick.r + brick.h - 1 >= ROWS - 3) dmg *= s.lastStand;
+    if (s.tinder && brick.burn > 0) dmg *= 1.25;
     if (crit) dmg *= s.critMult;
     return Math.max(1, Math.round(dmg));
   }
@@ -951,7 +957,8 @@ export class Sim {
       this.events.push({ type: 'orb', x: cx, y: cy, extra: false });
     }
     if (brick.kind === 'bomb') this.explode(brick.c, brick.r, Math.max(this.level, s.damage * 3), cx, cy);
-    else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.5), cx, cy);
+    else if (source === 'bomb' && s.chainReaction) this.explode(brick.c, brick.r, amount * 0.8, cx, cy);
+    else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, amount, cx, cy);
     if (brick.kind === 'splitter') {
       for (let i = 0; i < 2; i++) {
         const cell = this.freeNeighbour(brick.c, brick.r);
@@ -991,7 +998,7 @@ export class Sim {
   }
 
   /** Chain Lightning: hit the nearest other bricks. */
-  private zap(from: Brick, count: number, x: number, y: number, amount: number): void {
+  private zap(from: Brick, count: number, x: number, y: number, amount: number, jumps = this.stats.conduct): void {
     const fx = cellCenterX(from.c), fy = cellCenterY(from.r);
     const targets = this.bricks
       .filter((b) => b !== from && b.kind !== 'steel')
@@ -1002,6 +1009,8 @@ export class Sim {
       const tx = cellCenterX(b.c), ty = cellCenterY(b.r);
       this.events.push({ type: 'zap', x1: x, y1: y, x2: tx, y2: ty });
       this.damage(b, amount, tx, ty, 'chain', null, false);
+      // Conductor: each zap carries on to one more brick.
+      if (jumps > 0) this.zap(b, 1, tx, ty, Math.max(1, Math.round(amount * 0.8)), jumps - 1);
     }
   }
 

@@ -146,3 +146,31 @@ describe('biome rules', () => {
     expect(sim.reroll()).toBe(false);
   });
 });
+
+describe('synergy upgrades', () => {
+  it('Kindling fires scale with the hit that lit them', () => {
+    const weak = empty(20), strong = empty(20);
+    for (const sim of [weak, strong]) { sim.debugGrant('kindling'); sim.debugPlace('normal', 3, 5, 100000); }
+    for (let i = 0; i < 10; i++) strong.debugGrant('heavy');
+    turn(weak); turn(strong);
+    const burnOf = (sim: Sim) => sim.bricks.find((b) => b.kind === 'normal')!.burn;
+    expect(burnOf(strong)).toBeGreaterThan(burnOf(weak) * 3);
+  });
+
+  it('Chain Reaction makes explosion kills explode too', () => {
+    const sim = empty(21);
+    sim.debugGrant('chainreact');
+    sim.debugPlace('bomb', 3, 5, 1);
+    for (let c = 0; c < 7; c++) if (c !== 3) sim.debugPlace('normal', c, 5, 1);
+    const blasts = turn(sim).filter((e) => e.type === 'explode').length;
+    expect(blasts).toBeGreaterThan(1);
+  });
+
+  it('Acid adds a share of max HP to every hit', () => {
+    const sim = empty(22);
+    sim.debugGrant('acid');
+    sim.debugPlace('normal', 3, 5, 10000);
+    turn(sim);
+    expect(sim.bricks.find((b) => b.kind === 'normal')!.hp).toBeLessThan(10000 - 150);
+  });
+});
