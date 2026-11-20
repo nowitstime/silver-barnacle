@@ -249,7 +249,11 @@ describe('fire from last turn', () => {
     const brick = (sim: Sim) => sim.bricks.find((b) => b.kind === 'normal')!;
     expect(brick(many).burn).toBeGreaterThan(brick(few).burn * 3); // more hits, bigger fire
     const burning = brick(few).burn;
-    turn(few, 0.15); // shot away from it: untouched this turn
+    // A turn where nothing touches it: fire, recall at once, let the turn finish.
+    few.fire(Math.PI / 2);
+    few.tick(STEP);
+    few.recall();
+    while (!['aim', 'pick', 'over'].includes(few.phase)) few.tick(STEP);
     expect(brick(few).burn).toBe(burning); // fire keeps going
   });
 });
