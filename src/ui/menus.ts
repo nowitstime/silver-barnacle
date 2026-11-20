@@ -1,7 +1,8 @@
 import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
 import { ACHIEVEMENTS, SKINS, unlockSource } from '../content/achievements';
-import { BOSSES, CORE_BOSS } from '../content/bosses';
-import { BRICKS } from '../content/bricks';
+import { BOSSES, CORE_BOSS, bossFor } from '../content/bosses';
+import { BRICKS, type BrickKind } from '../content/bricks';
+import { loadHistory } from '../core/history';
 import { UPGRADES, UPGRADE_BY_ID, statSheet, type Stats } from '../content/upgrades';
 import type { ProfileStore } from '../core/profile';
 import { ballPath } from '../render/renderer';
@@ -49,6 +50,14 @@ export interface SummaryView {
   won?: boolean;
   /** Achievement ids earned during this run. */
   earned?: string[];
+  /** Brick kinds that crossed the line. */
+  cause?: BrickKind[];
+}
+
+/** "a Sprinter and a Shielder", for what ended a run. */
+function causeText(cause: BrickKind[], biome: number): string {
+  const names = cause.map((k) => (k === 'normal' ? 'bricks' : k === 'boss' ? bossFor(biome).name : k === 'loot' ? 'a loot brick' : `a ${BRICKS[k].name}`));
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] ?? '';
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -260,9 +269,9 @@ export class Menus {
 
   // ---- collection ----
 
-  showCollection(tab: 'achievements' | 'upgrades' | 'bricks' | 'skins' | 'stats'): void {
+  showCollection(tab: 'achievements' | 'upgrades' | 'bricks' | 'skins' | 'stats' | 'history'): void {
     const pr = this.profile;
-    const tabs = [['achievements', 'Awards'], ['upgrades', 'Upgrades'], ['bricks', 'Bricks'], ['skins', 'Skins'], ['stats', 'Stats']] as const;
+    const tabs = [['achievements', 'Awards'], ['upgrades', 'Upgrades'], ['bricks', 'Bricks'], ['skins', 'Skins'], ['stats', 'Stats'], ['history', 'History']] as const;
     let body = '';
     if (tab === 'achievements') {
       body = `<p class="sub">${pr.p.achievements.length} of ${ACHIEVEMENTS.length} earned</p><ul class="coll">${ACHIEVEMENTS.map((a) => {
@@ -295,6 +304,14 @@ export class Menus {
           <canvas width="64" height="64" data-preview="${k.id}" aria-hidden="true"></canvas>
           <b>${open ? '' : '🔒 '}${esc(k.name)}</b><small>${open ? (pr.skin === k.id ? 'Equipped' : 'Tap to equip') : esc(how?.desc ?? '')}</small></button>`;
       }).join('')}</div>`;
+    } else if (tab === 'history') {
+      const runs = loadHistory();
+      body = runs.length ? `<p class="sub">Your last ${runs.length} run${runs.length > 1 ? 's' : ''}</p><ul class="coll history">${runs.map((r) => {
+        const cls = CLASS_BY_ID.get(r.classId)?.name ?? r.classId;
+        const end = r.abandoned ? 'Abandoned' : r.cause.length ? `Ended by ${causeText(r.cause, r.biome)}` : r.won ? 'Won' : 'Ended';
+        const ups = Object.entries(r.upgrades).filter(([, n]) => n > 0).map(([id, n]) => `${UPGRADE_BY_ID.get(id)?.name ?? id}${n > 1 ? ` ×${n}` : ''}`).join(', ');
+        return `<li class="got"><b>Depth ${r.depth}${r.won ? ' ★' : ''} <small>${esc(cls)} · ${esc(biomeName(r.biome))} · ${new Date(r.date).toLocaleDateString()}</small></b><span class="end">${esc(end)}</span>${ups ? `<span>${esc(ups)}</span>` : ''}</li>`;
+      }).join('')}</ul>` : '<p class="sub">No finished runs yet.</p>';
     } else {
       const st = pr.p.stats;
       const row = (k: string, v: string | number) => `<div><dt>${k}</dt><dd>${typeof v === 'number' ? v.toLocaleString() : v}</dd></div>`;
@@ -356,6 +373,7 @@ export class Menus {
       <div class="sheet-inner summary-inner">
         <p class="eyebrow">${v.won ? 'Run complete ★' : 'Run over'}</p>
         <h2 class="big">Depth ${v.depth}</h2>
+        ${v.cause?.length ? `<p class="cause">Ended by ${esc(causeText(v.cause, v.biome))} reaching the line</p>` : ''}
         <p class="sub">${esc(c.name)} · reached ${esc(biomeName(v.biome))}${isBest ? ' · <span class="new">New best!</span>' : v.rank > 0 ? ` · #${v.rank + 1} best run` : ` · best ${v.best}`}</p>
         <dl class="totals">
           <div><dt>Bricks</dt><dd>${v.kills.toLocaleString()}</dd></div>

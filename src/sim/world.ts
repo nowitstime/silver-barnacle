@@ -194,6 +194,24 @@ export class Sim {
     return ROWS - this.lava;
   }
 
+  /**
+   * Danger preview: bricks that end the run if they're still standing when the board next moves
+   * (counts sprinters' extra step, Time Dilation's skipped rows and Forge lava).
+   */
+  get threats(): Brick[] {
+    const t = this.turn + 1;
+    const skip = this.stats.slowDrop && t % 2 === 1 && !this.bossActive && !this.bossCleared;
+    const line = ROWS - this.lavaAt(t);
+    return this.bricks.filter((b) => {
+      if (b.kind === 'steel' || b.kind === 'loot' || (b.boss?.id === 'core' && b.boss.phase < 3)) return false;
+      const step = skip ? 0 : 1 + (b.kind === 'sprinter' ? 1 : 0);
+      return b.r + b.h - 1 + step >= line;
+    });
+  }
+
+  /** What ended the run: the kinds of brick that crossed the line. */
+  deathCause: BrickKind[] = [];
+
   get unfired(): number {
     return Math.max(0, this.ballCount - this.fired);
   }
@@ -544,6 +562,7 @@ export class Sim {
         this.rebuildGrid();
         this.events.push({ type: 'shield', kind: wind ? 'wind' : 'shield' });
       } else {
+        this.deathCause = [...new Set(this.bricks.filter((b) => b.kind !== 'steel' && b.kind !== 'loot' && b.r + b.h - 1 >= this.dangerRow).map((b) => b.kind))];
         this.setPhase('over');
         this.events.push({ type: 'over' });
         return;
@@ -1106,7 +1125,7 @@ export class Sim {
   // ---- board helpers ----
 
   /** Is this brick next to a living Shielder? */
-  private shielded(b: Brick): boolean {
+  shielded(b: Brick): boolean {
     return NEIGHBOURS.some(([dc, dr]) => this.grid.get(gridKey(b.c + dc, b.r + dr))?.kind === 'shielder');
   }
 

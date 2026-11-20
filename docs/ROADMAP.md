@@ -156,9 +156,9 @@ Principles we keep: **every run should create a different build**, **you should 
 - ⬜ Real-device testing pass on a mid-range Android phone and an iPhone
 
 ## M13: Clarity and onboarding *(always know why you lost)*
-- ⬜ **Danger preview** (Into the Breach): bricks that will cross the line next turn pulse; bosses show their next move
-- ⬜ **Hold to inspect**: long-press any brick, pickup or boss for its info card
-- ⬜ **Run history**: the last 20 runs with build, depth and what killed you
+- ✅ **Danger preview** (Into the Breach): bricks that will cross the line next turn pulse with an arrow (counts sprinters, Time Dilation, lava). ⬜ Bosses show their next move
+- ✅ **Hold to inspect**: long-press any brick, pickup or boss for its info card (HP, burning, frozen, shielded, countdowns, threat warning); slide to look at others
+- ✅ **Run history**: the last 20 runs with build, depth and what killed you (Collection → History; the summary says what crossed the line)
 - ⬜ Guided first run (three short steps), then tips as now
 - ⬜ Accessibility: colorblind-safe ink sets, larger text, left-handed layout, effects intensity slider
 

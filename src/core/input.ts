@@ -10,6 +10,8 @@ export interface AimHandlers {
   onFire: () => void;
   /** Called when a drag starts/stops (to show the angle readout). */
   onActive?: (active: boolean) => void;
+  /** Long-press without moving: show info for what's under the finger (world coords); null hides it. */
+  onInspect?: (pos: [number, number] | null) => void;
 }
 
 const deg = Math.PI / 180;
@@ -22,6 +24,8 @@ const BASE_SENSITIVITY = 0.16 * deg;
 /** Movement (CSS px) below which a press counts as a tap. */
 const TAP_SLOP = 8;
 const TAP_MAX_MS = 300;
+/** Hold this long without moving to inspect a brick. */
+const HOLD_MS = 420;
 /** Keyboard / nudge-button step. */
 export const NUDGE = 0.2 * deg;
 
@@ -30,6 +34,7 @@ export const NUDGE = 0.2 * deg;
  * - Drag left/right like a dial. Slow drags are precise; fast flicks turn quicker.
  *   Full speed near the bottom of the screen; the higher your finger, the finer the control.
  * - Quick tap: jump the aim to point at the tapped spot (touches below the launcher are mirrored up).
+ * - Press and hold still: inspect the brick or pickup under your finger (slide to look at others).
  * A separate Fire control confirms the shot.
  */
 export class AimInput {
@@ -42,6 +47,8 @@ export class AimInput {
   /** Smoothed drag speed (px/ms), so one jumpy event doesn't spike the acceleration. */
   private speed = 0;
   private dragging = false;
+  private holdTimer = 0;
+  private inspecting = false;
 
   constructor(private view: View, private el: HTMLElement, private h: AimHandlers) {
     el.addEventListener('pointerdown', this.down);
@@ -71,12 +78,25 @@ export class AimInput {
     this.lastT = this.downAt;
     this.speed = 0;
     this.dragging = false;
+    this.inspecting = false;
+    clearTimeout(this.holdTimer);
+    const [cx, cy] = [e.clientX, e.clientY];
+    this.holdTimer = window.setTimeout(() => {
+      if (this.pointerId === null || this.dragging || !this.h.onInspect) return;
+      this.inspecting = true;
+      this.h.onInspect(this.view.toWorld(cx, cy));
+    }, HOLD_MS);
   };
 
   private move = (e: PointerEvent) => {
     if (e.pointerId !== this.pointerId || !this.h.canAim()) return;
+    if (this.inspecting) {
+      this.h.onInspect?.(this.view.toWorld(e.clientX, e.clientY)); // slide to inspect neighbours
+      return;
+    }
     if (!this.dragging) {
       if (Math.hypot(e.clientX - this.startX, e.clientY - this.startY) <= TAP_SLOP) return;
+      clearTimeout(this.holdTimer);
       this.dragging = true;
       this.lastX = e.clientX;
       this.lastT = performance.now();
@@ -108,15 +128,21 @@ export class AimInput {
 
   private up = (e: PointerEvent) => {
     if (e.pointerId !== this.pointerId) return;
-    const tap = !this.dragging && performance.now() - this.downAt < TAP_MAX_MS;
+    clearTimeout(this.holdTimer);
+    const tap = !this.dragging && !this.inspecting && performance.now() - this.downAt < TAP_MAX_MS;
     if (this.dragging) this.h.onActive?.(false);
+    if (this.inspecting) this.h.onInspect?.(null);
+    this.inspecting = false;
     this.pointerId = null;
     if (tap && this.h.canAim()) this.h.onAim(this.angleTo(e.clientX, e.clientY));
   };
 
   private cancel = (e: PointerEvent) => {
     if (e.pointerId !== this.pointerId) return;
+    clearTimeout(this.holdTimer);
     if (this.dragging) this.h.onActive?.(false);
+    if (this.inspecting) this.h.onInspect?.(null);
+    this.inspecting = false;
     this.pointerId = null;
   };
 

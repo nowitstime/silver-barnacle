@@ -302,6 +302,33 @@ export class Renderer {
       else if (b.kind === 'loot') this.drawLoot(s, inks, b, off);
       else this.drawBrick(s, inks, b, off, ref);
     }
+    if (s.sim.phase === 'aim') this.drawThreats(s, inks, off);
+  }
+
+  /** Danger preview: bricks that will cross the line on the next drop pulse, with an arrow under them. */
+  private drawThreats(s: RenderState, inks: Inks, off: number): void {
+    const threats = s.sim.threats;
+    if (!threats.length) return;
+    const { ctx } = this;
+    const pulse = 0.55 + 0.45 * Math.sin(performance.now() * 0.01);
+    ctx.save();
+    ctx.strokeStyle = inks.i2;
+    ctx.fillStyle = inks.i2;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = pulse;
+    for (const b of threats) {
+      const x = brickX(b.c), y = brickY(b.r) + off, w = span(b.w), h = span(b.h);
+      ctx.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3);
+      // Down arrow just below the brick.
+      const cx = x + w / 2, ay = y + h + 4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, ay);
+      ctx.lineTo(cx + 5, ay);
+      ctx.lineTo(cx, ay + 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawBrick(s: RenderState, inks: Inks, b: Brick, off: number, ref: number): void {

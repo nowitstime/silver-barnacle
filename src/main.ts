@@ -1,3 +1,5 @@
+import { addRun } from './core/history';
+import { inspectAt } from './content/inspect';
 import '@fontsource/space-mono/400.css';
 import '@fontsource/space-mono/700.css';
 import './styles/main.css';
@@ -72,6 +74,8 @@ let demoWait = 0;
 /** Frame timing, exposed as window.__perf with ?debug for profiling. */
 const perf = { sim: 0, render: 0, frames: [] as { dt: number; game: number; sim: number; render: number; balls: number; fx: number }[] };
 if (debug) (window as unknown as { __perf: typeof perf }).__perf = perf;
+/** With ?debug, window.__sim() returns the live game (for testing in the console). */
+if (debug) (window as unknown as { __sim: () => Sim }).__sim = () => sim;
 
 const loop = new Loop(
   (h) => {
@@ -130,6 +134,7 @@ const menus = new Menus(uiRoot, {
   onResume: () => resume(),
   onAbandon: () => {
     save(SAVE_KEY, null);
+    recordRun(true);
     showTitle();
   },
   onLeave: () => {
@@ -178,6 +183,7 @@ new AimInput(view, canvas, {
   angle: () => aimTarget,
   onAim: (a) => { aimTarget = a; aimTouched = time; },
   onActive: (on) => { aimDragging = on; aimTouched = time; },
+  onInspect: (pos) => hud.showInspect(pos ? inspectAt(sim, pos[0], pos[1]) : null),
   onFire: () => fire(),
 });
 
@@ -341,13 +347,22 @@ function summaryView(rank: number) {
   return {
     depth: sim.level, biome: sim.biome, classId: sim.classId, kills: sim.totals.kills, damage: sim.totals.damage,
     bestCombo: sim.totals.bestCombo, bosses: sim.totals.bosses, upgrades: { ...sim.upgrades }, rank, best,
-    won: sim.won,
+    won: sim.won, cause: [...sim.deathCause],
   };
+}
+
+/** Add the run to the history list. */
+function recordRun(abandoned = false): void {
+  addRun({
+    date: Date.now(), classId: sim.classId, depth: sim.level, biome: sim.biome, won: sim.won, abandoned,
+    kills: sim.totals.kills, bosses: sim.totals.bosses, upgrades: { ...sim.upgrades }, cause: abandoned ? [] : [...sim.deathCause],
+  });
 }
 
 /** Record the run's score and show the summary (after losing, or ending a won run). */
 function finishRun(delay = 0): void {
   save(SAVE_KEY, null);
+  recordRun();
   const st = profile.p.stats;
   st.runs++;
   st.deepest = Math.max(st.deepest, sim.level);

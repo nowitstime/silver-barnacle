@@ -1,4 +1,5 @@
 import type { Sim } from '../sim/world';
+import type { InspectCard } from '../content/inspect';
 
 /** Seconds into a volley before the fast-forward and recall buttons appear. */
 const FF_AFTER = 2.5;
@@ -23,6 +24,7 @@ export class Hud {
   private recall: HTMLButtonElement;
   private pause: HTMLButtonElement;
   private hint: HTMLElement;
+  private card: HTMLElement;
   visible = false;
 
   constructor(parent: HTMLElement, private h: HudHandlers) {
@@ -31,12 +33,13 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <button class="icon-btn pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
-      <p class="hint" id="hint" hidden>Drag left or right to aim (higher on the screen = finer) · tap to point · ◀ ▶ to nudge · then Fire</p>
+      <p class="hint" id="hint" hidden>Drag left or right to aim (higher on the screen = finer) · tap to point · hold a brick for info · ◀ ▶ to nudge · then Fire</p>
       <div class="fire-row">
         <button class="nudge" id="nudge-l" type="button" aria-label="Turn aim left">◀</button>
         <button class="fire" id="fire" type="button">Fire</button>
         <button class="nudge" id="nudge-r" type="button" aria-label="Turn aim right">▶</button>
       </div>
+      <div class="inspect-card" id="inspect" hidden role="status"></div>
       <div class="turn-controls">
         <button class="pill" id="recall" type="button" hidden>Recall</button>
         <button class="pill" id="ff" type="button" hidden aria-label="Fast forward">▶▶ 1×</button>
@@ -47,6 +50,7 @@ export class Hud {
     this.recall = this.root.querySelector('#recall')!;
     this.pause = this.root.querySelector('#pause')!;
     this.hint = this.root.querySelector('#hint')!;
+    this.card = this.root.querySelector('#inspect')!;
 
     this.fire.addEventListener('click', () => this.h.onFire());
     this.fireRow = this.root.querySelector('.fire-row')!;
@@ -76,6 +80,14 @@ export class Hud {
   show(on: boolean): void {
     this.visible = on;
     this.root.hidden = !on;
+  }
+
+  /** Hold-to-inspect info card; null hides it. */
+  showInspect(card: InspectCard | null): void {
+    this.card.hidden = !card;
+    if (!card) return;
+    const esc = (t: string) => t.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]!);
+    this.card.innerHTML = `<b>${esc(card.title)}</b>${card.lines.map((l) => `<p>${esc(l)}</p>`).join('')}${card.warn ? `<p class="warn">${esc(card.warn)}</p>` : ''}`;
   }
 
   showHint(on: boolean): void {

@@ -425,3 +425,11 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .card .nums { display: grid; gap: 1px; margin-top: 4px; padding-top: 5px; border-top: 1px dashed currentColor; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .btn-secondary small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 0.02em; margin-top: 2px; }
+
+/* Hold-to-inspect card: floats near the top so the finger doesn't cover it. */
+.inspect-card { position: fixed; left: 50%; top: max(56px, calc(env(safe-area-inset-top) + 48px)); transform: translateX(-50%); width: min(320px, calc(100% - 32px)); background: var(--paper); border: 2px solid var(--i1); box-shadow: 4px 3px 0 var(--i2); padding: 10px 12px; text-align: left; pointer-events: none; z-index: 3; }
+.inspect-card b { display: block; font-size: 15px; margin-bottom: 4px; }
+.inspect-card p { margin: 2px 0 0; font-size: 12px; line-height: 1.4; }
+.inspect-card .warn { color: var(--i2); font-weight: 700; }
+.cause { margin: -4px 0 0; font-size: 14px; font-weight: 700; color: var(--i2); }
+.history .end { font-weight: 700; color: var(--i2); }
