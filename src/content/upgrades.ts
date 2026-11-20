@@ -323,7 +323,7 @@ const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
   burn: ['Burn per turn', num], splash: ['Splash', per], firstBlood: ['First ball damage', times], mitosis: ['Splits per ball', num],
   lava: ['Fireballs', onoff], luckyOrbs: ['Double-orb chance', per], fuse: ['Explosion damage', (v) => `+${per(v)}`],
   armorPierce: ['Full damage to armor', onoff], hazardProof: ['Hazard-proof', onoff],
-  overcharge: ['Guaranteed crit', (v) => (Number(v) ? `every ${v}th hit` : 'off')], mercy: ['Finish bricks under', per],
+  overcharge: ['Guaranteed crit', (v) => (Number(v) ? `every ${v}${({ 2: 'nd', 3: 'rd' } as Record<number, string>)[Number(v)] ?? 'th'} hit` : 'off')], mercy: ['Finish bricks under', per],
   afterburn: ['Fire spreads', onoff], static: ['Static zap chance', per], bounty: ['Bounty chance', per],
   momentum: ['Damage per kill', num], wideLaser: ['Extra laser lines', num], echo: ['Echo volleys', onoff],
   detonate: ['Explode chance', per], slowDrop: ['Rows every other turn', onoff], guardian: ['Shields per biome', num],
@@ -334,6 +334,30 @@ const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
   magnet: ['Magnet pull', num], ghost: ['Pass-throughs per turn', num], wrap: ['Wraparound walls', onoff],
   fireMult: ['Fire heat', times], zapChance: ['Zap chance per hit', per], acid: ['Acid per hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
 };
+
+/** Stats shown as their own line even when unchanged. */
+const HEADLINE: (keyof Stats)[] = ['critChance', 'critMult'];
+/** On/off stats that just repeat a card's name (already in the build list). */
+const NAMED_FLAGS = new Set<keyof Stats>(['glassCannon', 'secondWind', 'tinder', 'chainReaction', 'lava', 'echo', 'afterburn', 'armorPierce', 'hazardProof', 'slowDrop', 'wrap']);
+
+/**
+ * The run's current numbers for the pause screen: damage and crit first, then everything
+ * your build has changed from the starting values. Crit chance includes Critical Mass.
+ */
+export function statSheet(s: Stats, balls: number): [string, string][] {
+  const base = baseStats();
+  const out: [string, string][] = [['Damage per hit', num(s.damage * s.dmgMult)]];
+  for (const key of HEADLINE) {
+    const v = key === 'critChance' ? s.critChance + s.critMass * Math.floor(balls / 10) : s[key];
+    out.push([STAT_LABELS[key]![0], STAT_LABELS[key]![1](v)]);
+  }
+  for (const key of Object.keys(STAT_LABELS) as (keyof Stats)[]) {
+    if (key === 'damage' || key === 'dmgMult' || HEADLINE.includes(key) || NAMED_FLAGS.has(key) || s[key] === base[key]) continue;
+    const [label, fmt] = STAT_LABELS[key]!;
+    out.push([label, fmt(s[key])]);
+  }
+  return out;
+}
 
 export interface RunSnapshot {
   balls: number;

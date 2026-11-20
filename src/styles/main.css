@@ -335,7 +335,16 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .class-card[aria-checked="true"] { box-shadow: 4px 4px 0 var(--i2); transform: translate(-2px, -2px); outline: 2px solid var(--i1); outline-offset: 2px; }
 .class-card[aria-checked="true"] .cperk { display: block; }
 
-.build { text-align: left; border-top: 2px solid var(--i1); padding-top: 12px; max-height: 42dvh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.stats { text-align: left; border-top: 2px solid var(--i1); padding-top: 10px; }
+.stats summary { font-weight: 700; font-size: 15px; cursor: pointer; list-style: none; }
+.stats summary::-webkit-details-marker { display: none; }
+.stats summary::before { content: '▸ '; color: var(--i2); }
+.stats[open] summary::before { content: '▾ '; }
+.stats dl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 10px 0 2px; }
+.stats dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; border-bottom: 1px dotted var(--i1); padding-bottom: 2px; }
+.stats dt { margin: 0; }
+.stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.build { text-align: left; border-top: 2px solid var(--i1); padding-top: 12px; }
 .build .perk { font-size: 13px; line-height: 1.45; margin-bottom: 10px; }
 .build ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .build li { display: grid; gap: 1px; font-size: 12px; line-height: 1.4; padding-left: 10px; border-left: 3px solid var(--i1); }

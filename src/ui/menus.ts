@@ -2,7 +2,7 @@ import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
 import { ACHIEVEMENTS, SKINS, unlockSource } from '../content/achievements';
 import { BOSSES, CORE_BOSS } from '../content/bosses';
 import { BRICKS } from '../content/bricks';
-import { UPGRADES, UPGRADE_BY_ID } from '../content/upgrades';
+import { UPGRADES, UPGRADE_BY_ID, statSheet, type Stats } from '../content/upgrades';
 import type { ProfileStore } from '../core/profile';
 import { ballPath } from '../render/renderer';
 import type { Score } from '../core/scores';
@@ -57,6 +57,8 @@ const biomeName = nameOf;
 /** All full-screen menus. One overlay, re-rendered per screen. */
 export class Menus {
   private el: HTMLElement;
+  /** Whether the pause screen's stats section is expanded (remembered while the app is open). */
+  private statsOpen = true;
   private back: (() => void) | null = null;
   private settings: Settings;
   private title: TitleView | null = null;
@@ -179,7 +181,7 @@ export class Menus {
 
   // ---- pause ----
 
-  showPause(v: { classId: ClassId; upgrades: Record<string, number>; depth: number; biome: number; shields: number; balls: number }): void {
+  showPause(v: { classId: ClassId; upgrades: Record<string, number>; stats: Stats; depth: number; biome: number; shields: number; balls: number }): void {
     const c = CLASS_BY_ID.get(v.classId)!;
     const ups = Object.entries(v.upgrades).filter(([, n]) => n > 0);
     this.render(`
@@ -192,6 +194,10 @@ export class Menus {
           <button class="btn-secondary" id="m-settings" type="button">Settings</button>
         </div>
         <button class="btn-secondary" id="m-leave" type="button">Main menu <small>(run saved, Continue to resume)</small></button>
+        <details class="stats" ${this.statsOpen ? 'open' : ''}>
+          <summary>Your stats</summary>
+          <dl>${statSheet(v.stats, v.balls).map(([k, val]) => `<div><dt>${esc(k)}</dt><dd>${esc(val)}</dd></div>`).join('')}</dl>
+        </details>
         <section class="build">
           <h3>Your build</h3>
           <div class="perk"><b>${c.name}: ${c.perk}.</b> ${c.perkDesc}</div>
@@ -202,6 +208,7 @@ export class Menus {
         </section>
         <button class="btn-text danger" id="m-abandon" type="button">Abandon run</button>
       </div>`, 'pause', () => this.h.onResume());
+    this.el.querySelector('details.stats')!.addEventListener('toggle', (e) => { this.statsOpen = (e.target as HTMLDetailsElement).open; });
     this.on('#m-resume', () => this.h.onResume());
     this.on('#m-leave', () => this.h.onLeave());
     this.on('#m-settings', () => this.showSettings(() => this.showPause(v)));

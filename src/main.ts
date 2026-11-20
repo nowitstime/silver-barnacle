@@ -276,7 +276,7 @@ function pause(): void {
   if (mode !== 'run' || sim.phase === 'over') return;
   loop.paused = true;
   menus.showPause({
-    classId: sim.classId, upgrades: sim.upgrades, depth: sim.level, biome: sim.biome,
+    classId: sim.classId, upgrades: sim.upgrades, stats: sim.stats, depth: sim.level, biome: sim.biome,
     shields: sim.shields, balls: sim.ballCount,
   });
 }
