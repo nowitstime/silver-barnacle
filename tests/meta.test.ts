@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACHIEVEMENTS, LOCKED_UPGRADES, SKINS } from '../src/content/achievements';
-import { UPGRADE_BY_ID, rollOffer } from '../src/content/upgrades';
+import { UPGRADE_BY_ID, rerollSameTiers, rollOffer } from '../src/content/upgrades';
 import { CLASS_BY_ID } from '../src/content/classes';
 import { mulberry32 } from '../src/core/rng';
 import { ProfileStore } from '../src/core/profile';
@@ -47,5 +47,30 @@ describe('achievements and unlocks', () => {
       const offer = rollOffer(rng, {}, 4, 'biome', true, LOCKED_UPGRADES);
       for (const id of LOCKED_UPGRADES) expect(offer).not.toContain(id);
     }
+  });
+});
+
+describe('reroll keeps rarities', () => {
+  it('each card rerolls into a different card of the same rarity', () => {
+    const rng = mulberry32(9);
+    for (let i = 0; i < 200; i++) {
+      const offer = rollOffer(rng, {}, 3, 'biome', i % 2 === 0);
+      const next = rerollSameTiers(rng, {}, offer);
+      expect(next).toHaveLength(offer.length);
+      next.forEach((id, k) => {
+        expect(UPGRADE_BY_ID.get(id)!.rarity).toBe(UPGRADE_BY_ID.get(offer[k])!.rarity);
+        expect(offer).not.toContain(id);
+      });
+      expect(new Set(next).size).toBe(next.length);
+    }
+  });
+
+  it('falls back to a lower rarity when a tier is exhausted', () => {
+    const rng = mulberry32(10);
+    // Own every legendary except the one on offer, so no other legendary is available.
+    const owned = { glass: 1, wind: 1, singularity: 2 };
+    const next = rerollSameTiers(rng, owned, ['lava']);
+    expect(next[0]).not.toBe('lava');
+    expect(UPGRADE_BY_ID.get(next[0])!.rarity).toBe('epic');
   });
 });

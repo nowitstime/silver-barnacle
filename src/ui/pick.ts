@@ -53,7 +53,7 @@ export class PickScreen {
           }).join('')}
         </div>
         <div class="row">
-          ${v.rerolls && onReroll ? `<button class="btn-secondary reroll" type="button">Reroll (free)</button>` : ''}
+          ${v.rerolls && onReroll ? `<button class="btn-secondary reroll" type="button">Reroll (free, same rarities)</button>` : ''}
           <button class="btn-primary take" type="button" disabled>Take it</button>
         </div>
       </div>`;

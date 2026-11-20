@@ -241,3 +241,27 @@ export function rollLoot(rng: Rng, owned: Record<string, number>, biome: number,
   const choices = avail.filter((u) => u.rarity === rarity);
   return choices[Math.floor(rng() * choices.length)].id;
 }
+
+/**
+ * Reroll an offer card by card, keeping each card's rarity (a legendary rerolls into another
+ * legendary). Never repeats a card that was just on offer. If a rarity has nothing left,
+ * that slot falls back to the next rarity down, then up.
+ */
+export function rerollSameTiers(rng: Rng, owned: Record<string, number>, current: string[], locked: string[] = []): string[] {
+  const order: Rarity[] = ['cursed', 'legendary', 'epic', 'rare', 'common'];
+  const next: string[] = [];
+  for (const id of current) {
+    const rarity = UPGRADE_BY_ID.get(id)?.rarity ?? 'rare';
+    const usable = (u: UpgradeDef) => canTake(u, owned) && !locked.includes(u.id) && !current.includes(u.id) && !next.includes(u.id);
+    // Same rarity first; then lower tiers; then higher ones (cursed only ever swaps for cursed).
+    const i = order.indexOf(rarity);
+    const tiers = rarity === 'cursed' ? ['cursed' as Rarity] : [...order.slice(i), ...order.slice(1, i).reverse()];
+    let pick: UpgradeDef | undefined;
+    for (const r of tiers) {
+      const pool = UPGRADES.filter((u) => u.rarity === r && usable(u));
+      if (pool.length) { pick = pool[Math.floor(rng() * pool.length)]; break; }
+    }
+    next.push(pick ? pick.id : id);
+  }
+  return next;
+}

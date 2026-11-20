@@ -2,7 +2,7 @@ import { stream, type Rng } from '../core/rng';
 import { CORE_PHASES, bossFor } from '../content/bosses';
 import { isHazard } from '../content/bricks';
 import { CLASS_BY_ID, type ClassId } from '../content/classes';
-import { LOOT_CATEGORIES, UPGRADE_BY_ID, computeStats, rollLoot, rollOffer, type Stats } from '../content/upgrades';
+import { LOOT_CATEGORIES, UPGRADE_BY_ID, computeStats, rerollSameTiers, rollLoot, rollOffer, type Stats } from '../content/upgrades';
 import type { Contact } from './collision';
 import {
   BALL_R, BALL_SPEED, COLS, DROP_TIME, FLOOR, LAUNCH_INTERVAL, MAX_LAUNCH_TIME, MIN_ANGLE, ROWS, SETTLE_TIME, W,
@@ -260,7 +260,8 @@ export class Sim {
   /** Swap the offered cards for new ones (big picks get one free reroll). */
   reroll(): boolean {
     if (this.phase !== 'pick' || !this.offer || !this.offer.rerolls) return false;
-    const ids = rollOffer(this.lootRng, this.upgrades, Math.max(0, this.biome - 1), this.offer.kind, this.stats.wildcard, this.locked);
+    // Same rarity per card: a legendary rerolls into another legendary.
+    const ids = rerollSameTiers(this.lootRng, this.upgrades, this.offer.ids, this.locked);
     if (!ids.length) return false;
     this.offer = { ...this.offer, ids, rerolls: this.offer.rerolls - 1 };
     return true;
