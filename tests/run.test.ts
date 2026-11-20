@@ -5,7 +5,7 @@ import { BRICKS, rollKind } from '../src/content/bricks';
 import { UPGRADES, categoryOf, computeStats, rollOffer, baseStats } from '../src/content/upgrades';
 import { BIOME_ROWS, biomeLength, gimmickFor } from '../src/sim/run';
 import { CELL, FLOOR, ROWS, STEP, TOP } from '../src/sim/constants';
-import { Sim } from '../src/sim/world';
+import { Sim, pickPoints } from '../src/sim/world';
 
 /** Play turns aiming straight-ish, taking the first card at every pick. */
 function play(sim: Sim, turns: number, onEvent?: (e: ReturnType<Sim['drainEvents']>[number]) => void) {
@@ -244,5 +244,31 @@ describe('ricochet rush', () => {
       for (const b of sim.balls) maxBonus = Math.max(maxBonus, b.bonus);
     }
     expect(maxBonus).toBe(0);
+  });
+});
+
+describe('three upgrade moments per biome', () => {
+  it('loot at a third, a small card pick at two-thirds (commons allowed), the big pick after the boss', () => {
+    const [lootAt, pickAt] = pickPoints(0);
+    expect(lootAt).toBe(4);
+    expect(pickAt).toBe(8);
+    const sim = new Sim(40);
+    sim.debugAddBalls(60);
+    for (let i = 0; i < 8; i++) sim.debugGrant('heavy');
+    let loot = false, small: string[] | null = null;
+    let guard = 0;
+    while (!small && sim.phase !== 'over' && guard++ < 20) {
+      sim.fire(Math.PI / 2 - 0.4 + (guard % 4) * 0.25);
+      while (!['aim', 'pick', 'over'].includes(sim.phase)) {
+        sim.tick(STEP);
+        for (const e of sim.drainEvents()) if (e.type === 'lootAppear') loot = true;
+      }
+      if (sim.phase === 'pick') small = sim.offer!.ids;
+    }
+    expect(loot).toBe(true);
+    expect(sim.offer!.kind).toBe('mid');
+    expect(sim.biomeRow).toBe(pickAt);
+    expect(sim.offer!.rerolls).toBe(0);
+    expect(small!.length).toBe(3);
   });
 });

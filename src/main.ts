@@ -542,7 +542,7 @@ function onFirstSight(id: string): void {
 /** Tips tied to moments rather than bricks. Each shows once ever. */
 function momentTips(e: SimEvent): void {
   if (e.type === 'orb' && profile.tip('orb')) tips.show('Every ⊕ orb you grab adds a ball to your next volley.');
-  if (e.type === 'pick' && profile.tip('pick')) tips.show('Upgrades stack and combine. Small picks come halfway through a biome; big ones after its boss.');
+  if (e.type === 'pick' && profile.tip('pick')) tips.show('Every biome has three upgrades: loot bricks at a third, this small pick at two-thirds, and a big pick after the boss. Cards marked “Fits your build” share themes with what you own.');
   if (e.type === 'drop' && sim.lowestRow >= ROWS - 2 && profile.tip('danger')) tips.show('If a brick crosses the bottom row, the run ends. Shields and Second Wind can save you once.');
   if (e.type === 'laser' && profile.tip('laser')) tips.show('Line lasers blast every brick in their row or column each time a ball passes through.');
   if (e.type === 'portal' && profile.tip('portal')) tips.show('Portals come in pairs: a ball that enters one comes out of the other.');

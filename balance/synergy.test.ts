@@ -10,6 +10,26 @@ import { UPGRADE_BY_ID, synergyScore, THEMES } from '../src/content/upgrades';
 import { mulberry32 } from '../src/core/rng';
 import { bestAngle, finishTurn } from '../src/sim/bot';
 import { Sim } from '../src/sim/world';
+import { CELL, FLOOR, MIN_ANGLE, TOP } from '../src/sim/constants';
+import type { Theme } from '../src/content/upgrades';
+
+/** Which build themes each loot genre feeds. */
+const GENRE_THEMES: Record<string, Theme[]> = {
+  power: ['damage', 'crit', 'general'], arsenal: ['multi', 'bank'], elemental: ['fire', 'explosion', 'lightning'],
+  guard: ['defense'], wild: ['damage', 'crit', 'multi', 'fire', 'explosion', 'lightning', 'bank'],
+};
+
+/** Synergy bot: aim straight at the loot brick whose genre best fits what it owns. */
+function lootAim(sim: Sim): number | null {
+  const loot = sim.bricks.filter((b) => b.kind === 'loot');
+  if (!loot.length) return null;
+  const owned = new Map<string, number>();
+  for (const [id, n] of Object.entries(sim.upgrades)) for (const t of THEMES[id] ?? []) owned.set(t, (owned.get(t) ?? 0) + n);
+  const fit = (g: string) => GENRE_THEMES[g].reduce((a, t) => a + (owned.get(t) ?? 0), 0) / (g === 'wild' ? 2 : 1);
+  const target = loot.reduce((a, b) => (fit(b.loot ?? 'wild') > fit(a.loot ?? 'wild') ? b : a));
+  const tx = target.c * CELL + CELL / 2, ty = TOP + target.r * CELL + CELL / 2;
+  return Math.max(MIN_ANGLE, Math.min(Math.PI - MIN_ANGLE, Math.atan2(FLOOR - ty, tx - sim.launchX)));
+}
 
 const SEEDS = Number(process.env.RUNS ?? 30);
 const CANDIDATES = Number(process.env.CANDIDATES ?? 4);
@@ -33,7 +53,8 @@ function play(seed: number, classId: ClassId, picker: Picker): Result {
       sim.choose(i);
       continue;
     }
-    sim.fire(bestAngle(sim, CANDIDATES));
+    const aim = picker === 'synergy' ? lootAim(sim) : null;
+    sim.fire(aim ?? bestAngle(sim, CANDIDATES));
     finishTurn(sim);
     turns++;
   }

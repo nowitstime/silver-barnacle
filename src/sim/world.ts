@@ -442,9 +442,14 @@ export class Sim {
     } else {
       this.spawnRow();
       this.biomeRow++;
-      if (!this.offeredMid && this.biomeRow === Math.floor(biomeLength(this.biome) / 2)) {
+      const [lootAt, pickAt] = pickPoints(this.biome);
+      if (!this.offeredMid && this.biomeRow === lootAt) {
         this.offeredMid = true;
         this.spawnLoot();
+      }
+      if (!this.offeredSmall && this.biomeRow === pickAt) {
+        this.offeredSmall = true;
+        this.smallPickDue = true;
       }
     }
     this.rebuildGrid();
@@ -507,8 +512,11 @@ export class Sim {
       this.biome++;
       this.biomeRow = 0;
       if (this.stats.guardian) this.runEffects().addShields(this.stats.guardian);
+    } else if (this.smallPickDue) {
+      this.smallPickDue = false;
+      kind = 'mid';
     }
-    if (kind === 'biome') this.offeredMid = false;
+    if (kind === 'biome') { this.offeredMid = false; this.offeredSmall = false; }
     if (kind) {
       this.offer = { kind, ids: rollOffer(this.lootRng, this.upgrades, kind === 'biome' ? this.biome - 1 : this.biome, kind, this.stats.wildcard, this.locked), rerolls: kind === 'biome' ? 1 : 0 };
       if (this.offer.ids.length) {
@@ -522,6 +530,9 @@ export class Sim {
     this.setPhase('aim');
   }
   private offeredMid = false;
+  /** The small card pick two-thirds of the way through the biome. */
+  private offeredSmall = false;
+  private smallPickDue = false;
   private coreBroken = false;
   /** The Core has been broken this run (the run can continue into endless). */
   won = false;
@@ -837,7 +848,7 @@ export class Sim {
     // Acid: a share of the brick's max HP on top (bosses resist).
     if (s.acid && brick.kind !== 'steel') dmg += Math.round(brick.maxHp * s.acid * (brick.boss ? 0.25 : 1));
     // Kindling: the brick burns for a share of this hit; Tinderbox doubles fires lit by crits.
-    if (s.burn && brick.kind !== 'steel') brick.burn = Math.max(brick.burn, Math.max(1, Math.round(dmg * 0.25 * s.burn * (s.tinder && crit ? 2 : 1))));
+    if (s.burn && brick.kind !== 'steel') brick.burn = Math.max(brick.burn, Math.max(1, Math.round(dmg * 0.6 * s.burn * s.fireMult * (s.tinder && crit ? 2 : 1))));
 
     const hitsBefore = this.totals.kills;
     const killed = this.damage(brick, dmg, x, y, 'ball', ball, crit, contact);
@@ -850,7 +861,7 @@ export class Sim {
     } else bounce(ball, contact);
 
     if (crit) {
-      if (s.chain) this.zap(brick, s.chain, x, y, Math.max(1, Math.round(dmg / 2)));
+      if (s.chain) this.zap(brick, s.chain, x, y, Math.max(1, Math.round(dmg * 0.75)));
       if (s.mitosis && !ball.copy && this.copiesThisVolley < Math.min(MAX_COPIES, s.mitosis * this.ballCount)) {
         this.copiesThisVolley++;
         const a = Math.atan2(-ball.vy, ball.vx) + (this.combatRng() < 0.5 ? 0.45 : -0.45);
@@ -858,6 +869,7 @@ export class Sim {
         this.events.push({ type: 'split', x: ball.x, y: ball.y });
       }
     }
+    if (s.zapChance && this.combatRng() < s.zapChance) this.zap(brick, 1, x, y, Math.max(1, Math.round(dmg / 2)));
     if (s.payload && this.hitsThisVolley % 15 === 0) this.explode(brick.c, brick.r, dmg * 2, x, y);
   }
 
@@ -1223,7 +1235,9 @@ export class Sim {
     this.biome = d.biome;
     this.biomeRow = d.biomeRow;
     this.bossActive = d.bossActive;
-    this.offeredMid = d.biomeRow >= Math.floor(biomeLength(d.biome) / 2);
+    const [lootAt, pickAt] = pickPoints(d.biome);
+    this.offeredMid = d.biomeRow >= lootAt;
+    this.offeredSmall = d.biomeRow >= pickAt;
     this.bricks = d.bricks.map((b) => ({ ...b, boss: b.boss ? { ...b.boss } : undefined }));
     this.items = d.items.map((i) => ({ ...i }));
     this.upgrades = { ...d.upgrades };
@@ -1253,13 +1267,14 @@ export class Sim {
   /** Jump to just before the next pick (the halfway point, or the boss). */
   debugSkipToPick(): void {
     if (this.phase !== 'aim') return;
-    const half = Math.floor(biomeLength(this.biome) / 2);
-    const target = this.biomeRow < half ? half - 1 : biomeLength(this.biome);
+    const [lootAt, pickAt] = pickPoints(this.biome);
+    const target = [lootAt - 1, pickAt - 1, biomeLength(this.biome)].find((t) => t > this.biomeRow - 1 && t >= this.biomeRow) ?? biomeLength(this.biome);
     if (target > this.biomeRow) {
       this.turn += target - this.biomeRow;
       this.biomeRow = target;
     }
   }
+
 
   /** Jump to the end of a biome so its boss arrives next turn (for testing). */
   debugJumpToBoss(biome = this.biome): void {
@@ -1267,6 +1282,7 @@ export class Sim {
     this.biome = biome;
     this.biomeRow = biomeLength(biome);
     this.offeredMid = true;
+    this.offeredSmall = true;
   }
 
   /** Put a brick of any kind in the top row (for testing). */
@@ -1284,6 +1300,12 @@ const NEIGHBOURS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 function sideOf(c: Contact): number {
   if (Math.abs(c.ny) >= Math.abs(c.nx)) return c.ny < 0 ? 0 : 2;
   return c.nx > 0 ? 1 : 3;
+}
+
+/** Rows into a biome when the loot bricks land (1/3) and the small card pick comes (2/3). */
+export function pickPoints(biome: number): [number, number] {
+  const len = biomeLength(biome);
+  return [Math.max(1, Math.round(len / 3)), Math.max(2, Math.round((len * 2) / 3))];
 }
 
 export function clampAngle(a: number): number {

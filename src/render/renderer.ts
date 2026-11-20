@@ -1116,7 +1116,9 @@ export class Renderer {
     else {
       ctx.fillRect(x0, 26, (x1 - x0) * sim.biomeProgress, 2);
       ctx.fillStyle = inks.i1;
-      ctx.fillRect(x0 + (x1 - x0) * 0.5 - 0.5, 24, 1, 6);
+      // Ticks for the loot drop (1/3) and the small pick (2/3).
+      ctx.fillRect(x0 + (x1 - x0) / 3 - 0.5, 24, 1, 6);
+      ctx.fillRect(x0 + ((x1 - x0) * 2) / 3 - 0.5, 24, 1, 6);
     }
     ctx.restore();
   }

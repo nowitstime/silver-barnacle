@@ -80,6 +80,10 @@ export interface Stats {
   chainReaction: boolean;
   /** Extra jumps for every lightning zap (Conductor). */
   conduct: number;
+  /** Multiplies how hot fires burn (Bellows). */
+  fireMult: number;
+  /** Chance any hit zaps a nearby brick (Copper Wire). */
+  zapChance: number;
   // ---- class perks ----
   executioner: boolean;
   encore: boolean;
@@ -93,7 +97,7 @@ export const baseStats = (): Stats => ({
   luckyOrbs: 0, fuse: 0, armorPierce: false, hazardProof: false, overcharge: 0, mercy: 0,
   afterburn: false, static: 0, bounty: 0, momentum: 0, wideLaser: 0, echo: false, detonate: 0,
   slowDrop: false, guardian: 0, critMass: 0, lastStand: 1, glassCannon: false, secondWind: false,
-  singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0,
+  singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0, fireMult: 1, zapChance: 0,
   executioner: false, encore: false, payload: false, wildcard: false,
 });
 
@@ -130,12 +134,16 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'lucky', name: 'Lucky Orbs', rarity: 'common', max: 6, desc: () => '+30% chance that a +ball orb gives two balls.', apply: (s, n) => { s.luckyOrbs += 0.3 * n; } }),
   U({ id: 'fuse', name: 'Short Fuse', rarity: 'common', max: 5, desc: () => 'Bombs and explosions deal +75% damage, and bombs show up more often.', apply: (s, n) => { s.fuse += 0.75 * n; } }),
   U({ id: 'steeltoe', name: 'Can Opener', rarity: 'common', max: 1, desc: () => 'Armored bricks take full damage.', apply: (s) => { s.armorPierce = true; } }),
+  U({ id: 'whetstone', name: 'Whetstone', rarity: 'common', max: 5, desc: () => '+4% crit chance and +25% crit damage.', apply: (s, n) => { s.critChance += 0.04 * n; s.critMult += 0.25 * n; } }),
+  U({ id: 'bellows', name: 'Bellows', rarity: 'common', max: 4, desc: () => 'Fires burn 30% hotter. (Needs something that lights fires.)', apply: (s, n) => { s.fireMult += 0.3 * n; } }),
+  U({ id: 'powder', name: 'Black Powder', rarity: 'common', max: 4, desc: () => 'Bricks you break have a 6% chance to explode for the damage of the hit.', apply: (s, n) => { s.detonate += 0.06 * n; } }),
+  U({ id: 'copper', name: 'Copper Wire', rarity: 'common', max: 4, desc: () => 'Any hit has an 8% chance to zap a nearby brick for half its damage.', apply: (s, n) => { s.zapChance += 0.08 * n; } }),
   // ---- rare ----
   U({ id: 'pierce', name: 'Pierce', rarity: 'rare', max: 4, desc: (n) => `Each ball smashes straight through ${n === 0 ? 'the first brick' : `the first ${n + 1} bricks`} it kills each turn.`, apply: (s, n) => { s.pierce += n; } }),
   U({ id: 'ricochet', name: 'Ricochet Rush', rarity: 'rare', max: 3, desc: () => 'Once a ball has hit a brick, every wall bounce gives it +1 damage until the turn ends.', apply: (s, n) => { s.ricochet += n; } }),
-  U({ id: 'chain', name: 'Chain Lightning', rarity: 'rare', max: 4, desc: () => 'Crits zap 3 more nearby bricks for half the crit\u2019s damage.', apply: (s, n) => { s.chain += 3 * n; } }),
-  U({ id: 'kindling', name: 'Kindling', rarity: 'rare', max: 5, desc: (n) => `Hits set bricks on fire: they burn for ${25 * (n + 1)}% of the hit that lit them, every turn. Bigger hits, bigger fires.`, apply: (s, n) => { s.burn += n; } }),
-  U({ id: 'splash', name: 'Splash', rarity: 'rare', max: 4, desc: (n) => `When a brick breaks, its neighbours take ${pct(0.5 * (n + 1))} of the killing hit.`, apply: (s, n) => { s.splash += 0.5 * n; } }),
+  U({ id: 'chain', name: 'Chain Lightning', rarity: 'rare', max: 4, desc: () => 'Crits zap 3 more nearby bricks for 75% of the crit\u2019s damage.', apply: (s, n) => { s.chain += 3 * n; } }),
+  U({ id: 'kindling', name: 'Kindling', rarity: 'rare', max: 5, desc: (n) => `Hits set bricks on fire: they burn for ${60 * (n + 1)}% of the hit that lit them, every turn. Bigger hits, bigger fires.`, apply: (s, n) => { s.burn += n; } }),
+  U({ id: 'splash', name: 'Splash', rarity: 'rare', max: 4, desc: (n) => `When a brick breaks, its neighbours take ${pct(0.75 * (n + 1))} of the killing hit.`, apply: (s, n) => { s.splash += 0.75 * n; } }),
   U({ id: 'first', name: 'First Blood', rarity: 'rare', max: 4, desc: (n) => `The first ball of every volley deals ${10 + 5 * n}× damage.`, apply: (s, n) => { s.firstBlood = 10 + 5 * (n - 1); } }),
   U({ id: 'proof', name: 'Hazard Suit', rarity: 'rare', max: 1, desc: () => 'Hazard bricks no longer affect your balls. Poppers still pop, but your ball survives.', apply: (s) => { s.hazardProof = true; } }),
   U({ id: 'overcharge', name: 'Overcharge', rarity: 'rare', max: 3, desc: (n) => `Every ${[5, 3, 2][Math.min(n, 2)]}${n >= 2 ? 'nd' : n === 1 ? 'rd' : 'th'} hit in a volley is a guaranteed crit.`, apply: (s, n) => { s.overcharge = [5, 3, 2][Math.min(n - 1, 2)]; } }),
@@ -214,6 +222,7 @@ const CATEGORY: Record<string, Exclude<LootCategory, 'wild'>> = {
   detonate: 'elemental', fuse: 'elemental', lava: 'elemental', wide: 'elemental', singularity: 'elemental',
   skin: 'guard', proof: 'guard', guardian: 'guard', wind: 'guard', dilation: 'guard', sight: 'guard',
   acid: 'power', tinder: 'elemental', chainreact: 'elemental', conductor: 'elemental',
+  whetstone: 'power', bellows: 'elemental', powder: 'elemental', copper: 'elemental',
 };
 
 export const categoryOf = (id: string): Exclude<LootCategory, 'wild'> | undefined => CATEGORY[id];
@@ -302,7 +311,7 @@ const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
   critMass: ['Crit per 10 balls', per], lastStand: ['Bottom-row damage', times], glassCannon: ['Glass Cannon', onoff],
   secondWind: ['Second Wind', onoff], singularity: ['Bricks collapsed per turn', num],
   hazardMult: ['Hazard frequency', times], hpMult: ['New brick HP', times],
-  acid: ['Acid per hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
+  fireMult: ['Fire heat', times], zapChance: ['Zap chance per hit', per], acid: ['Acid per hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
 };
 
 export interface RunSnapshot {
@@ -350,6 +359,7 @@ export const THEMES: Record<string, Theme[]> = {
   ricochet: ['bank', 'damage'], momentum: ['bank', 'damage'], pierce: ['bank'],
   skin: ['defense', 'general'], guardian: ['defense'], wind: ['defense'], proof: ['defense'], dilation: ['defense'],
   sight: ['general'], wide: ['general'], singularity: ['general'],
+  whetstone: ['crit'], bellows: ['fire'], powder: ['explosion'], copper: ['lightning'],
   pact: ['damage'], overgrowth: ['multi'], tunnel: ['crit'],
 };
 

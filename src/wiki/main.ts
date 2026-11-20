@@ -59,7 +59,7 @@ const PAGES: Page[] = [
           <tr><td>∞</td><td>Endless</td><td>24 each</td><td>Biomes repeat, tougher every lap</td><td>All five again</td></tr>
         </tbody>
       </table></div>
-      <p>Halfway through each biome, <b>three loot bricks</b> land on the board, each marked with a genre. Break one to claim an upgrade from that genre. After each boss you get a <b>big pick</b>: three rare-or-better cards with one free reroll. That's 10 upgrades before The Core.</p>
+      <p>Every biome has three upgrade moments: <b>loot bricks</b> a third of the way through (three genre-marked bricks; break the one you want), a <b>small pick</b> two-thirds of the way through (three cards, mostly commons and rares), and the <b>big pick</b> after its boss (rare or better, one free reroll). That's 15 upgrades before The Core.</p>
       <p>Every biome has a <b>rule</b> that gets stronger the deeper you go into it.</p>
       <h2>Where to start</h2>
       <ul>
@@ -157,7 +157,7 @@ const PAGES: Page[] = [
         </article>`).join('')}
       </div>
       <h2 id="loot">Loot bricks</h2>
-      <p>Halfway through every biome, three loot bricks land in the top row. The first one you break gives you an upgrade from its genre; the other two shatter. Loot bricks never end your run, and they fall off the bottom if you ignore them.</p>
+      <p>A third of the way through every biome, three loot bricks land in the top row. The first one you break gives you an upgrade from its genre; the other two shatter. Loot bricks never end your run, and they fall off the bottom if you ignore them.</p>
       <div class="table-wrap"><table><thead><tr><th>Genre</th><th>What's inside</th><th>Upgrades</th></tr></thead><tbody>
         ${LOOT_CATEGORIES.map((c) => `<tr><td><b>${LOOT_INFO[c].name}</b></td><td>${LOOT_INFO[c].hint}</td><td>${c === 'wild' ? 'Any (skews rare)' : UPGRADES.filter((u) => categoryOf(u.id) === c).map((u) => esc(u.name)).join(', ')}</td></tr>`).join('')}
       </tbody></table></div>

@@ -31,7 +31,9 @@ export interface RowOptions extends SpawnTuning {
  * so it keeps pace with your ball count and upgrades.
  */
 export function brickHp(level: number, biome: number): number {
-  return level * (1 + level / HP_CURVE) * (1 + BIOME_HP * biome);
+  // A little gentler through the first two biomes, so builds have time to come together.
+  const early = level < 28 ? 0.85 + 0.15 * (level / 28) : 1;
+  return level * (1 + level / HP_CURVE) * (1 + BIOME_HP * biome) * early;
 }
 export const HP_CURVE = 50;
 export const BIOME_HP = 0.2;
