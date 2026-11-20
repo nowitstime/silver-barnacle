@@ -15,8 +15,11 @@ export const endlessLap = (b: number): number => (b < ENDLESS_START ? 0 : Math.f
 
 export const biomeLength = (b: number): number => (b < CORE ? BIOME_ROWS[b] : b === CORE ? 0 : ENDLESS_ROWS);
 
-/** Endless gets tougher fast: brick HP +30% every endless biome (compounding), hazards every lap. */
-export const endlessHp = (b: number): number => (b < ENDLESS_START ? 1 : 1.3 ** (b - CORE));
+/**
+ * Endless gets tougher fast: brick HP ×1.45 every 24 turns after The Core (compounding, every turn,
+ * whether or not a row dropped). Hazards step up every lap.
+ */
+export const endlessHp = (turnsInEndless: number): number => 1.45 ** (Math.max(0, turnsInEndless) / 24);
 export const endlessHazards = (b: number): number => 1.3 ** endlessLap(b);
 
 /** Each biome changes how the game plays. */

@@ -62,6 +62,8 @@ export interface SaveData {
   won?: boolean;
   biome: number;
   biomeRow: number;
+  /** Turn endless mode began (older saves: estimated). */
+  endlessStart?: number;
   bossActive: boolean;
   bricks: Brick[];
   items: Item[];
@@ -404,11 +406,6 @@ export class Sim {
       }
       if (b.burn > 0) this.damage(b, b.burn, cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
     }
-    // Singularity: the toughest brick collapses.
-    if (s.singularity) {
-      const tough = this.bricks.filter((b) => b.hp > 0 && b.kind !== 'boss' && b.kind !== 'steel').sort((a, b) => b.hp - a.hp || a.id - b.id);
-      for (const b of tough.slice(0, s.singularity)) this.damage(b, b.hp, cellCenterX(b.c), cellCenterY(b.r), 'void', null, false);
-    }
     // Forge heat: untouched bricks regrow.
     if (this.gimmick === 'heat') {
       for (const b of this.bricks) {
@@ -473,6 +470,11 @@ export class Sim {
     }
     const skipRow = this.stats.slowDrop && this.turn % 2 === 1 && !this.bossActive && !this.bossCleared;
     if (!skipRow) this.shiftDown(1);
+    // Singularity: when a row drops, the toughest brick collapses.
+    if (!skipRow && s.singularity) {
+      const tough = this.bricks.filter((b) => b.hp > 0 && b.kind !== 'boss' && b.kind !== 'steel').sort((a, b) => b.hp - a.hp || a.id - b.id);
+      for (const b of tough.slice(0, s.singularity)) this.damage(b, b.hp, cellCenterX(b.c), cellCenterY(b.r), 'void', null, false);
+    }
     this.fusesTick();
     if (this.gimmick === 'current') this.tide();
     if (this.bossCleared || this.coreBroken || skipRow) {
@@ -576,6 +578,13 @@ export class Sim {
   private offeredSmall = false;
   private smallPickDue = false;
   private coreBroken = false;
+  /** Turn endless began; endless HP scales with turns since then. */
+  endlessStart = 0;
+
+  /** Extra brick HP in endless (1 before it). */
+  get endlessHpMult(): number {
+    return this.biome < ENDLESS_START ? 1 : endlessHp(this.turn - this.endlessStart);
+  }
   /** The Core has been broken this run (the run can continue into endless). */
   won = false;
 
@@ -584,6 +593,7 @@ export class Sim {
     if (this.phase !== 'won') return false;
     this.biome = ENDLESS_START;
     this.biomeRow = 0;
+    this.endlessStart = this.turn;
     this.offeredMid = false;
     this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard, this.locked), rerolls: 1 };
     if (this.offer.ids.length) {
@@ -608,7 +618,7 @@ export class Sim {
     const c = core ? 2 : 1 + Math.floor(this.rowRng() * (COLS - 3));
     for (const b of [...this.bricks]) if (b.r < size && b.c + b.w > c && b.c < c + size) this.removeBrick(b);
     const tier = core ? 45 : 12 + 3 * Math.min(this.biome, 4);
-    const hp = Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * tier * this.stats.hpMult * endlessHp(this.biome));
+    const hp = Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * tier * this.stats.hpMult * this.endlessHpMult);
     this.bricks.push({
       id: this.nextId++, c, r: 0, w: size, h: size, hp, maxHp: hp, kind: 'boss', burn: 0, frozen: false, hitThisTurn: false,
       boss: { id: def.id, side: 0, dir: this.rowRng() < 0.5 ? -1 : 1, turnDamage: 0, phase: 1 },
@@ -1148,7 +1158,7 @@ export class Sim {
       [cats[i], cats[j]] = [cats[j], cats[i]];
     }
     const cols = [1, 3, 5];
-    const hp = Math.max(2, Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * 1.2 * endlessHp(this.biome)));
+    const hp = Math.max(2, Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * 1.2 * this.endlessHpMult));
     cols.forEach((c, i) => {
       const old = this.grid.get(gridKey(c, 0));
       if (old) this.removeBrick(old);
@@ -1225,7 +1235,7 @@ export class Sim {
     const s = this.stats;
     const slowHp = s.slowDrop ? 1.8 : 1;
     const row = generateRow(this.rowRng, this.level, {
-      biome: Math.min(this.biome, CORE), hpMult: s.hpMult * slowHp * endlessHp(this.biome),
+      biome: Math.min(this.biome, CORE), hpMult: s.hpMult * slowHp * this.endlessHpMult,
       hazardMult: s.hazardMult * endlessHazards(this.biome),
       bombMult: (this.gimmick === 'heat' ? 2.5 : 1) * (1 + s.fuse),
     });
@@ -1272,6 +1282,7 @@ export class Sim {
       won: this.won,
       biome: this.biome,
       biomeRow: this.biomeRow,
+      endlessStart: this.endlessStart,
       bossActive: this.bossActive,
       bricks: this.bricks.map((b) => ({ ...b, boss: b.boss ? { ...b.boss } : undefined })),
       items: this.items.map((i) => ({ ...i })),
@@ -1297,6 +1308,7 @@ export class Sim {
     this.won = !!d.won;
     this.biome = d.biome;
     this.biomeRow = d.biomeRow;
+    this.endlessStart = d.endlessStart ?? Math.max(0, d.turn - Math.max(0, d.biome - CORE) * 24 - d.biomeRow);
     this.bossActive = d.bossActive;
     const [lootAt, pickAt] = pickPoints(d.biome);
     this.offeredMid = d.biomeRow >= lootAt;
