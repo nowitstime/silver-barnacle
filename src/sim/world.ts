@@ -1036,7 +1036,7 @@ export class Sim {
     }
     if (brick.kind === 'bomb') this.explode(brick.c, brick.r, Math.max(this.level, s.damage * 3), cx, cy);
     else if (source === 'bomb' && s.chainReaction) this.explode(brick.c, brick.r, amount * 0.8, cx, cy);
-    else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, amount, cx, cy);
+    else if (s.detonate && source !== 'bomb' && source !== 'void' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, amount, cx, cy);
     if (brick.kind === 'splitter') {
       for (let i = 0; i < 2; i++) {
         const cell = this.freeNeighbour(brick.c, brick.r);
@@ -1049,7 +1049,8 @@ export class Sim {
         if (n && n.kind !== 'steel') { n.burn = Math.max(n.burn, brick.burn); n.lit = true; }
       }
     }
-    if (s.splash > 0 && source !== 'splash' && source !== 'burn' && source !== 'bomb') {
+    // Bricks that collapse (Singularity, sponges) don't splash or explode for their whole HP.
+    if (s.splash > 0 && source !== 'splash' && source !== 'burn' && source !== 'bomb' && source !== 'void') {
       const splash = Math.max(1, Math.round(amount * s.splash));
       for (const [dc, dr] of NEIGHBOURS) {
         const n = this.grid.get(gridKey(brick.c + dc, brick.r + dr));
