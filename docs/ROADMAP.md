@@ -138,6 +138,7 @@ Principles we keep: **every run should create a different build**, **you should 
 - ⬜ **Generative music** per biome that builds with combos and danger, plus stereo panning by ball position
 - ⬜ **Last-shot ghost**: a faint line showing where your previous shot went
 - ⬜ Camera punch-in on boss kills; bigger biome transitions
+- ⬜ **Biome art pass**: give each biome its own background motif and a better ink pair. **Caverns first**: its flat purple darkness slab reads as annoying. Replace it with halftone shadow that thickens away from light, keep lit bricks as faint outlines once seen, and try a softer ink pair
 - ⬜ Audio mix pass: limiter, fewer harsh highs at high ball counts
 - ⬜ Real-device testing pass on a mid-range Android phone and an iPhone
 
