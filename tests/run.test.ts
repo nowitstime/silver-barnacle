@@ -48,7 +48,7 @@ describe('content', () => {
     expect(s.damage).toBe(b.damage + 2);
     expect(s.critChance).toBeCloseTo(b.critChance + 0.08);
     expect(s.critMult).toBe(b.critMult + 1);
-    expect(s.firstBlood).toBe(5);
+    expect(s.firstBlood).toBe(10);
     expect(s.dmgMult).toBe(3);
   });
 

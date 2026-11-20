@@ -80,7 +80,7 @@ describe('card previews', () => {
     const run = { balls: 12, shields: 1 };
     expect(previewUpgrade('sharp', {}, undefined, run)).toEqual(['Crit chance 5% → 13%']);
     expect(previewUpgrade('heavy', { heavy: 2 }, undefined, run)).toEqual(['Damage 3 → 4']);
-    expect(previewUpgrade('extra', {}, undefined, run)).toEqual(['Balls 12 → 15']);
+    expect(previewUpgrade('extra', {}, undefined, run)).toEqual(['Balls 12 → 17']);
     expect(previewUpgrade('glass', {}, undefined, run)).toContain('Shields 1 → 0');
     // Class perks are included: Striker starts at 15% crit.
     expect(previewUpgrade('sharp', {}, CLASS_BY_ID.get('striker')!.apply, run)).toEqual(['Crit chance 15% → 23%']);

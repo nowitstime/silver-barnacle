@@ -16,8 +16,8 @@ export interface ClassDef {
 export const CLASSES: ClassDef[] = [
   {
     id: 'striker', name: 'Striker', tagline: 'One heavy ball. Big crits.', startBalls: 1,
-    perk: 'Executioner', perkDesc: '+25% damage and +10% crit chance. Crits instantly finish bricks left under 25% HP.',
-    apply: (s) => { s.dmgMult += 0.25; s.critChance += 0.1; s.executioner = true; },
+    perk: 'Executioner', perkDesc: '+40% damage and +10% crit chance. Crits instantly finish bricks left under 35% HP.',
+    apply: (s) => { s.dmgMult += 0.4; s.critChance += 0.1; s.executioner = true; },
   },
   {
     id: 'juggler', name: 'Juggler', tagline: 'Lots of light balls.', startBalls: 4,
@@ -31,7 +31,7 @@ export const CLASSES: ClassDef[] = [
   },
   {
     id: 'bomber', name: 'Bomber', tagline: 'Weak hits, loud results.', startBalls: 2,
-    perk: 'Payload', perkDesc: 'Every 10th hit in a volley sets off an explosion that grows with depth.',
+    perk: 'Payload', perkDesc: 'Every 15th hit in a volley sets off an explosion that grows with depth.',
     apply: (s) => { s.payload = true; },
   },
   {

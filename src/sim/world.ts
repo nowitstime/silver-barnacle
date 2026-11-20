@@ -357,7 +357,8 @@ export class Sim {
     const s = this.stats;
     // Burning bricks take damage.
     for (const b of [...this.bricks]) {
-      if (b.burn > 0) this.damage(b, b.burn * s.damage, cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
+      // Burn eats a share of max HP, so it keeps up with deep bricks (bosses burn slower).
+      if (b.burn > 0) this.damage(b, Math.max(1, Math.round(b.maxHp * 0.04 * b.burn * (b.boss ? 0.25 : 1))), cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
     }
     // Singularity: the weakest bricks collapse.
     if (s.singularity) {
@@ -699,7 +700,7 @@ export class Sim {
       const target = this.bricks[Math.floor(this.combatRng() * this.bricks.length)];
       const tx = cellCenterX(target.c), ty = cellCenterY(target.r);
       this.events.push({ type: 'zap', x1: x, y1: y, x2: tx, y2: ty });
-      this.damage(target, s.damage, tx, ty, 'chain', null, false);
+      this.damage(target, Math.max(s.damage * 3, Math.round(this.level * 0.5)), tx, ty, 'chain', null, false);
     }
   }
 
@@ -842,7 +843,7 @@ export class Sim {
     } else bounce(ball, contact);
 
     if (crit) {
-      if (s.chain) this.zap(brick, s.chain, x, y);
+      if (s.chain) this.zap(brick, s.chain, x, y, Math.max(1, Math.round(dmg / 2)));
       if (s.mitosis && !ball.copy && this.copiesThisVolley < Math.min(MAX_COPIES, s.mitosis * this.ballCount)) {
         this.copiesThisVolley++;
         const a = Math.atan2(-ball.vy, ball.vx) + (this.combatRng() < 0.5 ? 0.45 : -0.45);
@@ -850,7 +851,7 @@ export class Sim {
         this.events.push({ type: 'split', x: ball.x, y: ball.y });
       }
     }
-    if (s.payload && this.hitsThisVolley % 10 === 0) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.3), x, y);
+    if (s.payload && this.hitsThisVolley % 15 === 0) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.2), x, y);
   }
 
   private ballDamage(ball: Ball, brick: Brick, crit: boolean): number {
@@ -922,7 +923,7 @@ export class Sim {
     // Finishers.
     if (brick.hp > 0 && brick.kind !== 'boss') {
       const frac = brick.hp / brick.maxHp;
-      if ((s.mercy && frac < s.mercy) || (s.executioner && crit && frac < 0.25)) brick.hp = 0;
+      if ((s.mercy && frac < s.mercy) || (s.executioner && crit && frac < 0.35)) brick.hp = 0;
     }
     const killed = brick.hp <= 0;
     if (killed) {
@@ -950,7 +951,7 @@ export class Sim {
       this.events.push({ type: 'orb', x: cx, y: cy, extra: false });
     }
     if (brick.kind === 'bomb') this.explode(brick.c, brick.r, Math.max(this.level, s.damage * 3), cx, cy);
-    else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, s.damage * 2, cx, cy);
+    else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, Math.max(s.damage * 3, this.level * 0.5), cx, cy);
     if (brick.kind === 'splitter') {
       for (let i = 0; i < 2; i++) {
         const cell = this.freeNeighbour(brick.c, brick.r);
@@ -964,7 +965,7 @@ export class Sim {
       }
     }
     if (s.splash > 0 && source !== 'splash' && source !== 'burn' && source !== 'bomb') {
-      const splash = Math.max(1, Math.round(s.damage * s.splash * (crit ? s.critMult : 1)));
+      const splash = Math.max(1, Math.round(amount * s.splash));
       for (const [dc, dr] of NEIGHBOURS) {
         const n = this.grid.get(gridKey(brick.c + dc, brick.r + dr));
         if (n) this.damage(n, splash, cellCenterX(n.c), cellCenterY(n.r), 'splash', null, false);
@@ -990,7 +991,7 @@ export class Sim {
   }
 
   /** Chain Lightning: hit the nearest other bricks. */
-  private zap(from: Brick, count: number, x: number, y: number): void {
+  private zap(from: Brick, count: number, x: number, y: number, amount: number): void {
     const fx = cellCenterX(from.c), fy = cellCenterY(from.r);
     const targets = this.bricks
       .filter((b) => b !== from && b.kind !== 'steel')
@@ -1000,7 +1001,7 @@ export class Sim {
     for (const { b } of targets) {
       const tx = cellCenterX(b.c), ty = cellCenterY(b.r);
       this.events.push({ type: 'zap', x1: x, y1: y, x2: tx, y2: ty });
-      this.damage(b, this.stats.damage, tx, ty, 'chain', null, false);
+      this.damage(b, amount, tx, ty, 'chain', null, false);
     }
   }
 
@@ -1134,7 +1135,7 @@ export class Sim {
 
   private spawnRow(): void {
     const s = this.stats;
-    const slowHp = s.slowDrop ? 1.6 : 1;
+    const slowHp = s.slowDrop ? 1.8 : 1;
     const row = generateRow(this.rowRng, this.level, {
       biome: Math.min(this.biome, CORE), hpMult: s.hpMult * slowHp * endlessHp(this.biome),
       hazardMult: s.hazardMult * endlessHazards(this.biome),
