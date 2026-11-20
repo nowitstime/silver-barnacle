@@ -200,6 +200,10 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .card .name { font-size: 18px; font-weight: 700; line-height: 1.15; }
 .card .desc { font-size: 13px; line-height: 1.45; }
 .card .owned { font-size: 11px; color: var(--i2); font-weight: 700; }
+.card .themes { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.card .themes i { font-style: normal; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid currentColor; padding: 0 5px; opacity: 0.8; }
+.card .themes .fits { font-size: 10px; color: var(--paper); background: var(--i2); padding: 1px 6px; letter-spacing: 0.04em; }
+.card[data-rarity="legendary"] .themes .fits { background: var(--paper); color: var(--i2); }
 .card[data-rarity="rare"] { background-image: radial-gradient(color-mix(in srgb, var(--i1) 22%, transparent) 1px, transparent 1.5px); background-size: 6px 6px; }
 .card[data-rarity="epic"] { border-color: var(--i2); box-shadow: 3px 3px 0 var(--i1); }
 .card[data-rarity="epic"] .rarity { color: var(--i2); }

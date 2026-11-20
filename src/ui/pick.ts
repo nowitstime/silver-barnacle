@@ -1,4 +1,4 @@
-import { UPGRADE_BY_ID } from '../content/upgrades';
+import { THEMES, UPGRADE_BY_ID, synergyScore } from '../content/upgrades';
 
 export interface PickView {
   kind: 'mid' | 'biome';
@@ -49,6 +49,7 @@ export class PickScreen {
             return `<button class="card" type="button" data-i="${i}" data-rarity="${u.rarity}" aria-pressed="false" style="animation-delay:${i * 70}ms">
               <span class="rarity">${RARITY_LABEL[u.rarity]}</span>
               <span class="name">${u.name}</span>
+              <span class="themes">${(THEMES[id] ?? []).map((t) => `<i>${t}</i>`).join('')}${synergyScore(id, v.owned) >= 2 ? '<b class="fits">Fits your build</b>' : ''}</span>
               <span class="desc">${u.desc(n)}</span>
               ${v.previews?.[i]?.length ? `<span class="nums">${v.previews[i].map((l) => `<span>${l}</span>`).join('')}</span>` : ''}
               ${n > 0 ? `<span class="owned">Owned ×${n}</span>` : ''}

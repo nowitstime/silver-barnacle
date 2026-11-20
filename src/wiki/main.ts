@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, SKINS, unlockSource, type Reward } from '../content/achie
 import { BOSSES, CORE_BOSS, CORE_PHASES } from '../content/bosses';
 import { BRICKS, type BrickKind } from '../content/bricks';
 import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
-import { LOOT_CATEGORIES, LOOT_INFO, UPGRADES, UPGRADE_BY_ID, baseStats, categoryOf, type Rarity } from '../content/upgrades';
+import { LOOT_CATEGORIES, LOOT_INFO, THEMES, UPGRADES, UPGRADE_BY_ID, baseStats, categoryOf, type Rarity } from '../content/upgrades';
 import { BIOME_INKS, type Inks } from '../render/palette';
 import { ballPath, drawBrickIcon, drawItemIcon } from '../render/renderer';
 import { MAX_LAUNCH_TIME, ROWS } from '../sim/constants';
@@ -127,7 +127,7 @@ const PAGES: Page[] = [
     index: () => UPGRADES.map((u) => [u.name, `${u.rarity} ${u.desc(0)}`]),
     render: () => `
       <h1>Upgrades</h1>
-      <p class="lede">${UPGRADES.length} upgrades. Most stack: the card always describes the <i>next</i> stack. Rarer cards show up more often deeper in a run, and big picks never offer commons. Cursed cards only appear for the Gambler.</p>
+      <p class="lede">${UPGRADES.length} upgrades. Each has themes (crit, fire, explosion, lightning, bank, multi, damage, defense, general). <b>General</b> cards are solid in any build; the rest pay off when you stack a theme, and cards that fit your build are marked in the pick screen. Most stack: the card always describes the <i>next</i> stack. Rarer cards show up more often deeper in a run, and big picks never offer commons. Cursed cards only appear for the Gambler.</p>
       <div class="filters" role="group" aria-label="Filter by rarity">
         <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
         ${RARITY_ORDER.map((r) => `<button type="button" class="chip" data-filter="${r}" aria-pressed="false">${r}</button>`).join('')}
@@ -136,6 +136,7 @@ const PAGES: Page[] = [
         <article class="card upgrade" data-rarity="${u.rarity}" id="up-${u.id}">
           <p class="rarity">${u.rarity}${u.max > 1 && u.max < 99 ? ` · up to ×${u.max}` : u.max >= 99 ? ' · stacks' : ' · once'}</p>
           <h3>${esc(u.name)}</h3>
+          <p class="tag">${(THEMES[u.id] ?? []).join(' · ')}</p>
           <p>${esc(u.desc(0))}</p>
           ${u.max > 1 && u.desc(1) !== u.desc(0) ? `<p class="stack">Stack 2: ${esc(u.desc(1))}</p>` : ''}
           ${unlockLine('upgrade', u.id)}
