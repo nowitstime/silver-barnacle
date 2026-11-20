@@ -56,12 +56,29 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
   z-index: 2;
 }
 
-.fire {
+.fire-row {
   position: fixed;
   left: 50%;
   bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
   transform: translateX(-50%);
   z-index: 2;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  animation: rise 0.18s ease-out;
+}
+.nudge {
+  width: 52px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--i1);
+  background: color-mix(in srgb, var(--paper) 85%, transparent);
+  border: 2px solid var(--i1);
+  box-shadow: 3px 3px 0 var(--i2);
+  touch-action: none;
+}
+.nudge:active { transform: translate(2px, 2px); box-shadow: none; }
+.fire {
   font-weight: 700;
   font-size: 18px;
   letter-spacing: 0.2em;
@@ -73,7 +90,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
   box-shadow: 4px 3px 0 var(--i2);
   animation: rise 0.18s ease-out;
 }
-.fire:active { transform: translate(calc(-50% + 4px), 3px); box-shadow: none; }
+.fire:active { transform: translate(4px, 3px); box-shadow: none; }
 
 .icon-btn {
   position: fixed;

@@ -28,6 +28,8 @@ export interface RenderState {
   numbers: boolean;
   /** Ball skin id. */
   skin: string;
+  /** Aim angle to print above the launcher while aiming (null hides it). */
+  aimReadout?: number | null;
 }
 
 /**
@@ -79,6 +81,7 @@ export class Renderer {
     this.drawBeams(s, inks);
     this.drawBalls(s, inks);
     this.drawLauncher(s, inks);
+    if (s.aimReadout != null) this.drawAngle(s, inks, s.aimReadout);
     this.drawParticles(s, inks);
     this.drawRings(s, inks);
     this.drawZaps(s, inks);
@@ -910,6 +913,25 @@ export class Renderer {
     const scale = b.fire ? 1.35 : b.copy ? 0.75 : b.shrunk ? 0.65 : 1;
     this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0, scale);
     ctx.globalAlpha = 1;
+  }
+
+  /** Exact aim angle above the launcher, so a good shot can be repeated. */
+  private drawAngle(s: RenderState, inks: Inks, a: number): void {
+    const { ctx } = this;
+    const text = `${((a * 180) / Math.PI).toFixed(1)}°`;
+    const x = Math.max(24, Math.min(W - 24, s.sim.launchX));
+    ctx.save();
+    ctx.font = `700 10px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 8;
+    ctx.fillStyle = inks.paper;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(x - w / 2, FLOOR - 26, w, 13);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = inks.i1;
+    ctx.fillText(text, x, FLOOR - 19);
+    ctx.restore();
   }
 
   private drawLauncher(s: RenderState, inks: Inks): void {

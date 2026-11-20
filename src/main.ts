@@ -3,7 +3,7 @@ import '@fontsource/space-mono/700.css';
 import './styles/main.css';
 import { registerSW } from 'virtual:pwa-register';
 import { Haptics, Sfx } from './core/audio';
-import { AimInput } from './core/input';
+import { AimInput, NUDGE, clampAim } from './core/input';
 import { Loop } from './core/loop';
 import { addScore, bestDepth, endlessBest, loadScores } from './core/scores';
 import { loadSettings, saveSettings, type Settings } from './core/settings';
@@ -56,7 +56,10 @@ addEventListener('keydown', () => sfx.unlock(), { capture: true });
 let mode: 'title' | 'run' = 'title';
 let sim = new Sim(newSeed(), { classId: 'juggler' });
 let best = bestDepth();
-let aimTarget = load<number>('aim', Math.PI / 2);
+let aimTarget = clampAim(load<number>('aim', Math.PI / 2));
+/** When the aim last changed (for the angle readout). */
+let aimTouched = -10;
+let aimDragging = false;
 let aimShown = aimTarget;
 let trace: Trace | null = null;
 let time = 0;
@@ -85,11 +88,12 @@ const loop = new Loop(
     fx.update(realDt, sim);
     if (slowUntil && performance.now() > slowUntil) { slowUntil = 0; loop.speed = 1; }
     if (sim.phase === 'aim' && loop.speed !== 1 && !fast && mode === 'run' && !slowUntil) loop.speed = 1;
-    aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 16);
+    aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 22);
     trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.traceAccel, sim.stats.wrap) : null;
     if (mode === 'run') autosave();
     const r0 = performance.now();
-    renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers, skin: profile.skin });
+    renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers, skin: profile.skin,
+      aimReadout: mode === 'run' && sim.phase === 'aim' && (aimDragging || time - aimTouched < 1.2) ? aimShown : null });
     if (mode === 'run' && !loop.paused) track(realDt);
     perf.render = performance.now() - r0;
     if (debug) {
@@ -106,6 +110,11 @@ const loop = new Loop(
 
 const hud = new Hud(uiRoot, {
   onFire: () => fire(),
+  onNudge: (dir) => {
+    if (mode !== 'run' || sim.phase !== 'aim') return;
+    aimTarget = clampAim(aimTarget - dir * NUDGE);
+    aimTouched = time;
+  },
   onPause: () => pause(),
   onSpeed: (s) => {
     loop.speed = s;
@@ -167,7 +176,8 @@ new AimInput(view, canvas, {
   canAim: () => mode === 'run' && sim.phase === 'aim' && !pick.open && !menus.open,
   launcher: () => [sim.launchX, FLOOR - BALL_R],
   angle: () => aimTarget,
-  onAim: (a) => (aimTarget = a),
+  onAim: (a) => { aimTarget = a; aimTouched = time; },
+  onActive: (on) => { aimDragging = on; aimTouched = time; },
   onFire: () => fire(),
 });
 
@@ -228,6 +238,8 @@ function startRun(classId: ClassId): void {
   if (!profile.classUnlocked(classId)) classId = 'striker';
   save('class', classId);
   sim = new Sim(seed, { classId, locked: profile.lockedUpgrades() });
+  // Fresh runs start aiming straight up.
+  aimTarget = aimShown = Math.PI / 2;
   demoRunning = false;
   beginRun();
   fx.showBanner(inksFor(0).name.toUpperCase(), 'Depth 1 · break bricks, grab orbs, don’t let them reach the bottom', 2.4);

@@ -76,7 +76,8 @@ const PAGES: Page[] = [
       <h1>How it works</h1>
       <h2 id="aiming">Aiming and firing</h2>
       <ul>
-        <li><b>Drag left or right</b> anywhere to turn the aim like a dial. Slow drags are precise; fast drags turn quicker.</li>
+        <li><b>Drag left or right</b> anywhere to turn the aim like a dial. Slow drags are precise; fast flicks turn quicker. <b>Slide your finger upward</b> while dragging for up to 3× finer control.</li>
+        <li><b>◀ ▶</b> beside Fire nudge the aim by 0.2° (hold to keep turning). The exact angle shows above the launcher while you aim.</li>
         <li><b>Tap</b> to point the aim at a spot (touches below the launcher are mirrored upward).</li>
         <li><b>Fire</b> confirms. Your aim carries over to the next turn.</li>
         <li>Desktop: arrow keys nudge the aim (Shift for bigger steps), Space or Enter fires.</li>

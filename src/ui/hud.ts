@@ -7,6 +7,8 @@ const SPEEDS = [1, 2, 4];
 
 export interface HudHandlers {
   onFire: () => void;
+  /** Fine-turn the aim: -1 left, +1 right. */
+  onNudge: (dir: number) => void;
   onPause: () => void;
   onSpeed: (speed: number) => void;
   onRecall: () => void;
@@ -16,6 +18,7 @@ export interface HudHandlers {
 export class Hud {
   private root: HTMLElement;
   private fire: HTMLButtonElement;
+  private fireRow: HTMLElement;
   private ff: HTMLButtonElement;
   private recall: HTMLButtonElement;
   private pause: HTMLButtonElement;
@@ -28,8 +31,12 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <button class="icon-btn pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
-      <p class="hint" id="hint" hidden>Drag left or right to aim · tap to point · then Fire</p>
-      <button class="fire" id="fire" type="button">Fire</button>
+      <p class="hint" id="hint" hidden>Drag left or right to aim (slide your finger up for fine control) · tap to point · ◀ ▶ to nudge · then Fire</p>
+      <div class="fire-row">
+        <button class="nudge" id="nudge-l" type="button" aria-label="Turn aim left">◀</button>
+        <button class="fire" id="fire" type="button">Fire</button>
+        <button class="nudge" id="nudge-r" type="button" aria-label="Turn aim right">▶</button>
+      </div>
       <div class="turn-controls">
         <button class="pill" id="recall" type="button" hidden>Recall</button>
         <button class="pill" id="ff" type="button" hidden aria-label="Fast forward">▶▶ 1×</button>
@@ -42,6 +49,20 @@ export class Hud {
     this.hint = this.root.querySelector('#hint')!;
 
     this.fire.addEventListener('click', () => this.h.onFire());
+    this.fireRow = this.root.querySelector('.fire-row')!;
+    // Nudge buttons: tap for one small step, hold to keep turning.
+    for (const [id, dir] of [['#nudge-l', -1], ['#nudge-r', 1]] as const) {
+      const b = this.root.querySelector<HTMLButtonElement>(id)!;
+      let timer = 0;
+      const stopHold = () => { clearTimeout(timer); clearInterval(timer); };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this.h.onNudge(dir);
+        stopHold();
+        timer = window.setTimeout(() => { timer = window.setInterval(() => this.h.onNudge(dir), 50); }, 320);
+      });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stopHold);
+    }
     this.pause.addEventListener('click', () => this.h.onPause());
     this.ff.addEventListener('click', () => {
       const cur = Number(this.ff.dataset.speed ?? 1);
@@ -64,7 +85,7 @@ export class Hud {
   update(sim: Sim, speed: number, blocked: boolean): void {
     if (!this.visible) return;
     const inVolley = sim.phase === 'fire' || sim.phase === 'run';
-    this.fire.hidden = sim.phase !== 'aim' || blocked;
+    this.fireRow.hidden = sim.phase !== 'aim' || blocked;
     this.ff.hidden = !(inVolley && (sim.turnTime > FF_AFTER || speed > 1));
     // Recall shows after a while, or straight away once there's nothing left to break.
     const cleared = inVolley && sim.turnTime > 0.3 && sim.bricks.every((b) => b.kind === 'steel');
