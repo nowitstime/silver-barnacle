@@ -369,7 +369,9 @@ export function synergyScore(id: string, owned: Record<string, number>): number 
   let score = 0;
   for (const t of THEMES[id] ?? []) {
     if (t === 'general') { score += 0.6; continue; }
-    for (const [mt, n] of mine) if (mt === t) score += n;
+    // Defense keeps you alive but doesn't combine into a damage engine.
+    const weight = t === 'defense' ? 0.25 : 1;
+    for (const [mt, n] of mine) if (mt === t) score += n * weight;
   }
   return score;
 }

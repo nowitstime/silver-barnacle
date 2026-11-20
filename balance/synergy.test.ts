@@ -11,6 +11,7 @@ import { mulberry32 } from '../src/core/rng';
 import { bestAngle, finishTurn } from '../src/sim/bot';
 import { Sim } from '../src/sim/world';
 import { CELL, FLOOR, MIN_ANGLE, TOP } from '../src/sim/constants';
+import { traceShot } from '../src/sim/trace';
 import type { Theme } from '../src/content/upgrades';
 
 /** Which build themes each loot genre feeds. */
@@ -28,7 +29,14 @@ function lootAim(sim: Sim): number | null {
   const fit = (g: string) => GENRE_THEMES[g].reduce((a, t) => a + (owned.get(t) ?? 0), 0) / (g === 'wild' ? 2 : 1);
   const target = loot.reduce((a, b) => (fit(b.loot ?? 'wild') > fit(a.loot ?? 'wild') ? b : a));
   const tx = target.c * CELL + CELL / 2, ty = TOP + target.r * CELL + CELL / 2;
-  return Math.max(MIN_ANGLE, Math.min(Math.PI - MIN_ANGLE, Math.atan2(FLOOR - ty, tx - sim.launchX)));
+  // Only take the shot if the first thing the ball would hit is that loot brick.
+  for (const off of [0, -6, 6, -12, 12]) {
+    const a = Math.max(MIN_ANGLE, Math.min(Math.PI - MIN_ANGLE, Math.atan2(FLOOR - ty, tx + off - sim.launchX)));
+    const t = traceShot(sim.grid, sim.launchX, a, 1, sim.accel);
+    const hit = t.contacts[0];
+    if (hit && Math.abs(hit[0] - tx) < CELL * 0.75 && Math.abs(hit[1] - ty) < CELL * 0.75) return a;
+  }
+  return null;
 }
 
 const SEEDS = Number(process.env.RUNS ?? 30);
