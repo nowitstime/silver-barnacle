@@ -13,7 +13,9 @@ export function finishTurn(sim: Sim, maxSeconds = 120): void {
 function boardScore(sim: Sim): number {
   let danger = 0;
   for (const b of sim.bricks) if (b.kind !== 'steel') danger += b.hp * (1 + (b.r + b.h) ** 2 * 0.15);
-  return -danger + sim.ballCount * 20 + sim.pendingBalls * 20 - (sim.phase === 'over' ? 1e9 : 0);
+  const upgrades = Object.values(sim.upgrades).reduce((a, n) => a + n, 0);
+  // Upgrades are worth a lot: this makes the bot go for loot bricks like a player would.
+  return -danger + sim.ballCount * 20 + sim.pendingBalls * 20 + upgrades * 400 - (sim.phase === 'over' ? 1e9 : 0);
 }
 
 /**

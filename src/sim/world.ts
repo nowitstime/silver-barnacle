@@ -378,7 +378,7 @@ export class Sim {
       for (const [dc, dr] of NEIGHBOURS) {
         const n = this.grid.get(gridKey(h.c + dc, h.r + dr));
         if (!n || n === h || n.kind === 'steel' || n.kind === 'loot' || n.hp >= n.maxHp) continue;
-        const amount = Math.max(1, Math.round(n.maxHp * (n.boss ? 0.03 : 0.15)));
+        const amount = Math.max(1, Math.round(n.maxHp * (n.boss ? 0.03 : 0.1)));
         n.hp = Math.min(n.maxHp, n.hp + amount);
         this.events.push({ type: 'heal', brick: n, amount });
       }

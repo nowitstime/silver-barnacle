@@ -94,6 +94,7 @@ it('balance report', async () => {
 
   // Is "just bounce it off the wall" a degenerate strategy? Same Ricochet build, two ways of aiming.
   const WALL_RUNS = Number(process.env.WALL_RUNS ?? 6);
+  if (WALL_RUNS > 0) {
   const build = ['ricochet', 'ricochet', 'ricochet'];
   const best: Result[] = [], wall: Result[] = [];
   for (let i = 0; i < WALL_RUNS; i++) {
@@ -109,6 +110,7 @@ it('balance report', async () => {
   lines.push(`| Aimed (bot) | ${median(best.map((r) => r.depth))} | ${Math.max(...best.map((r) => r.depth))} |`);
   lines.push(`| Wall-spam | ${median(wall.map((r) => r.depth))} | ${Math.max(...wall.map((r) => r.depth))} |`);
   lines.push('');
+  }
   if (RUNS > 0) writeFileSync(new URL('../docs/balance.md', import.meta.url), lines.join('\n'));
   console.log(lines.join('\n'));
 });
