@@ -4,39 +4,31 @@ Same 30 seeds and classes, played twice by the bot: once taking random cards, on
 
 | Picker | Median depth | Mean depth | Median bosses | Wins |
 |---|---|---|---|---|
-| random | 54 | 60 | 1 | 4/30 |
-| synergy | 57 | 56 | 2 | 2/30 |
+| random | 71 | 77 | 2 | 6/30 |
+| synergy | 58 | 73 | 2 | 6/30 |
 
-Synergy picker went deeper on **10 of 30** seeds.
+Synergy picker went deeper on **13 of 30** seeds.
 
 ## Synergy runs by main themes
 
 | Themes | Runs | Median depth |
 |---|---|---|
-| lightning+bank | 1 | 129 |
-| damage+multi | 1 | 124 |
-| crit+lightning | 2 | 71 |
-| general+multi | 2 | 70 |
-| multi+explosion | 1 | 70 |
-| damage+bank | 1 | 65 |
-| bank+damage | 2 | 64 |
-| general+explosion | 1 | 61 |
-| damage+crit | 1 | 60 |
-| general+damage | 3 | 60 |
-| multi+general | 2 | 57 |
-| damage+general | 1 | 56 |
-| defense+general | 2 | 56 |
-| damage+explosion | 1 | 47 |
-| general+crit | 1 | 46 |
-| defense+lightning | 1 | 40 |
-| general+fire | 3 | 39 |
-| defense+bank | 1 | 36 |
-| fire+explosion | 1 | 34 |
-| defense+fire | 1 | 34 |
-| defense | 1 | 29 |
-## Reading (first run)
-
-Synergy doesn't matter yet: the synergy picker did no better than random (median 57 vs 54, deeper on only 10 of 30 seeds, and identical on many). Reasons:
-- **Runs end before builds form.** Most runs die around depth 35–60, which is only 3–5 upgrades. With that few, what you pick barely matters.
-- **Half the picks aren't choices for the bot.** Loot bricks go to whichever one the bot happens to hit, not the genre it wants.
-- **Hit-scaled effects start tiny.** Base damage is 1–3 against bricks with dozens to hundreds of HP, so "25% of the hit" fires do almost nothing. Fire builds came out worst (median 34–39).
+| damage+crit | 2 | 140 |
+| bank+lightning | 1 | 125 |
+| crit+damage | 2 | 122 |
+| crit+fire | 1 | 106 |
+| multi+damage | 1 | 80 |
+| crit+multi | 1 | 80 |
+| damage+bank | 5 | 75 |
+| general+multi | 3 | 68 |
+| general+defense | 1 | 58 |
+| crit+bank | 1 | 53 |
+| damage+general | 2 | 51 |
+| defense+fire | 1 | 51 |
+| defense+general | 1 | 48 |
+| general+fire | 1 | 47 |
+| lightning+crit | 1 | 46 |
+| general+damage | 1 | 41 |
+| bank+damage | 1 | 40 |
+| crit+general | 3 | 37 |
+| general+crit | 1 | 34 |
