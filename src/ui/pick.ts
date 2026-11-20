@@ -8,6 +8,8 @@ export interface PickView {
   next?: string;
   /** Free rerolls left. */
   rerolls?: number;
+  /** Real-number preview lines per card (same order as ids). */
+  previews?: string[][];
 }
 
 const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', cursed: 'Cursed' } as const;
@@ -48,6 +50,7 @@ export class PickScreen {
               <span class="rarity">${RARITY_LABEL[u.rarity]}</span>
               <span class="name">${u.name}</span>
               <span class="desc">${u.desc(n)}</span>
+              ${v.previews?.[i]?.length ? `<span class="nums">${v.previews[i].map((l) => `<span>${l}</span>`).join('')}</span>` : ''}
               ${n > 0 ? `<span class="owned">Owned ×${n}</span>` : ''}
             </button>`;
           }).join('')}

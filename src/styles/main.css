@@ -386,3 +386,5 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 }
 .tip b { color: var(--i2); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 6px; }
 .tip small { display: block; margin-top: 4px; opacity: 0.6; font-size: 10px; }
+
+.card .nums { display: grid; gap: 1px; margin-top: 4px; padding-top: 5px; border-top: 1px dashed currentColor; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }

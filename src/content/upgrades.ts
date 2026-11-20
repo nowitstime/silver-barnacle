@@ -265,3 +265,57 @@ export function rerollSameTiers(rng: Rng, owned: Record<string, number>, current
   }
   return next;
 }
+
+// ---- previews: the real numbers shown on cards ----
+
+type Fmt = (v: number | boolean) => string;
+const num: Fmt = (v) => String(Math.round(Number(v) * 100) / 100);
+const per: Fmt = (v) => `${Math.round(Number(v) * 100)}%`;
+const times: Fmt = (v) => `×${Math.round(Number(v) * 100) / 100}`;
+const onoff: Fmt = (v) => (v ? 'on' : 'off');
+
+/** How each stat is named and printed on a card. */
+const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
+  damage: ['Damage', num], dmgMult: ['Damage multiplier', times], critChance: ['Crit chance', per],
+  critMult: ['Crit damage', times], sight: ['Laser bounces', (v) => (Number(v) < 0 ? 'stub' : num(v))],
+  pierce: ['Pierce per turn', num], ricochet: ['Damage per bank bounce', num], chain: ['Bricks zapped per crit', num],
+  burn: ['Burn per turn', num], splash: ['Splash', per], firstBlood: ['First ball damage', times], mitosis: ['Splits per ball', num],
+  lava: ['Fireballs', onoff], luckyOrbs: ['Double-orb chance', per], fuse: ['Explosion damage', (v) => `+${per(v)}`],
+  armorPierce: ['Full damage to armor', onoff], hazardProof: ['Hazard-proof', onoff],
+  overcharge: ['Guaranteed crit', (v) => (Number(v) ? `every ${v}th hit` : 'off')], mercy: ['Finish bricks under', per],
+  afterburn: ['Fire spreads', onoff], static: ['Static zap chance', per], bounty: ['Bounty chance', per],
+  momentum: ['Damage per kill', num], wideLaser: ['Extra laser lines', num], echo: ['Echo volleys', onoff],
+  detonate: ['Explode chance', per], slowDrop: ['Rows every other turn', onoff], guardian: ['Shields per biome', num],
+  critMass: ['Crit per 10 balls', per], lastStand: ['Bottom-row damage', times], glassCannon: ['Glass Cannon', onoff],
+  secondWind: ['Second Wind', onoff], singularity: ['Bricks collapsed per turn', num],
+  hazardMult: ['Hazard frequency', times], hpMult: ['New brick HP', times],
+};
+
+export interface RunSnapshot {
+  balls: number;
+  shields: number;
+}
+
+/**
+ * What taking this upgrade would change, in real numbers: e.g. "Crit chance 15% → 23%".
+ * `classApply` is the current class's perk, so the numbers match your run.
+ */
+export function previewUpgrade(id: string, owned: Record<string, number>, classApply: ((s: Stats) => void) | undefined, run: RunSnapshot): string[] {
+  const def = UPGRADE_BY_ID.get(id);
+  if (!def) return [];
+  const before = computeStats(owned, classApply);
+  const after = computeStats({ ...owned, [id]: (owned[id] ?? 0) + 1 }, classApply);
+  const lines: string[] = [];
+  for (const key of Object.keys(STAT_LABELS) as (keyof Stats)[]) {
+    if (before[key] === after[key]) continue;
+    const [label, fmt] = STAT_LABELS[key]!;
+    lines.push(`${label} ${fmt(before[key])} → ${fmt(after[key])}`);
+  }
+  // Instant effects (balls, shields).
+  let balls = 0, shields = 0;
+  def.onTake?.({ addBalls: (n) => (balls += n), addShields: (n) => (shields += n) });
+  if (after.glassCannon) shields = -run.shields;
+  if (balls) lines.push(`Balls ${run.balls} → ${run.balls + balls}`);
+  if (shields) lines.push(`Shields ${run.shields} → ${Math.max(0, run.shields + shields)}`);
+  return lines;
+}

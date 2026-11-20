@@ -125,10 +125,15 @@ Principles we keep: **every run should create a different build**, **you should 
 - ⬜ Next: signature hazard per biome (Thorn, Bat, Jellyfish, Icicle, Magma) and bosses that use their biome's rule
 
 ## M10b: Build-craft and balance *(more interesting choices every pick)*
-- ⬜ **Duo upgrades** (Hades): owning two specific upgrades unlocks a special card, e.g. Kindling + Splash → *Firestorm*, Chain Lightning + Mitosis → *Storm Cell*
-- ⬜ **Evolutions** (Vampire Survivors): a maxed upgrade plus a catalyst evolves into a super form
+- ✖ ~~Duo upgrades~~: decided against for now
+- ⬜ **Evolutions** (Vampire Survivors), to think about: a maxed upgrade evolves when you also own its partner. Ideas:
+  - Sharp Eye (max) + Brutal → **Deadeye**: every 5th hit is a crit that pierces
+  - Kindling (max) + Wildfire → **Inferno**: burning spreads every turn, not just on death
+  - Ricochet Rush (max) + Momentum → **Pinball**: bank bonus never resets within a volley
+  - Pierce (max) + The Ceiling Is Lava → **Drill**: fireballs pass through everything
+  - Extra Balls ×5 + Lucky Orbs → **Ball Factory**: every orb gives 3 balls
 - ⬜ **Rerolls and skips**: earn ink from bricks; spend it to reroll a pick, or skip a pick for ink
-- ⬜ **Show real numbers** on cards ("+8% crit → 21% total")
+- ✅ **Show real numbers** on cards: each card lists its exact before → after change for your run (class perks included)
 - ⬜ **Remove or transmute** an upgrade at certain events (Slay the Spire)
 - ⬜ Bot report v2: **pick rate vs win rate per upgrade** and per class, 50+ runs, to find the duds and the overpowered cards
 - ⬜ Second pass on any upgrade the report flags as dominant or useless

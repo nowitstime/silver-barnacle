@@ -11,7 +11,8 @@ import { load, save } from './core/storage';
 import { ProfileStore } from './core/profile';
 import { ACHIEVEMENTS, type RunFacts } from './content/achievements';
 import type { ClassId } from './content/classes';
-import { UPGRADES } from './content/upgrades';
+import { UPGRADES, previewUpgrade } from './content/upgrades';
+import { CLASS_BY_ID } from './content/classes';
 import { Fx } from './render/fx';
 import { biomeName, inksFor } from './render/palette';
 import { Renderer } from './render/renderer';
@@ -284,7 +285,11 @@ function fire(): void {
 function showPick(): void {
   if (!sim.offer || pick.open || menus.open) return;
   const nextBiome = biomeName(sim.biome);
-  const view = () => ({ kind: sim.offer!.kind, ids: sim.offer!.ids, owned: sim.upgrades, next: nextBiome, rerolls: sim.offer!.rerolls });
+  const classApply = CLASS_BY_ID.get(sim.classId)?.apply;
+  const view = () => ({
+    kind: sim.offer!.kind, ids: sim.offer!.ids, owned: sim.upgrades, next: nextBiome, rerolls: sim.offer!.rerolls,
+    previews: sim.offer!.ids.map((id) => previewUpgrade(id, sim.upgrades, classApply, { balls: sim.ballCount, shields: sim.shields })),
+  });
   pick.show(
     view(),
     (i) => {

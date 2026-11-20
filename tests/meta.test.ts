@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACHIEVEMENTS, LOCKED_UPGRADES, SKINS } from '../src/content/achievements';
-import { UPGRADE_BY_ID, rerollSameTiers, rollOffer } from '../src/content/upgrades';
+import { UPGRADE_BY_ID, previewUpgrade, rerollSameTiers, rollOffer } from '../src/content/upgrades';
 import { CLASS_BY_ID } from '../src/content/classes';
 import { mulberry32 } from '../src/core/rng';
 import { ProfileStore } from '../src/core/profile';
@@ -72,5 +72,17 @@ describe('reroll keeps rarities', () => {
     const next = rerollSameTiers(rng, owned, ['lava']);
     expect(next[0]).not.toBe('lava');
     expect(UPGRADE_BY_ID.get(next[0])!.rarity).toBe('epic');
+  });
+});
+
+describe('card previews', () => {
+  it('show real before → after numbers', () => {
+    const run = { balls: 12, shields: 1 };
+    expect(previewUpgrade('sharp', {}, undefined, run)).toEqual(['Crit chance 5% → 13%']);
+    expect(previewUpgrade('heavy', { heavy: 2 }, undefined, run)).toEqual(['Damage 3 → 4']);
+    expect(previewUpgrade('extra', {}, undefined, run)).toEqual(['Balls 12 → 15']);
+    expect(previewUpgrade('glass', {}, undefined, run)).toContain('Shields 1 → 0');
+    // Class perks are included: Striker starts at 15% crit.
+    expect(previewUpgrade('sharp', {}, CLASS_BY_ID.get('striker')!.apply, run)).toEqual(['Crit chance 15% → 23%']);
   });
 });
