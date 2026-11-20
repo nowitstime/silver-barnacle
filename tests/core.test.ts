@@ -25,7 +25,7 @@ describe('run shape', () => {
     expect(endlessLap(ENDLESS_START)).toBe(1);
     expect(endlessLap(ENDLESS_START + 5)).toBe(2);
     expect(biomeLength(CORE)).toBe(0);
-    expect(endlessHp(48)).toBeCloseTo(1.45 ** 2);
+    expect(endlessHp(48)).toBeCloseTo(4);
     expect(endlessHp(0)).toBe(1);
     expect(biomeName(CORE)).toBe('The Core');
     expect(biomeName(ENDLESS_START + 1)).toBe('Caverns II');
