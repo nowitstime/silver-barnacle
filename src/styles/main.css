@@ -275,7 +275,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .menu h2.big { font-size: 40px; }
 .menu h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
 .title-inner, .sheet-inner { width: min(420px, 100%); display: grid; gap: 14px; text-align: center; }
-.sheet-inner { background: var(--paper); border: 2px solid var(--i1); box-shadow: 5px 4px 0 var(--i2); padding: 22px 20px; }
+.sheet-inner { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; background: var(--paper); border: 2px solid var(--i1); box-shadow: 5px 4px 0 var(--i2); padding: 22px 20px; }
 .sheet-inner .sub { margin: -6px 0 0; }
 .stack { display: grid; gap: 10px; width: min(280px, 100%); margin: 6px auto 0; }
 .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
@@ -335,7 +335,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .class-card[aria-checked="true"] { box-shadow: 4px 4px 0 var(--i2); transform: translate(-2px, -2px); outline: 2px solid var(--i1); outline-offset: 2px; }
 .class-card[aria-checked="true"] .cperk { display: block; }
 
-.build { text-align: left; border-top: 2px solid var(--i1); padding-top: 12px; }
+.build { text-align: left; border-top: 2px solid var(--i1); padding-top: 12px; max-height: 42dvh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 .build .perk { font-size: 13px; line-height: 1.45; margin-bottom: 10px; }
 .build ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .build li { display: grid; gap: 1px; font-size: 12px; line-height: 1.4; padding-left: 10px; border-left: 3px solid var(--i1); }

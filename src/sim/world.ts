@@ -404,10 +404,10 @@ export class Sim {
       }
       if (b.burn > 0) this.damage(b, b.burn, cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
     }
-    // Singularity: the weakest bricks collapse.
+    // Singularity: the toughest brick collapses.
     if (s.singularity) {
-      const weak = this.bricks.filter((b) => b.kind !== 'boss' && b.kind !== 'steel').sort((a, b) => a.hp - b.hp || a.id - b.id);
-      for (const b of weak.slice(0, s.singularity)) this.damage(b, b.hp, cellCenterX(b.c), cellCenterY(b.r), 'void', null, false);
+      const tough = this.bricks.filter((b) => b.hp > 0 && b.kind !== 'boss' && b.kind !== 'steel').sort((a, b) => b.hp - a.hp || a.id - b.id);
+      for (const b of tough.slice(0, s.singularity)) this.damage(b, b.hp, cellCenterX(b.c), cellCenterY(b.r), 'void', null, false);
     }
     // Forge heat: untouched bricks regrow.
     if (this.gimmick === 'heat') {
