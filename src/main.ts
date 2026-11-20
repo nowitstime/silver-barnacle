@@ -613,6 +613,22 @@ function applyInks(): void {
 }
 
 addEventListener('resize', () => view.resize());
+preventZoom();
+
+/**
+ * The viewport meta asks for no zoom, but iOS Safari ignores it, so block the gestures directly:
+ * pinch (iOS gesture events and any two-finger move), and Ctrl+wheel on desktop.
+ * Double-tap zoom is turned off with CSS touch-action, which doesn't delay taps.
+ */
+function preventZoom(): void {
+  const stop = (e: Event) => e.preventDefault();
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(type, stop, { passive: false });
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && ['+', '=', '-', '0'].includes(e.key)) e.preventDefault();
+  });
+}
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && mode === 'run' && !menus.open) pause();
   else if (document.hidden) loop.paused = true;

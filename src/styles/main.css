@@ -13,6 +13,8 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  /* No double-tap zoom anywhere in the game; taps stay instant. */
+  touch-action: manipulation;
   background: var(--paper);
   color: var(--i1);
   font-family: var(--font);
@@ -180,7 +182,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 
 /* ---- upgrade pick ---- */
-.pick { align-items: center; background: color-mix(in srgb, var(--paper) 80%, transparent); overflow-y: auto; }
+.pick { touch-action: pan-y; align-items: center; background: color-mix(in srgb, var(--paper) 80%, transparent); overflow-y: auto; }
 .pick-inner { width: min(440px, 100%); text-align: center; padding-block: 12px; }
 .pick-inner h2 { margin: 0; font-size: 28px; line-height: 1.1; }
 .cards { display: grid; gap: 10px; margin-bottom: 16px; text-align: left; }
@@ -240,6 +242,7 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
   inset: 0;
   z-index: 6;
   overflow-y: auto;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   display: grid;
   justify-items: center;
