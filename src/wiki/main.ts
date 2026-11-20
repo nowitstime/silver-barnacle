@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, SKINS, unlockSource, type Reward } from '../content/achie
 import { BOSSES, CORE_BOSS, CORE_PHASES } from '../content/bosses';
 import { BRICKS, type BrickKind } from '../content/bricks';
 import { CLASSES, CLASS_BY_ID, type ClassId } from '../content/classes';
-import { UPGRADES, UPGRADE_BY_ID, baseStats, type Rarity } from '../content/upgrades';
+import { LOOT_CATEGORIES, LOOT_INFO, UPGRADES, UPGRADE_BY_ID, baseStats, categoryOf, type Rarity } from '../content/upgrades';
 import { BIOME_INKS, type Inks } from '../render/palette';
 import { ballPath, drawBrickIcon, drawItemIcon } from '../render/renderer';
 import { MAX_LAUNCH_TIME, ROWS } from '../sim/constants';
@@ -54,12 +54,13 @@ const PAGES: Page[] = [
       <div class="table-wrap"><table>
         <thead><tr><th>#</th><th>Biome</th><th>Rows</th><th>Rule</th><th>Boss</th></tr></thead>
         <tbody>
-          ${BIOME_ROWS.map((rows, i) => `<tr><td>${i + 1}</td><td>${swatch(BIOME_INKS[i])} ${BIOME_INKS[i].name}</td><td>${rows}</td><td>${GIMMICKS[i] === 'none' ? 'None' : esc(GIMMICK_TEXT[GIMMICKS[i]].split(':')[0])}</td><td>${BOSSES[i].name}</td></tr>`).join('')}
+          ${BIOME_ROWS.map((rows, i) => `<tr><td>${i + 1}</td><td>${swatch(BIOME_INKS[i])} ${BIOME_INKS[i].name}</td><td>${rows}</td><td>${esc(GIMMICK_TEXT[GIMMICKS[i]].split(':')[0])}</td><td>${BOSSES[i].name}</td></tr>`).join('')}
           <tr><td>6</td><td>${swatch(BIOME_INKS[5])} The Core</td><td>0</td><td>Final boss only</td><td>${CORE_BOSS.name}</td></tr>
           <tr><td>∞</td><td>Endless</td><td>24 each</td><td>Biomes repeat, tougher every lap</td><td>All five again</td></tr>
         </tbody>
       </table></div>
-      <p>You get a <b>small upgrade pick</b> halfway through each biome and a <b>big pick</b> (rare or better) after beating its boss: 10 picks before The Core.</p>
+      <p>Halfway through each biome, <b>three loot bricks</b> land on the board, each marked with a genre. Break one to claim an upgrade from that genre. After each boss you get a <b>big pick</b>: three rare-or-better cards with one free reroll. That's 10 upgrades before The Core.</p>
+      <p>Every biome has a <b>rule</b> that gets stronger the deeper you go into it.</p>
       <h2>Where to start</h2>
       <ul>
         <li><a href="#mechanics">How the game works</a>: aiming, damage, crits, shields.</li>
@@ -154,6 +155,11 @@ const PAGES: Page[] = [
           <div><h3>${esc(b.name)} ${b.hazard ? '<span class="pill">hazard</span>' : ''}</h3><p>${esc(b.desc)}</p><p class="tag">From depth ${b.from}${b.hp && b.hp !== 1 ? ` · ${pct(b.hp)} normal HP` : ''}</p></div>
         </article>`).join('')}
       </div>
+      <h2 id="loot">Loot bricks</h2>
+      <p>Halfway through every biome, three loot bricks land in the top row. The first one you break gives you an upgrade from its genre; the other two shatter. Loot bricks never end your run, and they fall off the bottom if you ignore them.</p>
+      <div class="table-wrap"><table><thead><tr><th>Genre</th><th>What's inside</th><th>Upgrades</th></tr></thead><tbody>
+        ${LOOT_CATEGORIES.map((c) => `<tr><td><b>${LOOT_INFO[c].name}</b></td><td>${LOOT_INFO[c].hint}</td><td>${c === 'wild' ? 'Any (skews rare)' : UPGRADES.filter((u) => categoryOf(u.id) === c).map((u) => esc(u.name)).join(', ')}</td></tr>`).join('')}
+      </tbody></table></div>
       <h2 id="items">Pickups</h2>
       <p>Balls pass straight through these.</p>
       <div class="cards">
@@ -173,7 +179,7 @@ const PAGES: Page[] = [
           <h3>${i + 1}. ${b.name}</h3>
           <p class="inks"><span style="background:${b.i1}"></span><span style="background:${b.i2}"></span></p>
           <p>${i < 5 ? `${BIOME_ROWS[i]} rows, then <a href="#bosses">${BOSSES[i].name}</a>.` : 'No rows: just The Core.'}</p>
-          <p>${i < 5 ? (GIMMICKS[i] === 'none' ? 'No special rule: learn the ropes.' : esc(GIMMICK_TEXT[GIMMICKS[i]])) : esc(CORE_BOSS.tell) + '.'}</p>
+          <p>${i < 5 ? esc(GIMMICK_TEXT[GIMMICKS[i]]) + '.' : esc(CORE_BOSS.tell) + '.'}</p>
         </article>`).join('')}</div>
       <h2 id="endless">Endless</h2>
       <p>After breaking The Core you can keep going. The five biomes repeat as laps (Caverns II, Caverns III…). Each lap multiplies brick HP by 1.35 and hazard frequency by 1.3, on top of normal depth scaling. Mini-bosses keep guarding every biome. Your deepest won run is your <b>endless best</b>.</p>`,
@@ -222,6 +228,8 @@ const PAGES: Page[] = [
         <li><b>Grab orbs early.</b> Ball count is your main growth until the first few upgrades kick in.</li>
         <li><b>Watch where you land.</b> The first ball home sets your next launch point; corners give steep, ceiling-hugging angles.</li>
         <li><b>Clear the bottom first</b> when it gets tight. The danger halftone and heartbeat mean two rows to go.</li>
+        <li><b>Priority targets.</b> Kill Shielders before the bricks they protect, Healers before they undo your work, and Fuses or Thieves before their countdown badge hits zero.</li>
+        <li><b>Pick your loot.</b> Loot bricks show their genre. Aim for the one your build needs: the first one broken is the one you get.</li>
       </ul>
       <h2>Builds that click</h2>
       <ul>
@@ -233,9 +241,10 @@ const PAGES: Page[] = [
       <h2>Biomes</h2>
       <ul>
         <li><b>Caverns:</b> the laser lights the dark; sweep the aim before firing to see what's there.</li>
-        <li><b>The Deep:</b> the current flips every turn and the laser already accounts for it.</li>
-        <li><b>Frostline:</b> frozen bricks waste your first hit; multi-ball volleys crack ice fast.</li>
-        <li><b>Forge:</b> bricks you skip regrow. Spread your shots, and use the extra bombs.</li>
+        <li><b>The Deep:</b> the current flips every turn (the laser accounts for it), and the tide shifts the whole board a column. Late in the biome it comes every other turn.</li>
+        <li><b>Frostline:</b> frozen bricks waste your first hit, and the first ball home slides on black ice, so your next launch point drifts the way it was moving.</li>
+        <li><b>Meadow:</b> leave a few bricks alone and they sprout blooms worth an extra ball. Greedy, but early balls snowball.</li>
+        <li><b>Forge:</b> bricks you skip regrow, and the lava raises the danger line every few turns. The dashed line shows where it will be next turn.</li>
       </ul>
       <h2>Bosses</h2>
       <ul>

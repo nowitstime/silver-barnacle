@@ -6,6 +6,8 @@ export interface PickView {
   owned: Record<string, number>;
   /** Name of the biome you're heading into (biome picks only). */
   next?: string;
+  /** Free rerolls left. */
+  rerolls?: number;
 }
 
 const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', cursed: 'Cursed' } as const;
@@ -28,7 +30,7 @@ export class PickScreen {
     return !this.el.hidden;
   }
 
-  show(v: PickView, onChoose: (i: number) => void, onSelect?: () => void): void {
+  show(v: PickView, onChoose: (i: number) => void, onSelect?: () => void, onReroll?: () => PickView | null): void {
     this.onChoose = onChoose;
     this.selected = -1;
     const title = v.kind === 'biome' ? 'Biome cleared' : 'Halfway there';
@@ -50,7 +52,10 @@ export class PickScreen {
             </button>`;
           }).join('')}
         </div>
-        <button class="btn-primary take" type="button" disabled>Take it</button>
+        <div class="row">
+          ${v.rerolls && onReroll ? `<button class="btn-secondary reroll" type="button">Reroll (free)</button>` : ''}
+          <button class="btn-primary take" type="button" disabled>Take it</button>
+        </div>
       </div>`;
     const take = this.el.querySelector<HTMLButtonElement>('.take')!;
     this.el.querySelectorAll<HTMLButtonElement>('.card').forEach((card) => {
@@ -64,6 +69,10 @@ export class PickScreen {
       });
     });
     take.addEventListener('click', () => this.confirm());
+    this.el.querySelector('.reroll')?.addEventListener('click', () => {
+      const next = onReroll?.();
+      if (next) this.show(next, onChoose, onSelect, onReroll);
+    });
     this.el.hidden = false;
   }
 

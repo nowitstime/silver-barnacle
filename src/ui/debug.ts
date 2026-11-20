@@ -21,7 +21,7 @@ export function mountDebug(root: HTMLElement, hooks: DebugHooks): (fps: number) 
     <button type="button" data-a="pick">Skip to pick</button>
     <button type="button" data-a="boss">Boss next</button>
     <button type="button" data-a="core">Go to Core</button>
-    <select data-a="place" aria-label="Place brick"><option value="">Place brick…</option>${['armored','bomb','splitter','steel','popper','anchor','balloon','sponge','shrinker','spawner','sprinter'].map((k) => `<option>${k}</option>`).join('')}</select>
+    <select data-a="place" aria-label="Place brick"><option value="">Place brick…</option>${['armored','bomb','splitter','steel','popper','anchor','balloon','sponge','shrinker','spawner','sprinter','shielder','healer','fuse','thief'].map((k) => `<option>${k}</option>`).join('')}</select>
     <select data-a="grant" aria-label="Grant upgrade"><option value="">Grant upgrade…</option>${hooks.upgrades.map((id) => `<option>${id}</option>`).join('')}</select>`;
   root.appendChild(el);
   const stats = el.querySelector<HTMLElement>('.debug-stats')!;

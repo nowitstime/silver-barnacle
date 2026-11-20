@@ -1,5 +1,5 @@
 import { circleRect, reflect, type Contact } from './collision';
-import { BALL_R, BALL_SPEED, COLS, FLOOR, MIN_VY_FRACTION, TOP, W, CELL, brickX, brickY, span } from './constants';
+import { BALL_R, BALL_R as BALL_RADIUS, BALL_SPEED, COLS, FLOOR, MIN_VY_FRACTION, TOP, W, CELL, brickX, brickY, span } from './constants';
 import { gridKey, type Brick, type BrickGrid } from './types';
 
 export interface Body {
@@ -7,6 +7,8 @@ export interface Body {
   y: number;
   vx: number;
   vy: number;
+  /** Collision radius; defaults to BALL_R. */
+  r?: number;
 }
 
 /** Constant accelerations acting on a body (currents, heavy balls). */
@@ -37,9 +39,10 @@ export function unloop(b: Body): void {
 
 /** Bounce a body off a brick contact. Separate from `stepBody` so a ball can choose to smash through instead. */
 export function bounce(b: Body, c: Contact): void {
+  const R = b.r ?? BALL_R;
   [b.vx, b.vy] = reflect(b.vx, b.vy, c.nx, c.ny);
-  b.x = c.px + c.nx * (BALL_R + 0.01);
-  b.y = c.py + c.ny * (BALL_R + 0.01);
+  b.x = c.px + c.nx * (R + 0.01);
+  b.y = c.py + c.ny * (R + 0.01);
   unloop(b);
 }
 
@@ -56,6 +59,7 @@ export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_
   }
   b.x += b.vx * h;
   b.y += b.vy * h;
+  const BALL_R = b.r ?? BALL_RADIUS;
 
   let wall = false, ceiling = false;
   if (b.x < BALL_R) { b.x = BALL_R; b.vx = Math.abs(b.vx); wall = true; }

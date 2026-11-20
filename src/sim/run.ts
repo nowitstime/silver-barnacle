@@ -20,14 +20,16 @@ export const endlessHp = (b: number): number => 1.35 ** endlessLap(b);
 export const endlessHazards = (b: number): number => 1.3 ** endlessLap(b);
 
 /** Each biome changes how the game plays. */
-export type Gimmick = 'none' | 'dark' | 'current' | 'ice' | 'heat';
-export const GIMMICKS: Gimmick[] = ['none', 'dark', 'current', 'ice', 'heat'];
+export type Gimmick = 'none' | 'growth' | 'dark' | 'current' | 'ice' | 'heat';
+export const GIMMICKS: Gimmick[] = ['growth', 'dark', 'current', 'ice', 'heat'];
 export const gimmickFor = (b: number): Gimmick => (b === CORE ? 'none' : GIMMICKS[themeOf(b)]);
 
+/** Every rule gets stronger the deeper you are in its biome. */
 export const GIMMICK_TEXT: Record<Gimmick, string> = {
   none: '',
-  dark: 'Darkness: you only see bricks near your balls',
-  current: 'Current: a drift pushes balls sideways, and flips each turn',
-  ice: 'Ice: balls speed up on every wall bounce. Frozen bricks shrug off the first hit',
-  heat: 'Heat: bricks you don’t hit regrow HP. Bombs are common',
+  growth: 'Growth: bricks you leave alone sprout blooms. Break a bloom for an extra ball',
+  dark: 'Darkness: you only see near your balls and the laser. Bricks you\u2019ve lit stay outlined. It gets darker',
+  current: 'Current and tides: a drift pushes balls sideways, and the tide shifts the whole board, more often as you go',
+  ice: 'Black ice: balls speed up off walls, landed balls slide, and more bricks freeze as you go',
+  heat: 'Rising lava: the danger line creeps up every few turns. Untouched bricks regrow. Bombs are common',
 };

@@ -187,8 +187,10 @@ export class Renderer {
     g.clearRect(0, 0, w, h);
     g.setTransform(view.scale * k, 0, 0, view.scale * k, view.offX * k, view.offY * k);
     g.globalCompositeOperation = 'source-over';
+    const dark = 0.6 + 0.3 * s.sim.intensity;
+    const reach = 1.15 - 0.3 * s.sim.intensity;
     g.fillStyle = inks.i1;
-    g.globalAlpha = 0.84;
+    g.globalAlpha = dark;
     g.fillRect(0, TOP, W, FLOOR - TOP);
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'destination-out';
@@ -199,18 +201,37 @@ export class Renderer {
       g.fillStyle = grad;
       g.fillRect(x - r, y - r, r * 2, r * 2);
     };
-    light(s.sim.launchX, FLOOR, 60);
+    const sources: [number, number, number][] = [[s.sim.launchX, FLOOR, 60 * reach]];
     const flying = s.sim.balls.filter((b) => b.state === 'flying');
     const step = Math.max(1, Math.ceil(flying.length / 24));
-    for (let i = 0; i < flying.length; i += step) light(flying[i].x, flying[i].y, flying[i].fire ? 70 : 48);
-    if (s.trace) for (let i = 0; i < s.trace.points.length; i += 5) light(s.trace.points[i][0], s.trace.points[i][1], 28);
+    for (let i = 0; i < flying.length; i += step) sources.push([flying[i].x, flying[i].y, (flying[i].fire ? 70 : 48) * reach]);
+    if (s.trace) for (let i = 0; i < s.trace.points.length; i += 5) sources.push([s.trace.points[i][0], s.trace.points[i][1], 28 * reach]);
+    for (const [x, y, r] of sources) light(x, y, r);
+    // Remember bricks once they've been lit, so they stay outlined in the dark.
+    for (const b of s.sim.bricks) {
+      if (this.seenInDark.has(b.id)) continue;
+      const bx = cellCenterX(b.c), by = cellCenterY(b.r);
+      if (sources.some(([x, y, r]) => (x - bx) ** 2 + (y - by) ** 2 < (r * 0.8) ** 2)) this.seenInDark.add(b.id);
+    }
     for (const r of s.fx.rings.slice(-12)) light(r.x, r.y, r.radius * 2);
     for (const it of s.sim.items) if (it.kind === 'orb') light(cellCenterX(it.c), cellCenterY(it.r), 16);
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.dark, 0, 0, view.canvas.width, view.canvas.height);
     ctx.restore();
+    // Outlines of remembered bricks.
+    ctx.save();
+    ctx.strokeStyle = inks.i2;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    for (const b of s.sim.bricks) if (this.seenInDark.has(b.id)) ctx.rect(brickX(b.c) + 1, brickY(b.r) + 1, span(b.w) - 2, span(b.h) - 2);
+    ctx.stroke();
+    ctx.restore();
+    if (this.seenInDark.size > 400) this.seenInDark = new Set([...this.seenInDark].slice(-200));
   }
+  private seenInDark = new Set<number>();
 
   private drawFloor(inks: Inks, sim: Sim): void {
     const { ctx } = this;
@@ -222,12 +243,48 @@ export class Renderer {
     ctx.moveTo(0, FLOOR + 0.5);
     ctx.lineTo(W, FLOOR + 0.5);
     ctx.stroke();
-    if (sim.lowestRow >= ROWS - 1) {
+    const danger = sim.dangerRow;
+    if (sim.lowestRow >= danger - 1) {
       ctx.setLineDash([]);
       ctx.strokeStyle = inks.i2;
       ctx.globalAlpha = 0.5 + 0.4 * Math.sin(performance.now() * 0.012);
       ctx.lineWidth = 2;
-      ctx.strokeRect(1, TOP + (ROWS - 1) * CELL, W - 2, CELL);
+      ctx.strokeRect(1, TOP + (danger - 1) * CELL, W - 2, CELL);
+    }
+    ctx.restore();
+    this.drawLava(inks, sim);
+  }
+
+  /** Forge: lava rows at the bottom, and a dashed warning where it will reach next turn. */
+  private drawLava(inks: Inks, sim: Sim): void {
+    if (sim.gimmick !== 'heat') return;
+    const { ctx } = this;
+    const t = performance.now() / 1000;
+    const now = sim.lava, next = sim.lavaAt(sim.turn + 1);
+    ctx.save();
+    if (now > 0) {
+      const y0 = TOP + (ROWS - now) * CELL;
+      ctx.fillStyle = inks.i2;
+      ctx.globalAlpha = 0.35 + 0.1 * Math.sin(t * 3);
+      ctx.fillRect(0, y0, W, FLOOR - y0);
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 6) ctx.lineTo(x, y0 + Math.sin(x * 0.12 + t * 4) * 2.5);
+      ctx.lineTo(W, y0 + 6); ctx.lineTo(0, y0 + 6); ctx.closePath();
+      ctx.fill();
+    }
+    if (next > now && sim.phase === 'aim') {
+      const y1 = TOP + (ROWS - next) * CELL;
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 8);
+      ctx.strokeStyle = inks.i2;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = inks.i2;
+      ctx.font = `700 8px ${FONT}`;
+      ctx.textAlign = 'right';
+      ctx.fillText('LAVA RISES NEXT TURN', W - 6, y1 - 4);
     }
     ctx.restore();
   }
@@ -236,8 +293,10 @@ export class Renderer {
 
   private drawBricks(s: RenderState, inks: Inks, off: number): void {
     const ref = Math.max(1, s.sim.level * 1.5);
+    this.drawShieldLinks(s, inks, off);
     for (const b of s.sim.bricks) {
       if (b.kind === 'boss') this.drawBoss(s, inks, b, off);
+      else if (b.kind === 'loot') this.drawLoot(s, inks, b, off);
       else this.drawBrick(s, inks, b, off, ref);
     }
   }
@@ -300,6 +359,8 @@ export class Renderer {
     } else this.hpLabel(b.hp, 0, 1, 13, ink);
 
     if (b.frozen) this.drawFrost(inks, half);
+    if (b.bloom) this.drawBloom(inks, half, s.time);
+    if (b.timer && (b.kind === 'fuse' || b.kind === 'thief')) this.drawTimer(inks, half, b.timer, b.kind === 'fuse' ? 3 : 2);
     if (b.burn > 0) this.drawFlames(inks, s.time, b.id);
     ctx.restore();
   }
@@ -376,10 +437,108 @@ export class Renderer {
           line([[-4, -5], [0, -1.5], [4, -5]]); ctx.stroke();
           line([[-4, 0], [0, 3.5], [4, 0]]); ctx.stroke();
           break;
+        case 'shielder':
+          line([[0, -6], [5, -4], [4.5, 2], [0, 6], [-4.5, 2], [-5, -4]], true); ctx.stroke();
+          line([[0, -2.5], [0, 2.5]]); ctx.stroke(); line([[-2.5, 0], [2.5, 0]]); ctx.stroke();
+          break;
+        case 'healer':
+          ctx.fillRect(-1.8, -6, 3.6, 12); ctx.fillRect(-6, -1.8, 12, 3.6);
+          break;
+        case 'fuse':
+          ctx.beginPath(); ctx.arc(0, 1.5, 4.5, 0, TAU); ctx.stroke();
+          line([[2.5, -2.5], [4.5, -5], [6.5, -4.5]]); ctx.stroke();
+          break;
+        case 'thief':
+          ctx.fillRect(-6.5, -2.5, 13, 5);
+          ctx.fillStyle = inks.i2;
+          ctx.beginPath(); ctx.arc(-3, 0, 1.6, 0, TAU); ctx.arc(3, 0, 1.6, 0, TAU); ctx.fill();
+          break;
         default:
           break;
       }
     };
+  }
+
+  /** Countdown badge in the corner (Fuse, Thief). Pulses on its last turn. */
+  private drawTimer(inks: Inks, half: number, t: number, max: number): void {
+    const { ctx } = this;
+    const urgent = t <= 1;
+    const r = urgent ? 6.5 + Math.sin(performance.now() * 0.015) * 1 : 6;
+    ctx.save();
+    ctx.translate(half - 3, -half + 3);
+    ctx.fillStyle = urgent ? inks.i2 : inks.paper;
+    ctx.strokeStyle = inks.i1;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = urgent ? inks.paper : inks.i1;
+    ctx.font = `700 9px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(Math.min(t, max)), 0, 0.5);
+    ctx.restore();
+  }
+
+  /** Meadow bloom: a little two-ink flower in the corner. Break it for an extra ball. */
+  private drawBloom(inks: Inks, half: number, time: number): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.translate(-half + 5, -half + 5);
+    ctx.rotate(time * 0.8);
+    ctx.fillStyle = inks.i2;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 3, Math.sin(a) * 3, 2.2, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = inks.paper;
+    ctx.beginPath(); ctx.arc(0, 0, 1.6, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  /** Shielders tie their neighbours together with a dashed ink line. */
+  private drawShieldLinks(s: RenderState, inks: Inks, off: number): void {
+    const shielders = s.sim.bricks.filter((b) => b.kind === 'shielder');
+    if (!shielders.length) return;
+    const { ctx } = this;
+    ctx.save();
+    ctx.strokeStyle = inks.i2;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.lineDashOffset = -s.time * 12;
+    ctx.beginPath();
+    for (const sh of shielders) {
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = s.sim.grid.get((sh.r + dr) * 64 + sh.c + dc);
+        if (!n || n === sh || n.boss) continue;
+        ctx.moveTo(cellCenterX(sh.c), cellCenterY(sh.r) + off);
+        ctx.lineTo(cellCenterX(n.c), cellCenterY(n.r) + off);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Loot brick: paper card with a genre symbol, pulsing so it reads as a prize. */
+  private drawLoot(s: RenderState, inks: Inks, b: Brick, off: number): void {
+    const { ctx } = this;
+    const fx = s.fx.bricks.get(b.id);
+    const size = span(1), half = size / 2;
+    const k = 1 + (fx?.wobble ?? 0) * 0.12 + Math.sin(s.time * 4 + b.c) * 0.03;
+    ctx.save();
+    ctx.translate(brickX(b.c) + half, brickY(b.r) + half + off);
+    ctx.scale(k, k);
+    ctx.fillStyle = inks.i2;
+    ctx.fillRect(-half + 2, -half + 2, size, size);
+    ctx.fillStyle = (fx?.flash ?? 0) > 0.3 ? inks.i2 : inks.paper;
+    ctx.fillRect(-half, -half, size, size);
+    ctx.strokeStyle = inks.i1;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-half + 1, -half + 1, size - 2, size - 2);
+    ctx.save();
+    ctx.translate(0, -4);
+    lootGlyph(ctx, b.loot ?? 'wild', inks);
+    ctx.restore();
+    this.hpLabel(b.hp, 0, 10, 8, inks.i1);
+    ctx.restore();
   }
 
   /** Frostline: an icy crust, cracked off by the first hit. */
@@ -595,6 +754,18 @@ export class Renderer {
         ctx.stroke();
         break;
       }
+      case 'spikes':
+        ctx.fillStyle = inks.i2;
+        ctx.beginPath();
+        for (let i = 0; i < 16; i++) {
+          const q = i % 2 ? 4 : 13;
+          const a = (i * Math.PI) / 8;
+          ctx.lineTo(Math.cos(a) * q, Math.sin(a) * q);
+        }
+        ctx.closePath();
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        break;
       case 'portal':
         ctx.rotate(time * 2 * (it.id % 2 ? 1 : -1));
         for (const [r, ink] of [[9, inks.i2], [6, inks.i1], [3, inks.i2]] as const) {
@@ -673,7 +844,7 @@ export class Renderer {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-    const visible = s.sim.balls.filter((b) => b.state !== 'held');
+    const visible = s.sim.balls.filter((b) => b.state !== 'held' || b.heldBy === -1);
     if (visible.length > 30) this.drawBallsBatched(s, inks, visible);
     else {
       for (const b of visible) {
@@ -1177,4 +1348,51 @@ export function drawItemIcon(c: HTMLCanvasElement, kind: Item['kind'], inks: Ink
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.setTransform(k, 0, 0, k, c.width / 2, c.height / 2);
   Renderer.prototype.drawItem.call({ ctx } as unknown as Renderer, { id: 1, c: 0, r: 0, kind }, inks, 1, 0.4);
+}
+
+/** Symbol for each loot genre, about 12px across, centred on 0,0. */
+function lootGlyph(ctx: CanvasRenderingContext2D, cat: string, inks: Inks): void {
+  ctx.strokeStyle = inks.i1;
+  ctx.fillStyle = inks.i2;
+  ctx.lineWidth = 1.8;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  switch (cat) {
+    case 'power': // a burst
+      ctx.beginPath();
+      for (let i = 0; i < 16; i++) {
+        const q = i % 2 ? 2.6 : 7;
+        const a = (i * Math.PI) / 8 - Math.PI / 2;
+        ctx.lineTo(Math.cos(a) * q, Math.sin(a) * q);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      break;
+    case 'arsenal': // three balls
+      for (const [x, y] of [[-4, 2.5], [4, 2.5], [0, -4]]) {
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); ctx.stroke();
+      }
+      break;
+    case 'elemental': // flame
+      ctx.beginPath();
+      ctx.moveTo(0, -7);
+      ctx.quadraticCurveTo(6, -1, 4, 4);
+      ctx.quadraticCurveTo(2, 7, 0, 7);
+      ctx.quadraticCurveTo(-5, 6, -4.5, 1.5);
+      ctx.quadraticCurveTo(-4, -2, -1, -3);
+      ctx.quadraticCurveTo(-1, -5, 0, -7);
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'guard': // shield
+      ctx.beginPath();
+      ctx.moveTo(0, -7); ctx.lineTo(6, -4.5); ctx.lineTo(5, 2.5); ctx.lineTo(0, 7); ctx.lineTo(-5, 2.5); ctx.lineTo(-6, -4.5);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      break;
+    default: // wild: a question mark
+      ctx.fillStyle = inks.i2;
+      ctx.font = `700 15px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', 0, 0.5);
+      ctx.strokeText('?', 0, 0.5);
+  }
 }

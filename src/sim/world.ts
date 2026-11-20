@@ -2,7 +2,7 @@ import { stream, type Rng } from '../core/rng';
 import { CORE_PHASES, bossFor } from '../content/bosses';
 import { isHazard } from '../content/bricks';
 import { CLASS_BY_ID, type ClassId } from '../content/classes';
-import { UPGRADE_BY_ID, computeStats, rollOffer, type Stats } from '../content/upgrades';
+import { LOOT_CATEGORIES, UPGRADE_BY_ID, computeStats, rollLoot, rollOffer, type Stats } from '../content/upgrades';
 import type { Contact } from './collision';
 import {
   BALL_R, BALL_SPEED, COLS, DROP_TIME, FLOOR, LAUNCH_INTERVAL, MAX_LAUNCH_TIME, MIN_ANGLE, ROWS, SETTLE_TIME, W,
@@ -21,7 +21,12 @@ const SAVE_VERSION = 2;
 const MAX_COPIES = 40;
 const HEAVY_GRAVITY = 700;
 const CURRENT_FORCE = 70;
-const SPONGE_HOLD = 1.0;
+/** Seconds a sponge holds balls before bursting. */
+const SPONGE_HOLD = 2.0;
+const BALLOON_STICK = 0.8;
+const FLOAT_LIFT = 650;
+const ANCHOR_PULL = 520;
+const ANCHOR_RANGE = 80;
 const ICE_SPEEDUP = 1.04;
 const ICE_MAX = 1.6;
 
@@ -30,6 +35,8 @@ export type PickKind = 'mid' | 'biome';
 export interface Offer {
   kind: PickKind;
   ids: string[];
+  /** Free rerolls left (big picks get one). */
+  rerolls?: number;
 }
 
 export interface RunOptions {
@@ -158,8 +165,28 @@ export class Sim {
   /** The row index of the lowest brick that can end the run, or -1. */
   get lowestRow(): number {
     let m = -1;
-    for (const b of this.bricks) if (b.kind !== 'steel') m = Math.max(m, b.r + b.h - 1);
+    for (const b of this.bricks) if (b.kind !== 'steel' && b.kind !== 'loot') m = Math.max(m, b.r + b.h - 1);
     return m;
+  }
+
+  /** 0 at the start of a biome, 1 at its boss: biome rules get stronger as it rises. */
+  get intensity(): number {
+    return this.bossActive ? 1 : Math.min(1, this.biomeRow / Math.max(1, biomeLength(this.biome)));
+  }
+
+  /** Forge: rows of lava eating into the board from below (0–2). */
+  lavaAt(turn: number): number {
+    if (this.gimmick !== 'heat') return 0;
+    return turn % 6 >= 4 ? (this.intensity > 0.6 ? 2 : 1) : 0;
+  }
+
+  get lava(): number {
+    return this.lavaAt(this.turn);
+  }
+
+  /** Bricks reaching this row end the run (lava raises it). */
+  get dangerRow(): number {
+    return ROWS - this.lava;
   }
 
   get unfired(): number {
@@ -214,13 +241,28 @@ export class Sim {
     const def = id ? UPGRADE_BY_ID.get(id) : undefined;
     if (!def) return false;
     const wasBiome = this.offer.kind === 'biome';
+    this.applyUpgrade(id);
+    this.offer = null;
+    this.setPhase('aim');
+    if (wasBiome) this.events.push({ type: 'biome', index: this.biome });
+    return true;
+  }
+
+  private applyUpgrade(id: string): void {
+    const def = UPGRADE_BY_ID.get(id);
+    if (!def) return;
     this.upgrades[id] = (this.upgrades[id] ?? 0) + 1;
     this.stats = this.computeStats();
     if (this.stats.glassCannon) this.shields = 0;
     def.onTake?.(this.runEffects());
-    this.offer = null;
-    this.setPhase('aim');
-    if (wasBiome) this.events.push({ type: 'biome', index: this.biome });
+  }
+
+  /** Swap the offered cards for new ones (big picks get one free reroll). */
+  reroll(): boolean {
+    if (this.phase !== 'pick' || !this.offer || !this.offer.rerolls) return false;
+    const ids = rollOffer(this.lootRng, this.upgrades, Math.max(0, this.biome - 1), this.offer.kind, this.stats.wildcard, this.locked);
+    if (!ids.length) return false;
+    this.offer = { ...this.offer, ids, rerolls: this.offer.rerolls - 1 };
     return true;
   }
 
@@ -301,7 +343,8 @@ export class Sim {
       fire: from?.fire ?? false,
       wallBounces: from?.wallBounces ?? 0,
       struck: from?.struck ?? false,
-      heavy: false, slow: false, shrunk: from?.shrunk ?? false, popped: false,
+      heavy: false, slow: false, shrunk: from?.shrunk ?? false, popped: false, floaty: false,
+      r: from?.r ?? BALL_R,
       heldBy: 0, heldTime: 0, portalCooldown: 0, lasers: [],
     };
     this.balls.push(ball);
@@ -330,6 +373,38 @@ export class Sim {
       }
     }
     this.bossTurn();
+    // Healers restore their neighbours.
+    for (const h of this.bricks.filter((x) => x.kind === 'healer')) {
+      for (const [dc, dr] of NEIGHBOURS) {
+        const n = this.grid.get(gridKey(h.c + dc, h.r + dr));
+        if (!n || n === h || n.kind === 'steel' || n.kind === 'loot' || n.hp >= n.maxHp) continue;
+        const amount = Math.max(1, Math.round(n.maxHp * (n.boss ? 0.03 : 0.15)));
+        n.hp = Math.min(n.maxHp, n.hp + amount);
+        this.events.push({ type: 'heal', brick: n, amount });
+      }
+    }
+    // Thieves steal a ball when their countdown runs out.
+    for (const t of this.bricks.filter((x) => x.kind === 'thief')) {
+      t.timer = (t.timer ?? 2) - 1;
+      if (t.timer <= 0) {
+        t.timer = 2;
+        if (this.ballCount > 1) {
+          this.ballCount--;
+          this.events.push({ type: 'steal', x: cellCenterX(t.c), y: cellCenterY(t.r) });
+        }
+      }
+    }
+    // Meadow growth: bricks left alone sprout blooms.
+    if (this.gimmick === 'growth') {
+      for (const b of this.bricks) {
+        if (b.kind !== 'normal') continue;
+        b.idle = b.hitThisTurn ? 0 : (b.idle ?? 0) + 1;
+        if (!b.bloom && b.idle >= 2 && this.rowRng() < 0.2 + 0.4 * this.intensity) {
+          b.bloom = true;
+          this.events.push({ type: 'bloom', x: cellCenterX(b.c), y: cellCenterY(b.r) });
+        }
+      }
+    }
     // Spawners grow.
     for (const b of this.bricks.filter((x) => x.kind === 'spawner')) {
       const cell = this.freeNeighbour(b.c, b.r);
@@ -352,6 +427,8 @@ export class Sim {
     }
     const skipRow = this.stats.slowDrop && this.turn % 2 === 1 && !this.bossActive && !this.bossCleared;
     if (!skipRow) this.shiftDown(1);
+    this.fusesTick();
+    if (this.gimmick === 'current') this.tide();
     if (this.bossCleared || this.coreBroken || skipRow) {
       // no new row
     } else if (this.bossActive) {
@@ -361,10 +438,15 @@ export class Sim {
     } else {
       this.spawnRow();
       this.biomeRow++;
+      if (!this.offeredMid && this.biomeRow === Math.floor(biomeLength(this.biome) / 2)) {
+        this.offeredMid = true;
+        this.spawnLoot();
+      }
     }
     this.rebuildGrid();
     this.setPhase('drop');
     this.events.push({ type: 'drop' });
+    if (this.lava > this.lavaAt(this.turn - 1)) this.events.push({ type: 'lava', level: this.lava });
   }
 
   private shiftDown(n: number): void {
@@ -384,7 +466,7 @@ export class Sim {
       }
     }
     // Steel and items that fall off the bottom just disappear.
-    this.bricks = this.bricks.filter((b) => !(b.kind === 'steel' && b.r >= ROWS));
+    this.bricks = this.bricks.filter((b) => !((b.kind === 'steel' || b.kind === 'loot') && b.r >= ROWS));
     this.items = this.items.filter((i) => i.r < ROWS);
   }
 
@@ -395,12 +477,12 @@ export class Sim {
       this.setPhase('won');
       return;
     }
-    if (this.lowestRow >= ROWS) {
+    if (this.lowestRow >= this.dangerRow) {
       if (this.shields > 0 || (this.stats.secondWind && !this.windUsed)) {
         const wind = this.shields <= 0;
         if (wind) this.windUsed = true;
         else this.shields--;
-        const clearFrom = ROWS - (wind ? 3 : 2);
+        const clearFrom = this.dangerRow - (wind ? 3 : 2);
         for (const b of [...this.bricks]) {
           if (b.r + b.h - 1 < clearFrom) continue;
           if (b.kind === 'boss') b.r = Math.max(0, clearFrom - b.h);
@@ -421,13 +503,10 @@ export class Sim {
       this.biome++;
       this.biomeRow = 0;
       if (this.stats.guardian) this.runEffects().addShields(this.stats.guardian);
-    } else if (!this.bossActive && this.biomeRow === Math.floor(biomeLength(this.biome) / 2) && !this.offeredMid) {
-      kind = 'mid';
-      this.offeredMid = true;
     }
     if (kind === 'biome') this.offeredMid = false;
     if (kind) {
-      this.offer = { kind, ids: rollOffer(this.lootRng, this.upgrades, kind === 'biome' ? this.biome - 1 : this.biome, kind, this.stats.wildcard, this.locked) };
+      this.offer = { kind, ids: rollOffer(this.lootRng, this.upgrades, kind === 'biome' ? this.biome - 1 : this.biome, kind, this.stats.wildcard, this.locked), rerolls: kind === 'biome' ? 1 : 0 };
       if (this.offer.ids.length) {
         this.setPhase('pick');
         this.events.push({ type: 'pick', kind });
@@ -449,7 +528,7 @@ export class Sim {
     this.biome = ENDLESS_START;
     this.biomeRow = 0;
     this.offeredMid = false;
-    this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard, this.locked) };
+    this.offer = { kind: 'biome', ids: rollOffer(this.lootRng, this.upgrades, 4, 'biome', this.stats.wildcard, this.locked), rerolls: 1 };
     if (this.offer.ids.length) {
       this.setPhase('pick');
       this.events.push({ type: 'pick', kind: 'biome' });
@@ -540,21 +619,47 @@ export class Sim {
 
   private stepBalls(h: number): void {
     const env = this.accel;
+    // Sponges burst once their timer runs out, spraying every ball they swallowed.
+    for (const sp of this.bricks.filter((b) => b.kind === 'sponge' && (b.timer ?? 0) > 0)) {
+      sp.timer! -= h;
+      if (sp.timer! <= 0) this.burstSponge(sp);
+    }
+    const anchors = this.bricks.filter((b) => b.kind === 'anchor');
     for (const ball of [...this.balls]) {
       if (ball.state === 'returned') continue;
       if (ball.state === 'held') {
-        ball.heldTime -= h;
-        const sponge = this.bricks.find((b) => b.id === ball.heldBy);
-        if (ball.heldTime <= 0 || !sponge) this.release(ball, sponge);
+        if (ball.heldBy === -1) {
+          // Stuck to the ceiling after a balloon.
+          ball.heldTime -= h;
+          if (ball.heldTime <= 0) this.release(ball);
+        } else if (!this.bricks.some((b) => b.id === ball.heldBy)) this.release(ball);
         continue;
       }
       if (ball.portalCooldown > 0) ball.portalCooldown -= h;
-      const accel = ball.heavy ? { ax: env.ax, ay: env.ay + HEAVY_GRAVITY } : env;
+      let ax = env.ax, ay = env.ay;
+      if (ball.heavy) ay += HEAVY_GRAVITY;
+      if (ball.floaty) ay -= FLOAT_LIFT;
+      if (anchors.length && !this.stats.hazardProof) {
+        for (const a of anchors) {
+          const dx = cellCenterX(a.c) - ball.x, dy = cellCenterY(a.r) - ball.y;
+          const d = Math.hypot(dx, dy);
+          if (d < ANCHOR_RANGE && d > 1) {
+            const f = ANCHOR_PULL * (1 - d / ANCHOR_RANGE);
+            ax += (dx / d) * f;
+            ay += (dy / d) * f;
+          }
+        }
+      }
+      const accel = ax || ay ? { ax, ay } : env;
       const res = stepBody(ball, h, this.grid, accel);
       if (res?.kind === 'floor') {
         ball.state = 'returned';
         const first = this.landX === null && !ball.copy;
-        if (first) this.landX = clampX(ball.x);
+        if (first) {
+          // Frostline's black ice: the first ball slides along the floor before stopping.
+          const slide = this.gimmick === 'ice' ? Math.sign(ball.vx) * (20 + 70 * this.intensity) : 0;
+          this.landX = clampX(ball.x + slide);
+        }
         this.events.push({ type: 'land', x: ball.x, first });
         continue;
       }
@@ -576,6 +681,14 @@ export class Sim {
       const k = Math.min(ICE_SPEEDUP, (BALL_SPEED * ICE_MAX) / sp);
       if (k > 1) { ball.vx *= k; ball.vy *= k; }
     }
+    if (ceiling && ball.floaty) {
+      ball.floaty = false;
+      ball.state = 'held';
+      ball.heldBy = -1;
+      ball.heldTime = BALLOON_STICK;
+      ball.vx = 0;
+      ball.vy = 0;
+    }
     if (ceiling && s.lava && !ball.fire) {
       ball.fire = true;
       this.events.push({ type: 'ignite', ballId: ball.id, x, y });
@@ -594,7 +707,7 @@ export class Sim {
     ball.heldBy = 0;
     if (sponge) {
       ball.x = cellCenterX(sponge.c);
-      ball.y = cellCenterY(sponge.r) + CELL / 2 + BALL_R + 1;
+      ball.y = cellCenterY(sponge.r) + CELL / 2 + ball.r + 1;
     }
     // Spit out downward-ish in a random direction.
     const a = -(MIN_ANGLE + this.combatRng() * (Math.PI - 2 * MIN_ANGLE));
@@ -603,11 +716,35 @@ export class Sim {
     ball.vy = -Math.sin(a) * sp;
   }
 
+  /** A sponge bursts: it's destroyed and every swallowed ball sprays out at once. */
+  private burstSponge(sp: Brick): void {
+    const held = this.balls.filter((b) => b.state === 'held' && b.heldBy === sp.id);
+    const x = cellCenterX(sp.c), y = cellCenterY(sp.r);
+    this.events.push({ type: 'burst', x, y, count: held.length });
+    this.damage(sp, sp.hp, x, y, 'void', null, false);
+    held.forEach((b, i) => {
+      b.state = 'flying';
+      b.heldBy = 0;
+      b.x = x;
+      b.y = y + CELL / 2 + b.r + 1;
+      const a = -(MIN_ANGLE + ((i + 0.5) / held.length) * (Math.PI - 2 * MIN_ANGLE));
+      b.vx = Math.cos(a) * BALL_SPEED;
+      b.vy = -Math.sin(a) * BALL_SPEED;
+    });
+  }
+
   private touchItems(ball: Ball): void {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
       const ix = cellCenterX(it.c), iy = cellCenterY(it.r);
-      if ((ball.x - ix) ** 2 + (ball.y - iy) ** 2 >= (BALL_R + ITEM_R) ** 2) continue;
+      if ((ball.x - ix) ** 2 + (ball.y - iy) ** 2 >= (ball.r + ITEM_R) ** 2) continue;
+      if (it.kind === 'spikes') {
+        if (this.stats.hazardProof || ball.copy) continue;
+        ball.popped = true;
+        ball.state = 'returned';
+        this.events.push({ type: 'hazard', kind: 'popper', ballId: ball.id, x: ball.x, y: ball.y });
+        return;
+      }
       if (it.kind === 'orb') {
         if (ball.copy) continue;
         this.items.splice(i, 1);
@@ -656,28 +793,33 @@ export class Sim {
     if (isHazard(brick.kind) && !s.hazardProof) {
       this.events.push({ type: 'hazard', kind: brick.kind, ballId: ball.id, x, y });
       switch (brick.kind) {
-        case 'popper':
+        case 'popper': {
+          const pc = brick.c, pr = brick.r;
           this.damage(brick, brick.hp, x, y, 'ball', ball, false);
           ball.popped = true;
           ball.state = 'returned';
+          // Leaves spikes for the rest of the turn.
+          this.items.push({ id: this.nextId++, c: pc, r: pr, kind: 'spikes', used: true });
           return;
+        }
         case 'anchor': ball.heavy = true; break;
-        case 'balloon':
-          if (!ball.slow) { ball.slow = true; ball.vx *= 0.5; ball.vy *= 0.5; }
+        case 'balloon': ball.floaty = true; break;
+        case 'shrinker':
+          ball.shrunk = true;
+          ball.r = BALL_R * 0.6;
           break;
-        case 'shrinker': ball.shrunk = true; break;
-        case 'sponge':
-          if (brick.hp > 1) {
-            bounce(ball, contact);
-            this.damage(brick, this.ballDamage(ball, brick, false), x, y, 'ball', ball, false);
-            if (this.grid.get(gridKey(brick.c, brick.r)) === brick) {
-              ball.state = 'held';
-              ball.heldBy = brick.id;
-              ball.heldTime = SPONGE_HOLD;
-            }
-            return;
-          }
-          break;
+        case 'sponge': {
+          // Swallow the ball (and chip the sponge); it bursts SPONGE_HOLD seconds after the first.
+          this.damage(brick, this.ballDamage(ball, brick, false), x, y, 'ball', ball, false);
+          if (this.bricks.includes(brick)) {
+            ball.state = 'held';
+            ball.heldBy = brick.id;
+            ball.x = cellCenterX(brick.c);
+            ball.y = cellCenterY(brick.r);
+            if (!brick.timer) brick.timer = SPONGE_HOLD;
+          } else bounce(ball, contact);
+          return;
+        }
         default: break;
       }
     }
@@ -732,6 +874,10 @@ export class Sim {
     // Defences.
     if (brick.kind === 'steel') {
       this.events.push({ type: 'immune', brick, x, y, reason: 'steel' });
+      return false;
+    }
+    if (brick.kind !== 'shielder' && !brick.boss && this.shielded(brick)) {
+      this.events.push({ type: 'immune', brick, x, y, reason: 'shield' });
       return false;
     }
     if (brick.frozen) {
@@ -794,6 +940,14 @@ export class Sim {
 
     // On-death effects.
     const cx = cellCenterX(brick.c), cy = cellCenterY(brick.r);
+    if (brick.kind === 'loot') {
+      this.claimLoot(brick, cx, cy);
+      return true;
+    }
+    if (brick.bloom) {
+      this.pendingBalls++;
+      this.events.push({ type: 'orb', x: cx, y: cy, extra: false });
+    }
     if (brick.kind === 'bomb') this.explode(brick.c, brick.r, Math.max(this.level, s.damage * 3), cx, cy);
     else if (s.detonate && source !== 'bomb' && this.combatRng() < s.detonate) this.explode(brick.c, brick.r, s.damage * 2, cx, cy);
     if (brick.kind === 'splitter') {
@@ -851,8 +1005,90 @@ export class Sim {
 
   // ---- board helpers ----
 
+  /** Is this brick next to a living Shielder? */
+  private shielded(b: Brick): boolean {
+    return NEIGHBOURS.some(([dc, dr]) => this.grid.get(gridKey(b.c + dc, b.r + dr))?.kind === 'shielder');
+  }
+
+  /** Fuses count down each turn; at zero they lunge two rows (as far as there's room). */
+  private fusesTick(): void {
+    this.rebuildGrid();
+    for (const f of this.bricks.filter((x) => x.kind === 'fuse').sort((a, z) => z.r - a.r)) {
+      f.timer = (f.timer ?? 3) - 1;
+      if (f.timer > 0) continue;
+      f.timer = 3;
+      let moved = 0;
+      while (moved < 2 && !this.grid.has(gridKey(f.c, f.r + 1)) && f.r + 1 < ROWS + 1) {
+        this.grid.delete(gridKey(f.c, f.r));
+        f.r++;
+        this.grid.set(gridKey(f.c, f.r), f);
+        moved++;
+      }
+      if (moved) this.events.push({ type: 'lunge', brick: f });
+    }
+  }
+
+  /** The Deep: the tide shifts every brick and pickup one column, more often deeper in the biome. */
+  private tide(): void {
+    const every = this.intensity < 0.34 ? 4 : this.intensity < 0.67 ? 3 : 2;
+    if (this.turn % every !== 0) return;
+    const dir = (Math.floor(this.turn / every) % 2) ? 1 : -1;
+    this.rebuildGrid();
+    const movers = this.bricks.filter((b) => !b.boss).sort((a, z) => (z.c - a.c) * dir);
+    for (const b of movers) {
+      const nc = b.c + dir;
+      if (nc < 0 || nc >= COLS || this.grid.has(gridKey(nc, b.r))) continue;
+      this.grid.delete(gridKey(b.c, b.r));
+      b.c = nc;
+      this.grid.set(gridKey(b.c, b.r), b);
+    }
+    for (const it of [...this.items].sort((a, z) => (z.c - a.c) * dir)) {
+      const nc = it.c + dir;
+      if (nc < 0 || nc >= COLS || this.grid.has(gridKey(nc, it.r)) || this.items.some((o) => o !== it && o.c === nc && o.r === it.r)) continue;
+      it.c = nc;
+    }
+    this.events.push({ type: 'tide', dir });
+  }
+
+  /** Halfway through a biome: three loot bricks of different genres land in the top row. */
+  private spawnLoot(): void {
+    const cats = [...LOOT_CATEGORIES];
+    for (let i = cats.length - 1; i > 0; i--) {
+      const j = Math.floor(this.lootRng() * (i + 1));
+      [cats[i], cats[j]] = [cats[j], cats[i]];
+    }
+    const cols = [1, 3, 5];
+    const hp = Math.max(2, Math.round(brickHp(this.level, Math.min(this.biome, CORE)) * 1.2 * endlessHp(this.biome)));
+    cols.forEach((c, i) => {
+      const old = this.grid.get(gridKey(c, 0));
+      if (old) this.removeBrick(old);
+      this.items = this.items.filter((it) => !(it.c === c && it.r === 0));
+      const b = this.addBrick(c, 0, hp, 'loot');
+      b.loot = cats[i];
+    });
+    // Keep the orb if it was pushed out.
+    if (!this.items.some((it) => it.kind === 'orb' && it.r === 0)) {
+      const free = [0, 2, 4, 6].filter((c) => !this.grid.has(gridKey(c, 0)));
+      if (free.length) this.items.push({ id: this.nextId++, c: free[0], r: 0, kind: 'orb' });
+    }
+    this.events.push({ type: 'lootAppear' });
+  }
+
+  /** First loot brick broken: grant an upgrade of its genre; the others shatter. */
+  private claimLoot(brick: Brick, x: number, y: number): void {
+    const id = rollLoot(this.lootRng, this.upgrades, this.biome, brick.loot ?? 'wild', this.locked);
+    if (id) this.applyUpgrade(id);
+    this.events.push({ type: 'loot', category: brick.loot ?? 'wild', upgrade: id, x, y });
+    for (const other of this.bricks.filter((b) => b.kind === 'loot')) {
+      this.events.push({ type: 'explode', x: cellCenterX(other.c), y: cellCenterY(other.r), radius: 14 });
+      this.removeBrick(other);
+    }
+  }
+
   private addBrick(c: number, r: number, hp: number, kind: BrickKind): Brick {
     const b: Brick = { id: this.nextId++, c, r, w: 1, h: 1, hp, maxHp: hp, kind, burn: 0, frozen: false, hitThisTurn: false };
+    if (kind === 'fuse') b.timer = 3;
+    if (kind === 'thief') b.timer = 2;
     this.bricks.push(b);
     this.grid.set(gridKey(c, r), b);
     this.events.push({ type: 'spawn', c, r });
@@ -886,7 +1122,7 @@ export class Sim {
       if (this.grid.get(k) === brick) this.grid.delete(k);
     }
     // Release any ball this sponge was holding.
-    if (brick.kind === 'sponge') for (const b of this.balls) if (b.heldBy === brick.id) b.heldTime = 0;
+    if (brick.kind === 'sponge') for (const b of this.balls) if (b.heldBy === brick.id) this.release(b, brick);
   }
 
   private slideReturned(h: number): void {
@@ -903,10 +1139,10 @@ export class Sim {
       hazardMult: s.hazardMult * endlessHazards(this.biome),
       bombMult: this.gimmick === 'heat' ? 2.5 : 1,
     });
-    const frozenChance = this.gimmick === 'ice' ? 0.3 : 0;
+    const frozenChance = this.gimmick === 'ice' ? 0.15 + 0.35 * this.intensity : 0;
     for (const b of row.bricks) {
       const brick = this.addBrick(b.c, 0, b.hp, b.kind);
-      if (frozenChance && b.kind !== 'steel' && this.rowRng() < frozenChance) brick.frozen = true;
+      if (frozenChance && b.kind !== 'steel' && b.kind !== 'popper' && this.rowRng() < frozenChance) brick.frozen = true;
     }
     this.events = this.events.filter((e) => e.type !== 'spawn' || e.r !== 0);
     let portal: Item | null = null;

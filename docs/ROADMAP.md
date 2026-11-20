@@ -116,7 +116,15 @@ Legend: ⬜ todo · 🟨 in progress · ✅ done
 
 Principles we keep: **every run should create a different build**, **you should always know why you lost**, **decisions beat reflexes**, and **the late game should feel powerful, not grindy**.
 
-## M10: Build-craft and balance *(more interesting choices every pick)*
+## M10: Choices with teeth ✅ *(built)*
+- ✅ **Loot bricks** halfway through every biome: three genre-marked bricks (✶ Power, ●●● Arsenal, flame Elemental, shield Guard, ? Wild). The first one you break grants an upgrade of that genre; the others shatter
+- ✅ Big pick after each boss gets **one free reroll**
+- ✅ **Priority targets**: Shielder (neighbours immune), Healer (restores neighbours), Fuse (countdown, then lunges two rows), Thief (countdown, then steals a ball), with countdown badges
+- ✅ **Hazard buffs**: Popper leaves spikes, Sponge swallows everything then bursts, Shrinker physically shrinks the ball, Balloon floats it up to stick on the ceiling, Anchor pulls nearby balls
+- ✅ **Escalating biome rules**: Meadow growth (blooms give balls), Caverns gets darker but remembers lit bricks, The Deep's tide shifts the board more often, Frostline black ice slides your launch point and freezes more bricks, Forge lava raises the danger line (with a next-turn warning)
+- ⬜ Next: signature hazard per biome (Thorn, Bat, Jellyfish, Icicle, Magma) and bosses that use their biome's rule
+
+## M10b: Build-craft and balance *(more interesting choices every pick)*
 - ⬜ **Duo upgrades** (Hades): owning two specific upgrades unlocks a special card, e.g. Kindling + Splash → *Firestorm*, Chain Lightning + Mitosis → *Storm Cell*
 - ⬜ **Evolutions** (Vampire Survivors): a maxed upgrade plus a catalyst evolves into a super form
 - ⬜ **Rerolls and skips**: earn ink from bricks; spend it to reroll a pick, or skip a pick for ink

@@ -2,15 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { mulberry32 } from '../src/core/rng';
 import { CLASSES } from '../src/content/classes';
 import { BRICKS, rollKind } from '../src/content/bricks';
-import { UPGRADES, computeStats, rollOffer, baseStats } from '../src/content/upgrades';
+import { UPGRADES, categoryOf, computeStats, rollOffer, baseStats } from '../src/content/upgrades';
 import { BIOME_ROWS, biomeLength, gimmickFor } from '../src/sim/run';
-import { ROWS, STEP } from '../src/sim/constants';
+import { CELL, FLOOR, ROWS, STEP, TOP } from '../src/sim/constants';
 import { Sim } from '../src/sim/world';
-
-function finishTurn(sim: Sim) {
-  let guard = 0;
-  while (!['aim', 'pick', 'over'].includes(sim.phase) && guard++ < 240 * 120) sim.tick(STEP);
-}
 
 /** Play turns aiming straight-ish, taking the first card at every pick. */
 function play(sim: Sim, turns: number, onEvent?: (e: ReturnType<Sim['drainEvents']>[number]) => void) {
@@ -30,7 +25,7 @@ describe('run structure', () => {
     expect(BIOME_ROWS).toEqual([12, 16, 20, 24, 28]);
     expect(biomeLength(0)).toBe(12);
     expect(biomeLength(7)).toBe(24);
-    expect(gimmickFor(0)).toBe('none');
+    expect(gimmickFor(0)).toBe('growth');
     expect(gimmickFor(1)).toBe('dark');
     expect(gimmickFor(5)).toBe('none');
   });
@@ -104,22 +99,34 @@ describe('content', () => {
 });
 
 describe('sim run flow', () => {
-  it('stops for a pick halfway through biome 1 and applies the choice', () => {
+  it('halfway through biome 1, three loot bricks appear; breaking one grants an upgrade of its genre', () => {
     const sim = new Sim(4);
-    sim.debugAddBalls(40);
+    sim.debugAddBalls(60);
+    for (let i = 0; i < 8; i++) sim.debugGrant('heavy');
+    let appeared = false, claimed: { category: string; upgrade: string | null } | null = null;
     let guard = 0;
-    while (sim.phase !== 'pick' && sim.phase !== 'over' && guard++ < 20) {
-      sim.fire(Math.PI / 2 - 0.3 + (guard % 3) * 0.3);
-      finishTurn(sim);
+    while (!claimed && sim.phase !== 'over' && guard++ < 30) {
+      if (sim.phase === 'pick') sim.choose(0);
+      const loot = sim.bricks.find((b) => b.kind === 'loot');
+      const angle = loot ? Math.atan2(FLOOR - (TOP + loot.r * CELL + CELL / 2), loot.c * CELL + CELL / 2 - sim.launchX) : Math.PI / 2;
+      sim.fire(angle);
+      while (!['aim', 'pick', 'over'].includes(sim.phase)) {
+        sim.tick(STEP);
+        for (const e of sim.drainEvents()) {
+          if (e.type === 'lootAppear') appeared = true;
+          if (e.type === 'loot') claimed = { category: e.category, upgrade: e.upgrade };
+        }
+      }
     }
-    expect(sim.phase).toBe('pick');
-    expect(sim.biomeRow).toBe(6);
-    expect(sim.offer!.kind).toBe('mid');
-    expect(sim.offer!.ids.length).toBe(3);
-    const id = sim.offer!.ids[0];
-    expect(sim.choose(0)).toBe(true);
-    expect(sim.upgrades[id]).toBe(1);
-    expect(sim.phase).toBe('aim');
+    expect(appeared).toBe(true);
+    expect(claimed).not.toBeNull();
+    expect(sim.bricks.some((b) => b.kind === 'loot')).toBe(false); // the others shattered
+    const c = claimed!;
+    if (c.upgrade) {
+      expect(sim.upgrades[c.upgrade]).toBeGreaterThanOrEqual(1);
+      if (c.category !== 'wild') expect(categoryOf(c.upgrade)).toBe(c.category);
+    }
+    expect(sim.offer).toBeNull(); // no menu at the halfway point any more
   });
 
   it('a mini-boss appears at the end of biome 1, and beating it gives the biome pick', () => {

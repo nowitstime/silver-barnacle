@@ -1,5 +1,6 @@
 import type { BossId } from '../content/bosses';
 import type { BrickKind, ItemKind } from '../content/bricks';
+import type { LootCategory } from '../content/upgrades';
 
 export type { BrickKind, ItemKind };
 
@@ -32,6 +33,13 @@ export interface Brick {
   frozen: boolean;
   /** Took any damage this turn (Forge heat). */
   hitThisTurn: boolean;
+  /** Countdown for Fuse and Thief; Sponge's seconds until it bursts (0 = idle). */
+  timer?: number;
+  /** Loot brick genre. */
+  loot?: LootCategory;
+  /** Meadow growth: turns since last hit, and whether it has sprouted a bloom. */
+  idle?: number;
+  bloom?: boolean;
   boss?: BossState;
 }
 
@@ -72,6 +80,10 @@ export interface Ball {
   heavy: boolean;
   slow: boolean;
   shrunk: boolean;
+  /** Balloon: floating up to stick on the ceiling. */
+  floaty: boolean;
+  /** Collision radius (shrunk balls are smaller). */
+  r: number;
   popped: boolean;
   /** Sponge holding this ball, and seconds left. */
   heldBy: number;
@@ -116,6 +128,14 @@ export type SimEvent =
   | { type: 'bossDown'; name: string }
   | { type: 'bossPhase'; phase: number; text: string }
   | { type: 'win' }
+  | { type: 'loot'; category: LootCategory; upgrade: string | null; x: number; y: number }
+  | { type: 'lootAppear' }
+  | { type: 'steal'; x: number; y: number }
+  | { type: 'lunge'; brick: Brick }
+  | { type: 'burst'; x: number; y: number; count: number }
+  | { type: 'bloom'; x: number; y: number }
+  | { type: 'tide'; dir: number }
+  | { type: 'lava'; level: number }
   | { type: 'pick'; kind: 'mid' | 'biome' }
   | { type: 'biome'; index: number }
   | { type: 'over' };

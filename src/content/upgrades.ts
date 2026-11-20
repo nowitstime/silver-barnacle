@@ -182,6 +182,29 @@ function rarityWeight(r: Rarity, biome: number, kind: 'mid' | 'biome'): number {
   return w[r];
 }
 
+/** Loot-brick genres: you see the genre on the brick, not the exact upgrade. */
+export type LootCategory = 'power' | 'arsenal' | 'elemental' | 'guard' | 'wild';
+export const LOOT_CATEGORIES: LootCategory[] = ['power', 'arsenal', 'elemental', 'guard', 'wild'];
+export const LOOT_INFO: Record<LootCategory, { name: string; hint: string }> = {
+  power: { name: 'Power', hint: 'Damage and crits' },
+  arsenal: { name: 'Arsenal', hint: 'More balls and how they travel' },
+  elemental: { name: 'Elemental', hint: 'Fire, lightning and explosions' },
+  guard: { name: 'Guard', hint: 'Shields, safety and sight' },
+  wild: { name: 'Wild', hint: 'Anything, usually rare' },
+};
+
+const CATEGORY: Record<string, Exclude<LootCategory, 'wild'>> = {
+  heavy: 'power', sharp: 'power', brutal: 'power', core: 'power', first: 'power', overcharge: 'power',
+  mercy: 'power', critmass: 'power', laststand: 'power', glass: 'power', steeltoe: 'power',
+  extra: 'arsenal', lucky: 'arsenal', mitosis: 'arsenal', echo: 'arsenal', bounty: 'arsenal',
+  pierce: 'arsenal', ricochet: 'arsenal', momentum: 'arsenal',
+  chain: 'elemental', kindling: 'elemental', splash: 'elemental', afterburn: 'elemental', static: 'elemental',
+  detonate: 'elemental', fuse: 'elemental', lava: 'elemental', wide: 'elemental', singularity: 'elemental',
+  skin: 'guard', proof: 'guard', guardian: 'guard', wind: 'guard', dilation: 'guard', sight: 'guard',
+};
+
+export const categoryOf = (id: string): Exclude<LootCategory, 'wild'> | undefined => CATEGORY[id];
+
 const canTake = (u: UpgradeDef, owned: Record<string, number>) =>
   (owned[u.id] ?? 0) < u.max && !(u.id === 'skin' && owned.glass) && !(u.id === 'guardian' && owned.glass);
 
@@ -204,4 +227,17 @@ export function rollOffer(
     if (cursed.length) offer.splice(Math.floor(rng() * (offer.length + 1)), 0, cursed[Math.floor(rng() * cursed.length)].id);
   }
   return offer;
+}
+
+/** Roll the upgrade hidden in a loot brick of the given genre. Wild skews rare. */
+export function rollLoot(rng: Rng, owned: Record<string, number>, biome: number, cat: LootCategory, locked: string[] = []): string | null {
+  const avail = UPGRADES.filter((u) => u.rarity !== 'cursed' && canTake(u, owned) && !locked.includes(u.id) &&
+    (cat === 'wild' || CATEGORY[u.id] === cat));
+  if (!avail.length) return null;
+  const kind = cat === 'wild' ? 'biome' : 'mid';
+  const rarities = RARITIES.filter((r) => avail.some((u) => u.rarity === r) && rarityWeight(r, biome, kind) > 0);
+  const pool = rarities.length ? rarities : RARITIES.filter((r) => avail.some((u) => u.rarity === r));
+  const rarity = pickWeighted(rng, pool, (r) => Math.max(0.01, rarityWeight(r, biome, kind)));
+  const choices = avail.filter((u) => u.rarity === rarity);
+  return choices[Math.floor(rng() * choices.length)].id;
 }

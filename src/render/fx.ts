@@ -1,4 +1,5 @@
-import { BALL_R, FLOOR, cellCenterX, cellCenterY } from '../sim/constants';
+import { BALL_R, FLOOR, TOP, W, cellCenterX, cellCenterY } from '../sim/constants';
+import { LOOT_INFO, UPGRADE_BY_ID } from '../content/upgrades';
 import type { Sim } from '../sim/world';
 import type { SimEvent } from '../sim/types';
 
@@ -155,6 +156,42 @@ export class Fx {
           break;
         case 'bossDown':
           this.showBanner(`${e.name.toUpperCase()} DOWN`, 'Biome cleared', 2);
+          break;
+        case 'lootAppear':
+          this.showBanner('LOOT', 'Three prizes landed. Each shows its genre. Break one to claim it; the others shatter.', 3);
+          break;
+        case 'loot': {
+          const u = e.upgrade ? UPGRADE_BY_ID.get(e.upgrade) : undefined;
+          this.showBanner(u ? u.name.toUpperCase() : 'EMPTY', u ? `${LOOT_INFO[e.category].name} loot: ${u.desc(0)}` : 'Nothing left to find in this genre.', 3);
+          this.rings.push({ x: e.x, y: e.y, radius: 40, life: 0.5, max: 0.5, ink: 1 });
+          this.confetti();
+          this.kick(5);
+          break;
+        }
+        case 'steal':
+          this.text(e.x, e.y - 8, '−1 BALL', true);
+          this.burst(e.x, e.y, 10, 120, 0.5, 1, true);
+          this.kick(4);
+          break;
+        case 'lunge':
+          this.text(cellCenterX(e.brick.c), cellCenterY(e.brick.r) - 8, 'LUNGE!', true);
+          this.kick(4);
+          break;
+        case 'burst':
+          this.rings.push({ x: e.x, y: e.y, radius: 34, life: 0.4, max: 0.4, ink: 1 });
+          this.burst(e.x, e.y, 18, 180, 0.6, 1, true, 300, true);
+          this.kick(4);
+          break;
+        case 'bloom':
+          this.rings.push({ x: e.x, y: e.y, radius: 14, life: 0.3, max: 0.3, ink: 1 });
+          break;
+        case 'tide':
+          this.text(W / 2, TOP + 48, e.dir > 0 ? 'TIDE →' : '← TIDE', true);
+          this.kick(2);
+          break;
+        case 'lava':
+          this.text(W / 2, FLOOR - 60, 'LAVA RISING', true);
+          this.kick(5);
           break;
         case 'zap':
           this.zaps.push({ ...e, life: 0.22, max: 0.22, seed: Math.random() * 1000 });

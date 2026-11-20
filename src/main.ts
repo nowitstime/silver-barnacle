@@ -284,8 +284,9 @@ function fire(): void {
 function showPick(): void {
   if (!sim.offer || pick.open || menus.open) return;
   const nextBiome = biomeName(sim.biome);
+  const view = () => ({ kind: sim.offer!.kind, ids: sim.offer!.ids, owned: sim.upgrades, next: nextBiome, rerolls: sim.offer!.rerolls });
   pick.show(
-    { kind: sim.offer.kind, ids: sim.offer.ids, owned: sim.upgrades, next: nextBiome },
+    view(),
     (i) => {
       const id = sim.offer?.ids[i];
       if (id) profile.seeUpgrade(id);
@@ -294,6 +295,12 @@ function showPick(): void {
       haptics.buzz(20);
     },
     () => sfx.click(),
+    () => {
+      if (!sim.reroll()) return null;
+      sfx.portal();
+      save(SAVE_KEY, sim.toSave());
+      return view();
+    },
   );
 }
 
@@ -410,6 +417,20 @@ function feedback(events: SimEvent[]): void {
         haptics.buzz([80, 40, 160], 0);
         break;
       case 'pick': sfx.fanfare(e.kind === 'biome'); break;
+      case 'lootAppear': sfx.fanfare(false); haptics.buzz([20, 40, 20], 0); break;
+      case 'loot':
+        if (e.upgrade) profile.seeUpgrade(e.upgrade);
+        sfx.orb();
+        sfx.fanfare(true);
+        haptics.buzz([30, 30, 60], 0);
+        loop.hold(0.1, 0);
+        break;
+      case 'steal': sfx.hazard('popper'); haptics.buzz(40); break;
+      case 'lunge': sfx.drop(); haptics.buzz(30); break;
+      case 'burst': sfx.explode(); break;
+      case 'bloom': sfx.split(); break;
+      case 'tide': sfx.portal(); break;
+      case 'lava': sfx.heartbeat(); sfx.drop(); haptics.buzz([40, 60, 40], 0); break;
       case 'bossPhase':
         sfx.bossRoar();
         fx.showBanner(`PHASE ${e.phase}`, e.text, 2.6);
@@ -520,7 +541,12 @@ function momentTips(e: SimEvent): void {
   if (e.type === 'drop' && sim.lowestRow >= ROWS - 2 && profile.tip('danger')) tips.show('If a brick crosses the bottom row, the run ends. Shields and Second Wind can save you once.');
   if (e.type === 'laser' && profile.tip('laser')) tips.show('Line lasers blast every brick in their row or column each time a ball passes through.');
   if (e.type === 'portal' && profile.tip('portal')) tips.show('Portals come in pairs: a ball that enters one comes out of the other.');
-  if (e.type === 'boss' && profile.tip('boss')) tips.show('Mini-bosses stop new rows from arriving. Beat them for the big upgrade pick.');
+  if (e.type === 'boss' && profile.tip('boss')) tips.show('Mini-bosses stop new rows from arriving. Beat them for the big upgrade pick (with one free reroll).');
+  if (e.type === 'lootAppear' && profile.tip('loot')) tips.show('Loot! The symbol shows the genre: ✶ Power, ●●● Arsenal, flame Elemental, shield Guard, ? Wild. The first one you break is yours.');
+  if (e.type === 'bloom' && profile.tip('bloom')) tips.show('Bricks you leave alone sprout blooms in Meadow. Break a bloom for an extra ball.');
+  if (e.type === 'tide' && profile.tip('tide')) tips.show('The tide shifts every brick one column. It comes more often deeper into The Deep.');
+  if (e.type === 'lava' && profile.tip('lava')) tips.show('Lava raised the danger line. Watch for the dashed warning: it shows where lava will reach next turn.');
+  if (e.type === 'steal' && profile.tip('steal')) tips.show('A Thief stole a ball. The badge on a Thief or Fuse counts down the turns until it acts.');
 }
 
 /** Briefly run the game in slow motion (big finishes). */
