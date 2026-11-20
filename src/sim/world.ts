@@ -261,7 +261,7 @@ export class Sim {
     this.phaseTime = 0;
     this.turnTime = 0;
     this.fired = 0;
-    const echo = this.stats.echo && this.turn % 5 === 4;
+    const echo = this.stats.echo && this.turn % 3 === 2;
     this.toFire = this.ballCount * (echo ? 2 : 1);
     this.copiesThisVolley = 0;
     this.killsThisVolley = 0;
@@ -397,6 +397,11 @@ export class Sim {
     // Burning bricks take damage.
     for (const b of [...this.bricks]) {
       // A brick burns for a share of the hit that lit it (set when it was ignited).
+      // Kindling: a lit brick burns for a share of everything it took this turn. Untouched, its fire keeps going.
+      if (b.lit && s.burn) {
+        if (b.taken) b.burn = Math.max(1, Math.round(b.taken * 0.4 * s.burn * s.fireMult));
+        b.taken = 0;
+      }
       if (b.burn > 0) this.damage(b, b.burn, cellCenterX(b.c), cellCenterY(b.r), 'burn', null, false);
     }
     // Singularity: the weakest bricks collapse.
@@ -897,7 +902,8 @@ export class Sim {
     // Acid: a share of the brick's max HP on top (bosses resist).
     if (s.acid && brick.kind !== 'steel') dmg += Math.round(brick.maxHp * s.acid * (brick.boss ? 0.25 : 1));
     // Kindling: the brick burns for a share of this hit; Tinderbox doubles fires lit by crits.
-    if (s.burn && brick.kind !== 'steel') brick.burn = Math.max(brick.burn, Math.max(1, Math.round(dmg * 0.6 * s.burn * s.fireMult * (s.tinder && crit ? 2 : 1))));
+    if (s.burn && brick.kind !== 'steel') brick.lit = true;
+    if (s.tinder && crit) brick.taken = (brick.taken ?? 0) + dmg; // crits count double toward the fire
 
     const hitsBefore = this.totals.kills;
     const killed = this.damage(brick, dmg, x, y, 'ball', ball, crit, contact);
@@ -996,6 +1002,7 @@ export class Sim {
     }
     brick.hitThisTurn = true;
     if (brick.boss) brick.boss.turnDamage += dealt;
+    if (source !== 'burn') brick.taken = (brick.taken ?? 0) + dealt;
     this.totals.damage += dealt;
     // Finishers.
     if (brick.hp > 0 && brick.kind !== 'boss') {
@@ -1039,7 +1046,7 @@ export class Sim {
     if (s.afterburn && brick.burn > 0) {
       for (const [dc, dr] of NEIGHBOURS) {
         const n = this.grid.get(gridKey(brick.c + dc, brick.r + dr));
-        if (n && n.kind !== 'steel') n.burn = Math.max(n.burn, brick.burn);
+        if (n && n.kind !== 'steel') { n.burn = Math.max(n.burn, brick.burn); n.lit = true; }
       }
     }
     if (s.splash > 0 && source !== 'splash' && source !== 'burn' && source !== 'bomb') {

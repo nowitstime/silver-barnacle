@@ -27,8 +27,12 @@ export interface Brick {
   hp: number;
   maxHp: number;
   kind: BrickKind;
-  /** Burn stacks (Kindling). Damage taken at the end of each turn. */
+  /** Fire damage this brick takes at the end of each turn (Kindling). 0 = not burning. */
   burn: number;
+  /** Set alight by Kindling. */
+  lit?: boolean;
+  /** Damage taken this turn from everything except fire (feeds next fire). Crits count double with Tinderbox. */
+  taken?: number;
   /** Frostline: the first hit only cracks the ice. */
   frozen: boolean;
   /** Took any damage this turn (Forge heat). */

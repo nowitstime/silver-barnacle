@@ -153,7 +153,7 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'pierce', name: 'Pierce', rarity: 'rare', max: 4, desc: (n) => `Each ball smashes straight through ${n === 0 ? 'the first brick' : `the first ${n + 1} bricks`} it kills each turn.`, apply: (s, n) => { s.pierce += n; } }),
   U({ id: 'ricochet', name: 'Ricochet Rush', rarity: 'rare', max: 3, desc: () => 'Once a ball has hit a brick, every wall bounce gives it +1 damage until the turn ends.', apply: (s, n) => { s.ricochet += n; } }),
   U({ id: 'chain', name: 'Chain Lightning', rarity: 'rare', max: 4, desc: () => 'Crits zap 3 more nearby bricks for 75% of the crit\u2019s damage.', apply: (s, n) => { s.chain += 3 * n; } }),
-  U({ id: 'kindling', name: 'Kindling', rarity: 'rare', max: 5, desc: (n) => `Hits set bricks on fire: they burn for ${60 * (n + 1)}% of the hit that lit them, every turn. Bigger hits, bigger fires.`, apply: (s, n) => { s.burn += n; } }),
+  U({ id: 'kindling', name: 'Kindling', rarity: 'rare', max: 5, desc: (n) => `Hits set bricks alight. At the end of each turn a burning brick takes another ${40 * (n + 1)}% of all the damage it took that turn. More hits, bigger fires; untouched fires keep burning.`, apply: (s, n) => { s.burn += n; } }),
   U({ id: 'splash', name: 'Splash', rarity: 'rare', max: 4, desc: (n) => `When a brick breaks, its neighbours take ${pct(0.75 * (n + 1))} of the killing hit.`, apply: (s, n) => { s.splash += 0.75 * n; } }),
   U({ id: 'first', name: 'First Blood', rarity: 'rare', max: 4, desc: (n) => `The first ball of every volley deals ${10 + 5 * n}× damage.`, apply: (s, n) => { s.firstBlood = 10 + 5 * (n - 1); } }),
   U({ id: 'proof', name: 'Hazard Suit', rarity: 'rare', max: 1, desc: () => 'Hazard bricks no longer affect your balls. Poppers still pop, but your ball survives.', apply: (s) => { s.hazardProof = true; } }),
@@ -173,7 +173,7 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'wrap', name: 'Wraparound', rarity: 'epic', max: 1, desc: () => 'The side walls become portals. Every time a ball wraps around, it deals +1 damage for the rest of the turn. (No more wall bounces.)', apply: (s) => { s.wrap = true; } }),
   // ---- epic ----
   U({ id: 'mitosis', name: 'Mitosis', rarity: 'epic', max: 3, desc: () => 'Crits split the ball in two. Copies vanish when they land.', apply: (s, n) => { s.mitosis += n; } }),
-  U({ id: 'echo', name: 'Echo', rarity: 'epic', max: 1, desc: () => 'Every 5th volley fires twice.', apply: (s) => { s.echo = true; } }),
+  U({ id: 'echo', name: 'Echo', rarity: 'epic', max: 1, desc: () => 'Every 3rd volley fires twice.', apply: (s) => { s.echo = true; } }),
   U({ id: 'detonate', name: 'Volatile', rarity: 'epic', max: 3, desc: () => 'Every brick you break has a 15% chance to explode for the damage of the hit that broke it.', apply: (s, n) => { s.detonate += 0.15 * n; } }),
   U({ id: 'dilation', name: 'Time Dilation', rarity: 'epic', max: 1, desc: () => 'New rows arrive only every other turn, but they have 80% more HP.', apply: (s) => { s.slowDrop = true; } }),
   U({ id: 'guardian', name: 'Guardian', rarity: 'epic', max: 3, desc: () => 'Gain a shield every time you clear a biome. +1 shield now.', apply: (s, n) => { s.guardian += n; }, onTake: (r) => r.addShields(1) }),
@@ -185,7 +185,7 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'wind', name: 'Second Wind', rarity: 'legendary', max: 1, desc: () => 'Once per run, when you would lose, the bottom 3 rows are wiped instead.', apply: (s) => { s.secondWind = true; } }),
   U({ id: 'singularity', name: 'Singularity', rarity: 'legendary', max: 2, desc: () => 'At the end of every turn, the 2 weakest bricks collapse into nothing.', apply: (s, n) => { s.singularity += 2 * n; } }),
   U({ id: 'acid', name: 'Acid', rarity: 'rare', max: 3, desc: (n) => `Every ball hit also eats ${(1.5 * (n + 1)).toFixed(1)}% of the brick\u2019s max HP. Good in any build.`, apply: (s, n) => { s.acid += 0.015 * n; } }),
-  U({ id: 'tinder', name: 'Tinderbox', rarity: 'rare', max: 1, desc: () => 'Crits light double-strength fires, and burning bricks take +25% damage from your balls.', apply: (s) => { s.tinder = true; } }),
+  U({ id: 'tinder', name: 'Tinderbox', rarity: 'rare', max: 1, desc: () => 'Crit damage counts double toward fires, and burning bricks take +25% damage from your balls.', apply: (s) => { s.tinder = true; } }),
   U({ id: 'chainreact', name: 'Chain Reaction', rarity: 'epic', max: 1, desc: () => 'Bricks killed by an explosion explode too.', apply: (s) => { s.chainReaction = true; } }),
   U({ id: 'conductor', name: 'Conductor', rarity: 'rare', max: 2, desc: () => 'Every lightning zap (Chain Lightning, Static) jumps to one more brick.', apply: (s, n) => { s.conduct += n; } }),
   // ---- cursed (Gambler only) ----

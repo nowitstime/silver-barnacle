@@ -239,3 +239,17 @@ describe('physics cards', () => {
     expect(top).toBeGreaterThan(445);
   });
 });
+
+describe('fire from last turn', () => {
+  it('burns for a share of the damage taken that turn, and keeps burning when untouched', () => {
+    const few = empty(40), many = empty(40);
+    for (const sim of [few, many]) { sim.debugGrant('kindling'); sim.debugPlace('normal', 3, 5, 1000000); }
+    many.debugAddBalls(9);
+    turn(few); turn(many);
+    const brick = (sim: Sim) => sim.bricks.find((b) => b.kind === 'normal')!;
+    expect(brick(many).burn).toBeGreaterThan(brick(few).burn * 3); // more hits, bigger fire
+    const burning = brick(few).burn;
+    turn(few, 0.15); // shot away from it: untouched this turn
+    expect(brick(few).burn).toBe(burning); // fire keeps going
+  });
+});
