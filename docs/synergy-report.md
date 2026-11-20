@@ -5,30 +5,30 @@ Same 30 seeds and classes, played twice by the bot: once taking random cards, on
 | Picker | Median depth | Mean depth | Median bosses | Wins |
 |---|---|---|---|---|
 | random | 71 | 77 | 2 | 6/30 |
-| synergy | 58 | 73 | 2 | 6/30 |
+| synergy | 78 | 76 | 3 | 4/30 |
 
-Synergy picker went deeper on **13 of 30** seeds.
+Synergy picker went deeper on **16 of 30** seeds.
 
 ## Synergy runs by main themes
 
 | Themes | Runs | Median depth |
 |---|---|---|
-| damage+crit | 2 | 140 |
-| bank+lightning | 1 | 125 |
-| crit+damage | 2 | 122 |
-| crit+fire | 1 | 106 |
-| multi+damage | 1 | 80 |
-| crit+multi | 1 | 80 |
-| damage+bank | 5 | 75 |
-| general+multi | 3 | 68 |
-| general+defense | 1 | 58 |
-| crit+bank | 1 | 53 |
-| damage+general | 2 | 51 |
-| defense+fire | 1 | 51 |
-| defense+general | 1 | 48 |
-| general+fire | 1 | 47 |
-| lightning+crit | 1 | 46 |
+| damage+bank | 4 | 130 |
+| damage+crit | 2 | 125 |
+| general+explosion | 1 | 122 |
+| lightning+bank | 2 | 107 |
+| crit+damage | 3 | 105 |
+| damage+general | 1 | 101 |
+| crit+multi | 1 | 84 |
+| crit+general | 3 | 80 |
+| general+defense | 1 | 78 |
+| multi+general | 1 | 71 |
+| general+fire | 1 | 60 |
+| crit+bank | 1 | 51 |
+| general+crit | 3 | 49 |
+| crit+fire | 1 | 46 |
 | general+damage | 1 | 41 |
 | bank+damage | 1 | 40 |
-| crit+general | 3 | 37 |
-| general+crit | 1 | 34 |
+| fire+defense | 1 | 40 |
+| crit+defense | 1 | 36 |
+| fire+general | 1 | 32 |
