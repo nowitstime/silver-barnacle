@@ -66,7 +66,10 @@ export class Hud {
     const inVolley = sim.phase === 'fire' || sim.phase === 'run';
     this.fire.hidden = sim.phase !== 'aim' || blocked;
     this.ff.hidden = !(inVolley && (sim.turnTime > FF_AFTER || speed > 1));
-    this.recall.hidden = !(inVolley && sim.turnTime > RECALL_AFTER);
+    // Recall shows after a while, or straight away once there's nothing left to break.
+    const cleared = inVolley && sim.turnTime > 0.3 && sim.bricks.every((b) => b.kind === 'steel');
+    this.recall.hidden = !(inVolley && (sim.turnTime > RECALL_AFTER || cleared));
+    this.recall.classList.toggle('pulse', cleared);
     this.pause.hidden = sim.phase === 'over';
     if (this.ff.dataset.speed !== String(speed)) {
       this.ff.dataset.speed = String(speed);

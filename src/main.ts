@@ -123,6 +123,12 @@ const menus = new Menus(uiRoot, {
     save(SAVE_KEY, null);
     showTitle();
   },
+  onLeave: () => {
+    // The run is saved at the start of every turn (and at picks), so Continue picks up from there.
+    if (sim.phase === 'aim' || sim.phase === 'pick' || sim.phase === 'won') save(SAVE_KEY, sim.toSave());
+    demoRunning = false;
+    showTitle();
+  },
   onToMenu: () => showTitle(),
   onEndless: () => {
     menus.hide();

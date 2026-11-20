@@ -14,6 +14,8 @@ export interface MenuHandlers {
   onNewRun: (classId: ClassId) => void;
   onResume: () => void;
   onAbandon: () => void;
+  /** Leave to the title screen, keeping the run saved. */
+  onLeave: () => void;
   onToMenu: () => void;
   onSettings: (s: Settings) => void;
   onEndless: () => void;
@@ -189,6 +191,7 @@ export class Menus {
           <button class="btn-primary" id="m-resume" type="button" data-focus>Resume</button>
           <button class="btn-secondary" id="m-settings" type="button">Settings</button>
         </div>
+        <button class="btn-secondary" id="m-leave" type="button">Main menu <small>(run saved, Continue to resume)</small></button>
         <section class="build">
           <h3>Your build</h3>
           <div class="perk"><b>${c.name}: ${c.perk}.</b> ${c.perkDesc}</div>
@@ -200,6 +203,7 @@ export class Menus {
         <button class="btn-text danger" id="m-abandon" type="button">Abandon run</button>
       </div>`, 'pause', () => this.h.onResume());
     this.on('#m-resume', () => this.h.onResume());
+    this.on('#m-leave', () => this.h.onLeave());
     this.on('#m-settings', () => this.showSettings(() => this.showPause(v)));
     const abandon = this.el.querySelector<HTMLButtonElement>('#m-abandon')!;
     abandon.addEventListener('click', () => {

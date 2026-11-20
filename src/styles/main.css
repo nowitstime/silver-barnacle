@@ -102,6 +102,8 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
   box-shadow: 2px 2px 0 var(--i2);
 }
 .pill.on { background: var(--i1); color: var(--paper); }
+.pill.pulse { animation: pulse 0.9s ease-in-out infinite; background: var(--i2); color: var(--paper); border-color: var(--i2); }
+@keyframes pulse { 50% { transform: scale(1.08); } }
 .pill:active { transform: translate(2px, 2px); box-shadow: none; }
 
 .overlay {
@@ -395,3 +397,5 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .tip small { display: block; margin-top: 4px; opacity: 0.6; font-size: 10px; }
 
 .card .nums { display: grid; gap: 1px; margin-top: 4px; padding-top: 5px; border-top: 1px dashed currentColor; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.btn-secondary small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 0.02em; margin-top: 2px; }
