@@ -84,6 +84,17 @@ export interface Stats {
   fireMult: number;
   /** Chance any hit zaps a nearby brick (Copper Wire). */
   zapChance: number;
+  // ---- ball physics ----
+  /** Downward pull on your balls (Lead Core +, Featherweight −). */
+  gravity: number;
+  /** Speed gained per bounce (Rubber). */
+  rubber: number;
+  /** Pull toward the nearest brick (Magnetic). */
+  magnet: number;
+  /** Bricks a ball passes through per turn (Ghost). */
+  ghost: number;
+  /** Side walls are portals; each wrap adds damage (Wraparound). */
+  wrap: boolean;
   // ---- class perks ----
   executioner: boolean;
   encore: boolean;
@@ -97,7 +108,7 @@ export const baseStats = (): Stats => ({
   luckyOrbs: 0, fuse: 0, armorPierce: false, hazardProof: false, overcharge: 0, mercy: 0,
   afterburn: false, static: 0, bounty: 0, momentum: 0, wideLaser: 0, echo: false, detonate: 0,
   slowDrop: false, guardian: 0, critMass: 0, lastStand: 1, glassCannon: false, secondWind: false,
-  singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0, fireMult: 1, zapChance: 0,
+  singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0, fireMult: 1, zapChance: 0, gravity: 0, rubber: 0, magnet: 0, ghost: 0, wrap: false,
   executioner: false, encore: false, payload: false, wildcard: false,
 });
 
@@ -153,6 +164,13 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'bounty', name: 'Bounty', rarity: 'rare', max: 4, desc: () => 'Each brick you break has a 4% chance to give you an extra ball.', apply: (s, n) => { s.bounty += 0.04 * n; } }),
   U({ id: 'momentum', name: 'Momentum', rarity: 'rare', max: 4, desc: () => 'Every brick a ball breaks gives it +2 damage until the turn ends.', apply: (s, n) => { s.momentum += 2 * n; } }),
   U({ id: 'wide', name: 'Wide Beam', rarity: 'rare', max: 2, desc: () => 'Line lasers blast one more line on each side.', apply: (s, n) => { s.wideLaser += n; } }),
+  // ---- ball physics ----
+  U({ id: 'rubber', name: 'Rubber', rarity: 'common', max: 3, desc: () => 'Balls speed up 5% on every bounce (up to 1.8×): more hits per turn.', apply: (s, n) => { s.rubber += 0.05 * n; } }),
+  U({ id: 'lead', name: 'Lead Core', rarity: 'rare', max: 1, desc: () => 'Balls are heavy: they fall in an arc and hit 60% harder. The laser shows the arc.', apply: (s) => { s.gravity += 420; s.dmgMult += 0.6; } }),
+  U({ id: 'feather', name: 'Featherweight', rarity: 'rare', max: 1, desc: () => 'Balls float upward a little, hugging the ceiling and staying in the air longer.', apply: (s) => { s.gravity -= 150; } }),
+  U({ id: 'magnet', name: 'Magnetic', rarity: 'rare', max: 2, desc: () => 'Balls curve toward the nearest brick. The laser shows the curve.', apply: (s, n) => { s.magnet += 320 * n; } }),
+  U({ id: 'ghost', name: 'Ghost', rarity: 'rare', max: 2, desc: (n) => `Each turn, every ball passes straight through the first ${n + 1 > 1 ? `${n + 1} bricks` : 'brick'} it touches, still damaging ${n + 1 > 1 ? 'them' : 'it'}.`, apply: (s, n) => { s.ghost += n; } }),
+  U({ id: 'wrap', name: 'Wraparound', rarity: 'epic', max: 1, desc: () => 'The side walls become portals. Every time a ball wraps around, it deals +1 damage for the rest of the turn. (No more wall bounces.)', apply: (s) => { s.wrap = true; } }),
   // ---- epic ----
   U({ id: 'mitosis', name: 'Mitosis', rarity: 'epic', max: 3, desc: () => 'Crits split the ball in two. Copies vanish when they land.', apply: (s, n) => { s.mitosis += n; } }),
   U({ id: 'echo', name: 'Echo', rarity: 'epic', max: 1, desc: () => 'Every 5th volley fires twice.', apply: (s) => { s.echo = true; } }),
@@ -223,6 +241,7 @@ const CATEGORY: Record<string, Exclude<LootCategory, 'wild'>> = {
   skin: 'guard', proof: 'guard', guardian: 'guard', wind: 'guard', dilation: 'guard', sight: 'guard',
   acid: 'power', tinder: 'elemental', chainreact: 'elemental', conductor: 'elemental',
   whetstone: 'power', bellows: 'elemental', powder: 'elemental', copper: 'elemental',
+  rubber: 'arsenal', lead: 'arsenal', feather: 'arsenal', magnet: 'arsenal', ghost: 'arsenal', wrap: 'arsenal',
 };
 
 export const categoryOf = (id: string): Exclude<LootCategory, 'wild'> | undefined => CATEGORY[id];
@@ -311,6 +330,8 @@ const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
   critMass: ['Crit per 10 balls', per], lastStand: ['Bottom-row damage', times], glassCannon: ['Glass Cannon', onoff],
   secondWind: ['Second Wind', onoff], singularity: ['Bricks collapsed per turn', num],
   hazardMult: ['Hazard frequency', times], hpMult: ['New brick HP', times],
+  gravity: ['Ball weight', (v) => (Number(v) > 0 ? 'heavy' : Number(v) < 0 ? 'floaty' : 'normal')], rubber: ['Speed per bounce', (v) => `+${per(v)}`],
+  magnet: ['Magnet pull', num], ghost: ['Pass-throughs per turn', num], wrap: ['Wraparound walls', onoff],
   fireMult: ['Fire heat', times], zapChance: ['Zap chance per hit', per], acid: ['Acid per hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
 };
 
@@ -345,7 +366,7 @@ export function previewUpgrade(id: string, owned: Record<string, number>, classA
 
 // ---- themes: what synergises with what ----
 
-export type Theme = 'crit' | 'fire' | 'explosion' | 'lightning' | 'bank' | 'multi' | 'damage' | 'defense' | 'general';
+export type Theme = 'crit' | 'fire' | 'explosion' | 'lightning' | 'bank' | 'multi' | 'damage' | 'defense' | 'general' | 'physics';
 
 /** Each upgrade's themes. Generalists are good anywhere; the rest pay off together. */
 export const THEMES: Record<string, Theme[]> = {
@@ -360,6 +381,8 @@ export const THEMES: Record<string, Theme[]> = {
   skin: ['defense', 'general'], guardian: ['defense'], wind: ['defense'], proof: ['defense'], dilation: ['defense'],
   sight: ['general'], wide: ['general'], singularity: ['general'],
   whetstone: ['crit'], bellows: ['fire'], powder: ['explosion'], copper: ['lightning'],
+  rubber: ['physics', 'bank'], lead: ['physics', 'damage'], feather: ['physics', 'fire'], magnet: ['physics', 'crit'],
+  ghost: ['physics', 'fire'], wrap: ['physics'],
   pact: ['damage'], overgrowth: ['multi'], tunnel: ['crit'],
 };
 

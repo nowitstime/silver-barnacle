@@ -44,13 +44,16 @@ const CANDIDATES = Number(process.env.CANDIDATES ?? 4);
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? 220);
 type Picker = 'random' | 'synergy';
 
-interface Result { depth: number; won: boolean; bosses: number; themes: string }
+interface Result { depth: number; won: boolean; bosses: number; themes: string; build: Record<string, number>; snap: Record<string, number> | null; snapDepth: number; picker: Picker; classId: ClassId }
 
 function play(seed: number, classId: ClassId, picker: Picker): Result {
   const sim = new Sim(seed, { classId });
   const rnd = mulberry32(seed ^ 0x51e);
   let turns = 0;
+  // Snapshot of the build when the run reaches The Deep (biome index 2), for fair comparisons.
+  let snap: Record<string, number> | null = null, snapDepth = 0;
   while (sim.phase !== 'over' && sim.phase !== 'won' && turns < MAX_TURNS) {
+    if (!snap && sim.biome >= 2 && sim.phase === 'aim') { snap = { ...sim.upgrades }; snapDepth = sim.level; }
     if (sim.phase === 'pick') {
       const ids = sim.offer!.ids.filter((id) => UPGRADE_BY_ID.get(id)!.rarity !== 'cursed' || picker === 'random');
       let i = Math.floor(rnd() * sim.offer!.ids.length);
@@ -69,7 +72,7 @@ function play(seed: number, classId: ClassId, picker: Picker): Result {
   const counts = new Map<string, number>();
   for (const [id, n] of Object.entries(sim.upgrades)) for (const t of THEMES[id] ?? []) counts.set(t, (counts.get(t) ?? 0) + n);
   const themes = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([t]) => t).join('+');
-  return { depth: sim.level, won: sim.won, bosses: sim.totals.bosses, themes };
+  return { depth: sim.level, won: sim.won, bosses: sim.totals.bosses, themes, build: { ...sim.upgrades }, snap, snapDepth, picker, classId };
 }
 
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
@@ -96,6 +99,41 @@ it('synergy report', async () => {
   const byTheme = new Map<string, number[]>();
   for (const r of res.synergy) byTheme.set(r.themes || '(none)', [...(byTheme.get(r.themes || '(none)') ?? []), r.depth]);
   for (const [t, ds] of [...byTheme].sort((a, b) => median(b[1]) - median(a[1]))) lines.push(`| ${t} | ${ds.length} | ${median(ds)} |`);
+  lines.push('');
+
+  // ---- build examinations ----
+  const all = [...res.random, ...res.synergy];
+  const name = (id: string) => UPGRADE_BY_ID.get(id)?.name ?? id;
+  const fmt = (b: Record<string, number>) => Object.entries(b).filter(([, n]) => n > 0).sort((x, y) => y[1] - x[1]).map(([id, n]) => (n > 1 ? `${name(id)} ×${n}` : name(id))).join(', ');
+  lines.push('## Best runs (both pickers)', '', '| Depth | Picker | Class | Final build |', '|---|---|---|---|');
+  for (const r of [...all].sort((a, b) => b.depth - a.depth).slice(0, 10)) lines.push(`| ${r.depth}${r.won ? ' ★' : ''} | ${r.picker} | ${r.classId} | ${fmt(r.build)} |`);
+
+  // Fair comparison: builds as they stood on reaching The Deep, scored by how far the run went after that.
+  const snaps = all.filter((r) => r.snap).map((r) => ({ cards: Object.keys(r.snap!).filter((k) => r.snap![k] > 0), gain: r.depth - r.snapDepth }));
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
+  const base = avg(snaps.map((x) => x.gain));
+  lines.push('', '## Combos', '', `Builds snapshotted on reaching The Deep (${snaps.length} runs got there; average ${base.toFixed(0)} more rows afterwards). A pair is a real combo if runs holding **both** went further than runs holding only one of them.`, '');
+  const ids = [...new Set(snaps.flatMap((x) => x.cards))];
+  const pairs: { a: string; b: string; n: number; both: number; lift: number }[] = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i], b = ids[j];
+    const both = snaps.filter((x) => x.cards.includes(a) && x.cards.includes(b));
+    const onlyA = snaps.filter((x) => x.cards.includes(a) && !x.cards.includes(b));
+    const onlyB = snaps.filter((x) => !x.cards.includes(a) && x.cards.includes(b));
+    if (both.length < 3 || onlyA.length < 2 || onlyB.length < 2) continue;
+    const mb = avg(both.map((x) => x.gain));
+    pairs.push({ a, b, n: both.length, both: mb, lift: mb - Math.max(avg(onlyA.map((x) => x.gain)), avg(onlyB.map((x) => x.gain))) });
+  }
+  pairs.sort((x, y) => y.lift - x.lift);
+  lines.push('| Pair | Runs with both | Rows gained with both | Better than either alone by |', '|---|---|---|---|');
+  for (const p of pairs.slice(0, 12)) lines.push(`| ${name(p.a)} + ${name(p.b)} | ${p.n} | ${p.both.toFixed(0)} | ${p.lift >= 0 ? '+' : ''}${p.lift.toFixed(0)} |`);
+  lines.push('', '**Anti-combos** (worse together than apart):', '', '| Pair | Runs with both | Worse than the better one alone by |', '|---|---|---|');
+  for (const p of pairs.slice(-6).reverse()) lines.push(`| ${name(p.a)} + ${name(p.b)} | ${p.n} | ${p.lift.toFixed(0)} |`);
+
+  // Single cards held at the snapshot.
+  lines.push('', '## Single cards at the snapshot', '', '| Card | Runs holding it | Rows gained afterwards (avg) |', '|---|---|---|');
+  const singles = ids.map((id) => ({ id, xs: snaps.filter((x) => x.cards.includes(id)).map((x) => x.gain) })).filter((x) => x.xs.length >= 4).sort((x, y) => avg(y.xs) - avg(x.xs));
+  for (const x of singles) lines.push(`| ${name(x.id)} | ${x.xs.length} | ${avg(x.xs).toFixed(0)} |`);
   lines.push('');
   writeFileSync(new URL('../docs/synergy-report.md', import.meta.url), lines.join('\n'));
   console.log(lines.join('\n'));

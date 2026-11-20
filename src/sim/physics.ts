@@ -19,8 +19,12 @@ export interface Accel {
 
 export const NO_ACCEL: Accel = { ax: 0, ay: 0 };
 
+/** Acceleration that depends on where the ball is (magnets, anchors). */
+export type AccelFn = (x: number, y: number) => Accel;
+
 export type StepResult =
   | { kind: 'wall'; x: number; y: number; ceiling: boolean }
+  | { kind: 'wrap'; x: number; y: number }
   | { kind: 'brick'; brick: Brick; x: number; y: number; contact: Contact }
   | { kind: 'floor' }
   | null;
@@ -52,7 +56,7 @@ export const brickRect = (b: Brick): [number, number, number, number] => [brickX
  * Advance one body by h seconds. Walls bounce automatically. A brick contact is reported
  * but NOT resolved: the caller decides whether to `bounce` or pass through.
  */
-export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_ACCEL): StepResult {
+export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_ACCEL, wrap = false, skipId?: number): StepResult {
   if (accel.ax || accel.ay) {
     b.vx += accel.ax * h;
     b.vy += accel.ay * h;
@@ -62,6 +66,11 @@ export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_
   const BALL_R = b.r ?? BALL_RADIUS;
 
   let wall = false, ceiling = false;
+  if (wrap && (b.x < BALL_R || b.x > W - BALL_R)) {
+    // Wraparound: the side walls are portals.
+    b.x = b.x < BALL_R ? W - BALL_R : BALL_R;
+    return { kind: 'wrap', x: b.x, y: b.y };
+  }
   if (b.x < BALL_R) { b.x = BALL_R; b.vx = Math.abs(b.vx); wall = true; }
   else if (b.x > W - BALL_R) { b.x = W - BALL_R; b.vx = -Math.abs(b.vx); wall = true; }
   if (b.y < TOP + BALL_R) { b.y = TOP + BALL_R; b.vy = Math.abs(b.vy); wall = true; ceiling = true; }
@@ -84,7 +93,7 @@ export function stepBody(b: Body, h: number, grid: BrickGrid, accel: Accel = NO_
     for (let c = c0; c <= c1; c++) {
       if (c < 0 || c >= COLS) continue;
       const brick = grid.get(gridKey(c, r));
-      if (!brick) continue;
+      if (!brick || brick.id === skipId) continue;
       const [rx, ry, rw, rh] = brickRect(brick);
       const hit = circleRect(b.x, b.y, BALL_R, rx, ry, rw, rh, b.vx, b.vy);
       if (!hit) continue;

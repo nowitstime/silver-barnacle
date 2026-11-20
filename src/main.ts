@@ -86,7 +86,7 @@ const loop = new Loop(
     if (slowUntil && performance.now() > slowUntil) { slowUntil = 0; loop.speed = 1; }
     if (sim.phase === 'aim' && loop.speed !== 1 && !fast && mode === 'run' && !slowUntil) loop.speed = 1;
     aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 16);
-    trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.accel) : null;
+    trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.traceAccel, sim.stats.wrap) : null;
     if (mode === 'run') autosave();
     const r0 = performance.now();
     renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers, skin: profile.skin });

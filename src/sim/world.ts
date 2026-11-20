@@ -8,7 +8,8 @@ import {
   BALL_R, BALL_SPEED, COLS, DROP_TIME, FLOOR, LAUNCH_INTERVAL, MAX_LAUNCH_TIME, MIN_ANGLE, ROWS, SETTLE_TIME, W,
   CELL, TOP, cellCenterX, cellCenterY,
 } from './constants';
-import { bounce, stepBody, type Accel } from './physics';
+import { bounce, brickRect, stepBody, type Accel } from './physics';
+import { circleRect } from './collision';
 import { brickHp, generateRow } from './rows';
 import { CORE, ENDLESS_START, biomeLength, endlessHazards, endlessHp, gimmickFor, type Gimmick } from './run';
 import {
@@ -195,6 +196,41 @@ export class Sim {
     return Math.max(0, this.ballCount - this.fired);
   }
 
+  /** Ball physics from upgrades: weight (Lead Core / Featherweight) and Magnetic's pull. */
+  physicsPull(x: number, y: number): Accel {
+    const s = this.stats;
+    let ax = 0, ay = s.gravity;
+    if (s.magnet) {
+      let best: Brick | null = null, bd = 120 * 120;
+      for (const b of this.bricks) {
+        if (b.kind === 'steel') continue;
+        const dx = cellCenterX(b.c) + (b.w - 1) * CELL / 2 - x, dy = cellCenterY(b.r) + (b.h - 1) * CELL / 2 - y;
+        const d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; best = b; }
+      }
+      if (best) {
+        const dx = cellCenterX(best.c) + (best.w - 1) * CELL / 2 - x, dy = cellCenterY(best.r) + (best.h - 1) * CELL / 2 - y;
+        const d = Math.sqrt(bd) || 1;
+        const f = s.magnet * (1 - d / 120);
+        ax += (dx / d) * f;
+        ay += (dy / d) * f;
+      }
+    }
+    return { ax, ay };
+  }
+
+  /** What the aim laser should feel: the biome current plus your ball physics. */
+  readonly traceAccel = (x: number, y: number): Accel => {
+    const p = this.stats.gravity || this.stats.magnet ? this.physicsPull(x, y) : { ax: 0, ay: 0 };
+    return { ax: this.current + p.ax, ay: p.ay };
+  };
+
+  private speedUp(ball: Ball, k: number): void {
+    const sp = Math.hypot(ball.vx, ball.vy);
+    const f = Math.min(k, (BALL_SPEED * 1.8) / sp);
+    if (f > 1) { ball.vx *= f; ball.vy *= f; }
+  }
+
   /** Sideways drift in The Deep, flipping each turn. */
   get current(): number {
     return this.gimmick === 'current' ? (this.turn % 2 === 0 ? 1 : -1) * CURRENT_FORCE : 0;
@@ -343,6 +379,7 @@ export class Sim {
       state: 'flying', index, copy, golden: false,
       bonus: from?.bonus ?? 0,
       pierceLeft: from?.pierceLeft ?? this.stats.pierce,
+      ghostLeft: from?.ghostLeft ?? this.stats.ghost,
       fire: from?.fire ?? false,
       wallBounces: from?.wallBounces ?? 0,
       struck: from?.struck ?? false,
@@ -665,8 +702,18 @@ export class Sim {
           }
         }
       }
+      if (this.stats.gravity || this.stats.magnet) {
+        const p = this.physicsPull(ball.x, ball.y);
+        ax += p.ax;
+        ay += p.ay;
+      }
       const accel = ax || ay ? { ax, ay } : env;
-      const res = stepBody(ball, h, this.grid, accel);
+      const res = stepBody(ball, h, this.grid, accel, this.stats.wrap, ball.ghostFrom);
+      // Done ghosting through a brick once the ball no longer overlaps it.
+      if (ball.ghostFrom !== undefined) {
+        const g = this.bricks.find((b) => b.id === ball.ghostFrom);
+        if (!g || !circleRect(ball.x, ball.y, ball.r, ...brickRect(g))) ball.ghostFrom = undefined;
+      }
       if (res?.kind === 'floor') {
         ball.state = 'returned';
         const first = this.landX === null && !ball.copy;
@@ -678,6 +725,7 @@ export class Sim {
         this.events.push({ type: 'land', x: ball.x, first });
         continue;
       }
+      if (res?.kind === 'wrap') ball.bonus += 1;
       if (res?.kind === 'wall') this.onWall(ball, res.x, res.y, res.ceiling);
       if (res?.kind === 'brick') this.ballHit(ball, res.brick, res.x, res.y, res.contact);
       if (ball.state === 'flying') this.touchItems(ball);
@@ -691,6 +739,7 @@ export class Sim {
     ball.wallBounces++;
     // Only bank shots count: a ball must hit a brick before wall bounces build damage.
     if (s.ricochet && !ceiling && ball.struck) ball.bonus += s.ricochet;
+    if (s.rubber) this.speedUp(ball, 1 + s.rubber);
     if (this.gimmick === 'ice') {
       const sp = Math.hypot(ball.vx, ball.vy);
       const k = Math.min(ICE_SPEEDUP, (BALL_SPEED * ICE_MAX) / sp);
@@ -854,11 +903,17 @@ export class Sim {
     const killed = this.damage(brick, dmg, x, y, 'ball', ball, crit, contact);
     if (killed && s.momentum) ball.bonus += s.momentum * (this.totals.kills - hitsBefore);
 
-    // Smash through kills (Pierce, fireballs) instead of bouncing.
+    // Smash through kills (Pierce, fireballs) or ghost through anything, instead of bouncing.
     const through = killed && (ball.fire || ball.pierceLeft > 0);
     if (through) {
       if (!ball.fire) ball.pierceLeft--;
-    } else bounce(ball, contact);
+    } else if (ball.ghostLeft > 0) {
+      ball.ghostLeft--;
+      ball.ghostFrom = brick.id;
+    } else {
+      bounce(ball, contact);
+      if (s.rubber) this.speedUp(ball, 1 + s.rubber);
+    }
 
     if (crit) {
       if (s.chain) this.zap(brick, s.chain, x, y, Math.max(1, Math.round(dmg * 0.75)));

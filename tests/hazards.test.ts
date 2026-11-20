@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_R, ROWS, STEP } from '../src/sim/constants';
+import { BALL_R, CELL, ROWS, STEP, TOP } from '../src/sim/constants';
+import { traceShot } from '../src/sim/trace';
 import { Sim } from '../src/sim/world';
 import type { SimEvent } from '../src/sim/types';
 
@@ -185,5 +186,56 @@ describe('synergy upgrades', () => {
     sim.debugPlace('normal', 3, 5, 10000);
     turn(sim);
     expect(sim.bricks.find((b) => b.kind === 'normal')!.hp).toBeLessThan(10000 - 150);
+  });
+});
+
+describe('physics cards', () => {
+  it('Lead Core arcs the laser downward; the shot lands where the laser says', () => {
+    const plain = empty(30), heavy = empty(30);
+    heavy.debugGrant('lead');
+    const a = 1.2;
+    const tPlain = traceShot(plain.grid, plain.launchX, a, 1, plain.traceAccel);
+    const tHeavy = traceShot(heavy.grid, heavy.launchX, a, 1, heavy.traceAccel);
+    const peak = (t: { points: [number, number][] }) => Math.min(...t.points.map((p) => p[1]));
+    expect(peak(tHeavy)).toBeGreaterThan(peak(tPlain)); // doesn't climb as high
+  });
+
+  it('Wraparound sends balls through the side walls and they gain damage', () => {
+    const sim = empty(31);
+    sim.debugGrant('wrap');
+    sim.fire(0.25);
+    let walls = 0, maxBonus = 0;
+    for (let i = 0; i < 240 * 3 && sim.phase !== 'aim'; i++) {
+      sim.tick(STEP);
+      for (const e of sim.drainEvents()) if (e.type === 'wall' && !e.ceiling) walls++;
+      for (const b of sim.balls) maxBonus = Math.max(maxBonus, b.bonus);
+    }
+    expect(walls).toBe(0);
+    expect(maxBonus).toBeGreaterThan(0);
+  });
+
+  it('Ghost passes through a brick, damaging it, and gets behind it', () => {
+    const sim = empty(32);
+    sim.debugGrant('ghost');
+    sim.debugPlace('normal', 3, 6, 100000);
+    const brickTop = TOP + 6 * CELL;
+    sim.fire(Math.PI / 2);
+    let above = false, hits = 0;
+    for (let i = 0; i < 240 * 4 && sim.phase !== 'aim'; i++) {
+      sim.tick(STEP);
+      for (const e of sim.drainEvents()) if (e.type === 'hit') hits++;
+      if (sim.balls.some((b) => b.state === 'flying' && b.y < brickTop - 6)) above = true;
+    }
+    expect(above).toBe(true); // made it through to the far side
+    expect(hits).toBeGreaterThanOrEqual(2); // damaged on the way through, then from behind
+  });
+
+  it('Rubber speeds balls up on bounces', () => {
+    const sim = empty(33);
+    sim.debugGrant('rubber');
+    sim.fire(0.4);
+    let top = 0;
+    for (let i = 0; i < 240 * 2; i++) { sim.tick(STEP); for (const b of sim.balls) top = Math.max(top, Math.hypot(b.vx, b.vy)); }
+    expect(top).toBeGreaterThan(445);
   });
 });

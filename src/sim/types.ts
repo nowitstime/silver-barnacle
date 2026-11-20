@@ -67,6 +67,9 @@ export interface Ball {
   bonus: number;
   /** Bricks it may still smash through this turn (Pierce). */
   pierceLeft: number;
+  /** Bricks it may still ghost through this turn, and the one it is passing through now. */
+  ghostLeft: number;
+  ghostFrom?: number;
   /** Fireball (The Ceiling Is Lava). */
   fire: boolean;
   /** Temporary split/echo copy. Removed when it lands. */
