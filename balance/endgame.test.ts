@@ -10,13 +10,15 @@ import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { CLASSES, type ClassId } from '../src/content/classes';
 import { UPGRADE_BY_ID, THEMES } from '../src/content/upgrades';
 import { mulberry32 } from '../src/core/rng';
-import { bestAngle, finishTurn } from '../src/sim/bot';
+import { bestAngle, finishTurn, smartAngle } from '../src/sim/bot';
 import { Sim } from '../src/sim/world';
 import { CORE } from '../src/sim/run';
 
 const SEEDS = Number(process.env.RUNS ?? 60);
 const CANDIDATES = Number(process.env.CANDIDATES ?? 4);
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? 600);
+/** v2 (default): aims at corners, gaps and bank shots with a precision check. v1: 4 evenly spaced angles. */
+const BOT = process.env.BOT ?? 'v2';
 const SHARDS = Number(process.env.SHARDS ?? 1), SHARD = Number(process.env.SHARD ?? 0), MERGE = Number(process.env.MERGE ?? 0);
 const OUT = new URL('./.out/', import.meta.url);
 
@@ -31,7 +33,7 @@ function play(seed: number, classId: ClassId): Result {
     if (!atDeep && sim.biome >= 2 && sim.phase === 'aim') atDeep = { ...sim.upgrades };
     if (sim.phase === 'won') { won = true; if (!sim.continueEndless()) break; continue; }
     if (sim.phase === 'pick') { sim.choose(Math.floor(rnd() * sim.offer!.ids.length)); continue; }
-    sim.fire(bestAngle(sim, CANDIDATES));
+    sim.fire(BOT === 'v1' ? bestAngle(sim, CANDIDATES) : smartAngle(sim));
     finishTurn(sim);
     turns++;
   }
