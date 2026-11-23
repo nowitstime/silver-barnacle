@@ -435,4 +435,4 @@ button:focus-visible { outline: 2px solid var(--i2); outline-offset: 2px; }
 .history .end { font-weight: 700; color: var(--i2); }
 
 /* Trigger cards' effect on the coming volley, just above Fire. */
-.mods { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(84px, calc(env(safe-area-inset-bottom) + 76px)); margin: 0; padding: 2px 8px; font-size: 12px; font-weight: 700; color: var(--i2); background: color-mix(in srgb, var(--paper) 80%, transparent); white-space: nowrap; pointer-events: none; }
+.mods { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(84px, calc(env(safe-area-inset-bottom) + 76px)); margin: 0; padding: 2px 8px; font-size: 12px; font-weight: 700; color: var(--i2); background: color-mix(in srgb, var(--paper) 80%, transparent); width: max-content; max-width: calc(100% - 32px); text-align: center; line-height: 1.35; pointer-events: none; }
