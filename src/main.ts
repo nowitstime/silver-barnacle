@@ -93,7 +93,7 @@ const loop = new Loop(
     if (slowUntil && performance.now() > slowUntil) { slowUntil = 0; loop.speed = 1; }
     if (sim.phase === 'aim' && loop.speed !== 1 && !fast && mode === 'run' && !slowUntil) loop.speed = 1;
     aimShown += (aimTarget - aimShown) * Math.min(1, realDt * 22);
-    trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.traceAccel, sim.stats.wrap) : null;
+    trace = mode === 'run' && sim.phase === 'aim' ? traceShot(sim.grid, sim.launchX, aimShown, sim.stats.sight, sim.traceAccel, sim.stats.wrap, 5, 4000, sim.ballRadius) : null;
     if (mode === 'run') autosave();
     const r0 = performance.now();
     renderer.draw({ sim, fx, trace, best, time, showHitboxes, numbers: settings.numbers, skin: profile.skin,
@@ -282,7 +282,7 @@ function pause(): void {
   if (mode !== 'run' || sim.phase === 'over') return;
   loop.paused = true;
   menus.showPause({
-    classId: sim.classId, upgrades: sim.upgrades, stats: sim.stats, triggers: sim.triggerLabels(), depth: sim.level, biome: sim.biome,
+    classId: sim.classId, upgrades: sim.upgrades, stats: sim.stats, triggers: [...(sim.stats.bigBall ? [`Heavyweight +${sim.growth.big ?? 0} damage`] : []), ...sim.triggerLabels()], depth: sim.level, biome: sim.biome,
     shields: sim.shields, balls: sim.ballCount,
   });
 }

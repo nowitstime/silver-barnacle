@@ -315,7 +315,7 @@ export class Menus {
     } else {
       const st = pr.p.stats;
       const row = (k: string, v: string | number) => `<div><dt>${k}</dt><dd>${typeof v === 'number' ? v.toLocaleString() : v}</dd></div>`;
-      body = `<dl class="totals stats-grid">${row('Runs', st.runs)}${row('Wins', st.wins)}${row('Deepest', st.deepest)}${row('Bricks', st.kills)}${row('Damage', st.damage)}${row('Bosses', st.bosses)}${row('Best combo', st.bestCombo)}${row('Most balls', st.maxBalls)}${row('Crits', st.crits)}${row('Balls popped', st.pops)}${row('Time played', `${Math.floor(st.time / 3600)}h ${Math.floor((st.time % 3600) / 60)}m`)}${row('Classes won', `${st.classWins.length}/5`)}</dl>`;
+      body = `<dl class="totals stats-grid">${row('Runs', st.runs)}${row('Wins', st.wins)}${row('Deepest', st.deepest)}${row('Bricks', st.kills)}${row('Damage', st.damage)}${row('Bosses', st.bosses)}${row('Best combo', st.bestCombo)}${row('Most balls', st.maxBalls)}${row('Crits', st.crits)}${row('Balls popped', st.pops)}${row('Time played', `${Math.floor(st.time / 3600)}h ${Math.floor((st.time % 3600) / 60)}m`)}${row('Classes won', `${st.classWins.length}/${CLASSES.length}`)}</dl>`;
     }
     this.render(`
       <div class="sheet-inner coll-inner">

@@ -1,7 +1,7 @@
 import { stream, type Rng } from '../core/rng';
 import { CORE_PHASES, bossFor } from '../content/bosses';
 import { isHazard } from '../content/bricks';
-import { CLASS_BY_ID, type ClassId } from '../content/classes';
+import { BIG_BALL_SCALE, CLASS_BY_ID, type ClassId } from '../content/classes';
 import { LOOT_CATEGORIES, UPGRADE_BY_ID, computeStats, rerollSameTiers, rollLoot, rollOffer, type Stats } from '../content/upgrades';
 import type { Contact } from './collision';
 import {
@@ -263,6 +263,18 @@ export class Sim {
     }
   }
 
+  /** New balls join the volley, or, for Big Ball, add damage to the one ball. */
+  private gainBalls(n: number): void {
+    if (n <= 0) return;
+    if (this.stats.bigBall) this.growth.big = (this.growth.big ?? 0) + n;
+    else this.ballCount += n;
+  }
+
+  /** Collision radius of a fresh ball. */
+  get ballRadius(): number {
+    return this.stats.bigBall ? BALL_R * BIG_BALL_SCALE : BALL_R;
+  }
+
   /** What ended the run: the kinds of brick that crossed the line. */
   deathCause: BrickKind[] = [];
 
@@ -320,7 +332,7 @@ export class Sim {
 
   private runEffects() {
     return {
-      addBalls: (n: number) => (this.ballCount += n),
+      addBalls: (n: number) => this.gainBalls(n),
       addShields: (n: number) => { if (!this.stats.glassCannon) this.shields += n; },
     };
   }
@@ -438,7 +450,7 @@ export class Sim {
     const interval = Math.min(LAUNCH_INTERVAL, MAX_LAUNCH_TIME / this.toFire);
     while (this.fired < this.toFire && this.phaseTime >= this.fired * interval) {
       const copy = this.fired >= this.ballCount;
-      const ball = this.spawnBall(this.launchX, FLOOR - BALL_R, this.aimAngle, this.fired % this.ballCount, copy);
+      const ball = this.spawnBall(this.launchX, FLOOR - this.ballRadius, this.aimAngle, this.fired % this.ballCount, copy);
       ball.golden = !copy && ball.index === this.goldenIndex;
       this.fired++;
       this.events.push({ type: 'launch', x: this.launchX, y: FLOOR - BALL_R });
@@ -459,7 +471,7 @@ export class Sim {
       wallBounces: from?.wallBounces ?? 0,
       struck: from?.struck ?? false,
       heavy: false, slow: false, shrunk: from?.shrunk ?? false, popped: false, floaty: false,
-      r: from?.r ?? BALL_R,
+      r: from?.r ?? this.ballRadius,
       heldBy: 0, heldTime: 0, portalCooldown: 0, lasers: [],
     };
     this.balls.push(ball);
@@ -531,7 +543,7 @@ export class Sim {
     this.items = this.items.filter((i) => !i.used);
 
     if (this.landX !== null) this.launchX = this.landX;
-    this.ballCount += this.pendingBalls;
+    this.gainBalls(this.pendingBalls);
     this.pendingBalls = 0;
     this.balls = [];
     this.turn++;
@@ -963,7 +975,7 @@ export class Sim {
         case 'balloon': ball.floaty = true; break;
         case 'shrinker':
           ball.shrunk = true;
-          ball.r = BALL_R * 0.6;
+          ball.r *= 0.6;
           break;
         case 'sponge': {
           // Swallow the ball (and chip the sponge); it bursts SPONGE_HOLD seconds after the first.
@@ -1022,7 +1034,7 @@ export class Sim {
 
   private ballDamage(ball: Ball, brick: Brick, crit: boolean): number {
     const s = this.stats;
-    let dmg = (s.damage + ball.bonus) * s.dmgMult;
+    let dmg = (s.damage + (this.growth.big ?? 0) + ball.bonus) * s.dmgMult;
     if (ball.index === 0 && !ball.copy && s.firstBlood > 1) dmg *= s.firstBlood;
     if (ball.fire) dmg *= 2;
     if (ball.golden) dmg *= 2;

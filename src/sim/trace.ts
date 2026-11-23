@@ -16,9 +16,9 @@ export interface Trace {
  */
 export function traceShot(
   grid: BrickGrid, x: number, angle: number, maxContacts = 1, accel: Accel | AccelFn = NO_ACCEL,
-  wrap = false, sampleEvery = 5, maxSteps = 4000,
+  wrap = false, sampleEvery = 5, maxSteps = 4000, r = BALL_R,
 ): Trace {
-  const b = { x, y: FLOOR - BALL_R, vx: Math.cos(angle) * BALL_SPEED, vy: -Math.sin(angle) * BALL_SPEED };
+  const b = { x, y: FLOOR - r, r, vx: Math.cos(angle) * BALL_SPEED, vy: -Math.sin(angle) * BALL_SPEED };
   const points: [number, number][] = [[b.x, b.y]];
   const contacts: [number, number][] = [];
   const steps = maxContacts <= 0 ? 40 : maxSteps;

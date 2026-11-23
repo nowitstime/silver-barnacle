@@ -1,6 +1,6 @@
 import type { Stats } from './upgrades';
 
-export type ClassId = 'striker' | 'juggler' | 'ricochet' | 'bomber' | 'gambler';
+export type ClassId = 'striker' | 'juggler' | 'ricochet' | 'bomber' | 'gambler' | 'bigball';
 
 export interface ClassDef {
   id: ClassId;
@@ -39,6 +39,14 @@ export const CLASSES: ClassDef[] = [
     perk: 'Wildcard', perkDesc: 'Upgrade picks offer 4 cards, but one of them is always cursed.',
     apply: (s) => { s.wildcard = true; },
   },
+  {
+    id: 'bigball', name: 'Big Ball', tagline: 'One ball. It only gets heavier.', startBalls: 1,
+    perk: 'Heavyweight', perkDesc: 'You only ever have one big ball. Every extra ball you would get (orbs, cards, bounties) adds +1 damage to it instead.',
+    apply: (s) => { s.bigBall = true; },
+  },
 ];
+
+/** Big Ball's radius compared to a normal ball. */
+export const BIG_BALL_SCALE = 1.6;
 
 export const CLASS_BY_ID = new Map(CLASSES.map((c) => [c.id, c]));

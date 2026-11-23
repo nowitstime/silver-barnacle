@@ -937,7 +937,7 @@ export class Renderer {
       ctx.beginPath(); ctx.moveTo(b.x, b.y + BALL_R + 2); ctx.lineTo(b.x, b.y + BALL_R + 7); ctx.stroke();
     }
     if (b.copy) ctx.globalAlpha = 0.7;
-    const scale = b.fire ? 1.35 : b.copy ? 0.75 : b.shrunk ? 0.65 : 1;
+    const scale = (b.fire ? 1.35 : b.copy ? 0.75 : 1) * (b.r / BALL_R);
     this.ball(b.x, b.y, inks, b.vx, b.vy, s.fx.squash.get(b.id) ?? 0, scale);
     ctx.globalAlpha = 1;
   }
@@ -968,14 +968,17 @@ export class Renderer {
     const count = firing ? sim.unfired : sim.ballCount;
     const showBall = !firing || sim.unfired > 0;
     ctx.save();
-    if (showBall && sim.phase !== 'settle') this.ball(sim.launchX, FLOOR - BALL_R, inks, 0, 0, 0, 1 + s.fx.launcherKick * 0.45);
+    const big = sim.ballRadius / BALL_R;
+    if (showBall && sim.phase !== 'settle') this.ball(sim.launchX, FLOOR - sim.ballRadius, inks, 0, 0, 0, big * (1 + s.fx.launcherKick * 0.45));
     ctx.restore();
     if (count > 0 && sim.phase !== 'settle') {
       ctx.fillStyle = inks.i1;
       ctx.font = `700 11px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`×${count}`, Math.max(16, Math.min(W - 16, sim.launchX)), FLOOR + 15);
+      // Big Ball shows its damage instead of a ball count.
+      const label = sim.stats.bigBall ? `${sim.stats.damage + (sim.growth.big ?? 0)} dmg` : `×${count}`;
+      ctx.fillText(label, Math.max(20, Math.min(W - 20, sim.launchX)), FLOOR + 15);
     }
   }
 

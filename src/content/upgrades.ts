@@ -113,6 +113,8 @@ export interface Stats {
   /** Damage beyond what a kill needed carries into the ball's next hit. */
   overkill: boolean;
   // ---- class perks ----
+  /** Big Ball: one big ball; extra balls become damage. */
+  bigBall: boolean;
   executioner: boolean;
   encore: boolean;
   payload: boolean;
@@ -127,7 +129,7 @@ export const baseStats = (): Stats => ({
   slowDrop: false, guardian: 0, critMass: 0, lastStand: 1, glassCannon: false, secondWind: false,
   singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0, fireMult: 1, zapChance: 0, gravity: 0, rubber: 0, magnet: 0, ghost: 0, wrap: false,
   sniper: false, windup: false, rampage: false, sweep: false, avalanche: false, berserker: false, composure: false, overkill: false,
-  executioner: false, encore: false, payload: false, wildcard: false,
+  bigBall: false, executioner: false, encore: false, payload: false, wildcard: false,
 });
 
 /** What an upgrade may do to the run the moment it's taken. */
