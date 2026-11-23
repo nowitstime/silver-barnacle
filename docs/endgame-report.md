@@ -4,17 +4,18 @@
 
 | Runs | Reached The Core | Beat The Core | Hit the turn limit | Median depth | Mean depth |
 |---|---|---|---|---|---|
-| 160 | 29 | 29 | 11 | 81 | 141 |
+| 160 | 20 | 20 | 1 | 66 | 90 |
 
 ## By class
 
 | Class | Runs | Beat The Core | Median depth | Best |
 |---|---|---|---|---|
-| Striker | 32 | 8 | 101 | 599 |
-| Juggler | 32 | 8 | 94 | 596 |
-| Ricochet | 32 | 2 | 81 | 455 |
-| Bomber | 32 | 5 | 71 | 600 |
-| Gambler | 32 | 6 | 48 | 586 |
+| Striker | 32 | 2 | 80 | 265 |
+| Juggler | 32 | 5 | 65 | 601 |
+| Ricochet | 32 | 7 | 72 | 573 |
+| Bomber | 32 | 3 | 66 | 251 |
+| Gambler | 32 | 3 | 43 | 470 |
+| Big Ball | 0 | 0 | 0 | 0 |
 
 ## Deepest runs
 
@@ -22,21 +23,21 @@ Build as it stood when the run reached The Core (what it had to win with), then 
 
 | Depth | Class | Balls at end | Build at The Core |
 |---|---|---|---|
-| 600 ★ | bomber | 444 | Conductor ×2, Thick Skin ×2, Can Opener, First Blood, Lucky Orbs, Acid, Ghost, Tinderbox, Pierce, Chain Lightning, Black Powder, Wraparound, Echo |
-| 599 ★ (limit) | striker | 197 | Bellows ×2, Hazard Suit, Long Sight, Chain Lightning, Acid, Guardian, Extra Balls, Sharp Eye, Time Dilation, Short Fuse, Mitosis, The Ceiling Is Lava, Second Wind, Static |
-| 597 ★ (limit) | striker | 392 | Ricochet Rush ×2, Whetstone ×2, Bounty ×2, Long Sight, Volatile, Can Opener, Ghost, Echo, Overcharge, Heavier Balls, Black Powder, Glass Cannon |
-| 596 ★ (limit) | juggler | 326 | Acid ×2, Splash ×2, Magnetic ×2, Bellows, Wide Beam, Mitosis, Overcharge, Copper Wire, Time Dilation, Critical Mass, Chain Lightning, Tinderbox |
-| 593 ★ (limit) | striker | 283 | Long Sight ×2, Heavier Balls, Featherweight, Thick Skin, Acid, Wildfire, Overcharge, First Blood, Pierce, Bellows, Ghost, Glass Cannon, Sharp Eye, Lead Core |
-| 588 ★ (limit) | striker | 246 | Chain Lightning ×3, Bellows ×2, Long Sight ×2, Short Fuse, Echo, Rubber, Ricochet Rush, Acid, Time Dilation, Wildfire, Sharp Eye |
-| 586 ★ | gambler | 258 | Tinderbox, Kindling, Acid, Bellows, First Blood, Overcharge, Ghost, Tunnel Vision, Splash, Last Stand, Copper Wire, Momentum, Glass Cannon, Wraparound, Second Wind |
-| 581 ★ (limit) | striker | 475 | Bounty ×2, Featherweight, Can Opener, Ghost, First Blood, Black Powder, Acid, Conductor, Last Stand, Chain Lightning, Lucky Orbs, Singularity, Sharp Eye, Overcharge |
-| 579 ★ (limit) | gambler | 526 | Wide Beam ×2, Last Stand, Dense Core, Thick Skin, Extra Balls, Bounty, Acid, Blood Pact, Magnetic, Chain Lightning, Conductor, Long Sight, Volatile, Overgrowth |
-| 572 ★ (limit) | striker | 213 | Acid ×2, Copper Wire ×2, Extra Balls, Pierce, Rubber, Whetstone, Ghost, Magnetic, Singularity, Wraparound, Overcharge, Hazard Suit, Time Dilation |
-| 562 ★ (limit) | juggler | 401 | Wildfire, Can Opener, Acid, Hazard Suit, Extra Balls, Chain Lightning, Mitosis, Heavier Balls, Guardian, Brutal, Dense Core, Wraparound, Time Dilation, Last Stand, First Blood |
-| 550 ★ (limit) | gambler | 269 | Overgrowth ×2, Blood Pact ×2, Momentum, Acid, Copper Wire, Hazard Suit, Conductor, Volatile, Glass Cannon, Ricochet Rush, Wide Beam, Kindling, Tunnel Vision |
-| 479 ★ (limit) | bomber | 185 | Acid, Extra Balls, Conductor, Wraparound, Tinderbox, Time Dilation, Brutal, Mitosis, Featherweight, Black Powder, Sharp Eye, Volatile, Hazard Suit, Lucky Orbs, Static |
-| 475 ★ | gambler | 333 | Thick Skin ×2, Heavier Balls ×2, Overcharge, Ghost, Dense Core, Singularity, Magnetic, Wide Beam, Tinderbox, Guardian, Acid, Bellows, Tunnel Vision |
-| 456 ★ | gambler | 286 | Kindling ×3, Overcharge ×2, Ghost, Blood Pact, Chain Reaction, Long Sight, Last Stand, Heavier Balls, Wraparound, Overgrowth, Acid, Mitosis |
+| 601 ★ (limit) | juggler | 942 | Dense Core ×2, Heavier Balls, The Ceiling Is Lava, Black Powder, Tinderbox, Second Wind, Chain Lightning, Overkill, Clean Sweep, Singularity, Critical Mass, Acid, First Blood, Glass Cannon |
+| 573 ★ | ricochet | 423 | Ghost ×2, Sniper, Overcharge, Wide Beam, Lucky Orbs, Tinderbox, Copper Wire, Critical Mass, Clean Sweep, Whetstone, Splash, Rampage, Acid, Magnetic |
+| 470 ★ | gambler | 613 | Dense Core, Black Powder, Ghost, Hazard Suit, Whetstone, Mercy Kill, Wraparound, Volatile, Featherweight, Chain Lightning, The Ceiling Is Lava, Clean Sweep, Ricochet Rush, Guardian, First Blood |
+| 411 ★ | juggler | 340 | Short Fuse ×2, Long Sight ×2, Wide Beam ×2, Critical Mass, Kindling, Thick Skin, Heavier Balls, Glass Cannon, Tinderbox, Rampage, Wildfire, Wind-Up |
+| 286 ★ | gambler | 431 | Blood Pact ×2, Lucky Orbs, Extra Balls, Ghost, Copper Wire, Wraparound, Wide Beam, Second Wind, Clean Sweep, Time Dilation, Mercy Kill, Pierce, Overgrowth, Composure |
+| 281 ★ | ricochet | 398 | Dense Core, Brutal, Guardian, Extra Balls, Black Powder, Tinderbox, Pierce, Clean Sweep, Overkill, Wraparound, Critical Mass, Lucky Orbs, Sharp Eye, Featherweight |
+| 265 ★ | striker | 148 | Bellows ×2, Ghost ×2, Ricochet Rush ×2, Wraparound, Extra Balls, Chain Lightning, Mitosis, Guardian, Heavier Balls, Magnetic, Kindling, Featherweight |
+| 261 ★ | juggler | 206 | Long Sight ×2, Acid ×2, Guardian, Thick Skin, Mercy Kill, Ricochet Rush, Mitosis, Conductor, Heavier Balls, Sniper, Chain Reaction, Pierce, Tinderbox |
+| 259 ★ | juggler | 620 | Sniper, Can Opener, Overkill, Volatile, Extra Balls, Chain Lightning, Glass Cannon, Heavier Balls, Last Stand, Long Sight, Lucky Orbs, Wraparound, Hazard Suit, Clean Sweep, Overcharge |
+| 251 ★ | bomber | 159 | Acid, Glass Cannon, Berserker, Momentum, Heavier Balls, Wind-Up, Critical Mass, Can Opener, Magnetic, Rubber, Black Powder, Chain Lightning, Conductor, Short Fuse, Wildfire |
+| 246 ★ | ricochet | 233 | Bounty ×2, Can Opener, Brutal, Chain Lightning, Long Sight, Wind-Up, Extra Balls, Momentum, Ghost, Glass Cannon, Heavier Balls, First Blood, Ricochet Rush, Last Stand |
+| 239 ★ | striker | 152 | Ricochet Rush ×2, Dense Core, Glass Cannon, Wraparound, Echo, Rubber, Mercy Kill, Splash, Acid, Long Sight, Brutal, Singularity, Sniper, Composure |
+| 185 ★ | ricochet | 138 | Whetstone ×2, Lucky Orbs ×2, Rubber, Wraparound, Thick Skin, Heavier Balls, Critical Mass, Glass Cannon, Hazard Suit, Short Fuse, Mitosis, Pierce, Last Stand |
+| 182 ★ | ricochet | 132 | Thick Skin ×2, Kindling ×2, Long Sight ×2, Extra Balls ×2, Wildfire, Wraparound, Wind-Up, Ghost, Second Wind, Rubber, Mitosis |
+| 173 ★ | juggler | 166 | Wildfire, Chain Reaction, Wraparound, Chain Lightning, First Blood, Pierce, Wind-Up, Magnetic, Sniper, Overcharge, Mercy Kill, Last Stand, Dense Core, Rubber, Hazard Suit |
 
 ## Build families
 
@@ -44,77 +45,65 @@ Runs that reached The Core, grouped by their two biggest themes at that point.
 
 | Main themes | Runs | Beat The Core | Mean final depth |
 |---|---|---|---|
-| damage+crit | 3 | 100% | 582 |
-| damage+bank | 1 | 100% | 550 |
-| crit+damage | 2 | 100% | 536 |
-| defense+crit | 2 | 100% | 527 |
-| physics+crit | 2 | 100% | 475 |
-| crit+fire | 2 | 100% | 473 |
-| fire+crit | 1 | 100% | 456 |
-| multi+damage | 1 | 100% | 452 |
-| damage+fire | 2 | 100% | 436 |
-| bank+crit | 2 | 100% | 416 |
-| crit+multi | 4 | 100% | 410 |
-| damage+multi | 2 | 100% | 403 |
-| physics+bank | 1 | 100% | 372 |
-| bank+fire | 1 | 100% | 311 |
-| multi+crit | 1 | 100% | 303 |
-| crit+defense | 1 | 100% | 251 |
-| damage+physics | 1 | 100% | 205 |
+| crit+damage | 1 | 100% | 470 |
+| damage+fire | 1 | 100% | 411 |
+| damage+crit | 3 | 100% | 340 |
+| crit+multi | 4 | 100% | 302 |
+| multi+defense | 1 | 100% | 286 |
+| fire+physics | 1 | 100% | 265 |
+| bank+damage | 1 | 100% | 261 |
+| damage+bank | 2 | 100% | 245 |
+| fire+defense | 1 | 100% | 182 |
+| bank+explosion | 1 | 100% | 173 |
+| damage+multi | 3 | 100% | 173 |
+| bank+lightning | 1 | 100% | 157 |
 
 ## Cards held at The Core
 
-29 runs reached The Core; 100% of them beat it, mean final depth 442. Cards seen in at least 4 of those runs.
+20 runs reached The Core; 100% of them beat it, mean final depth 272. Cards seen in at least 4 of those runs.
 
 | Card | Runs holding it | Beat The Core | Mean final depth | vs. average |
 |---|---|---|---|---|
-| Can Opener | 4 | 100% (+0) | 585 | +143 |
-| Conductor | 5 | 100% (+0) | 558 | +116 |
-| Wildfire | 4 | 100% (+0) | 550 | +108 |
-| Long Sight | 8 | 100% (+0) | 521 | +79 |
-| Blood Pact | 4 | 100% (+0) | 509 | +67 |
-| Overgrowth | 4 | 100% (+0) | 509 | +67 |
-| Acid | 20 | 100% (+0) | 492 | +50 |
-| First Blood | 8 | 100% (+0) | 488 | +46 |
-| Lucky Orbs | 5 | 100% (+0) | 484 | +42 |
-| Tinderbox | 7 | 100% (+0) | 482 | +40 |
-| Chain Lightning | 11 | 100% (+0) | 477 | +35 |
-| Bellows | 9 | 100% (+0) | 472 | +30 |
-| Copper Wire | 7 | 100% (+0) | 471 | +30 |
-| Bounty | 6 | 100% (+0) | 465 | +24 |
-| Last Stand | 7 | 100% (+0) | 463 | +21 |
-| Overcharge | 12 | 100% (+0) | 462 | +20 |
-| Rubber | 4 | 100% (+0) | 461 | +19 |
-| Ghost | 16 | 100% (+0) | 457 | +15 |
-| Wide Beam | 7 | 100% (+0) | 456 | +14 |
-| Ricochet Rush | 6 | 100% (+0) | 446 | +4 |
-| Extra Balls | 9 | 100% (+0) | 445 | +3 |
-| Time Dilation | 11 | 100% (+0) | 444 | +3 |
-| Volatile | 9 | 100% (+0) | 441 | -1 |
-| Static | 4 | 100% (+0) | 440 | -2 |
-| Sharp Eye | 9 | 100% (+0) | 439 | -2 |
-| Singularity | 5 | 100% (+0) | 436 | -6 |
-| Black Powder | 9 | 100% (+0) | 431 | -11 |
-| Mitosis | 10 | 100% (+0) | 428 | -14 |
-| Dense Core | 5 | 100% (+0) | 424 | -18 |
-| Pierce | 8 | 100% (+0) | 420 | -22 |
-| Hazard Suit | 11 | 100% (+0) | 419 | -23 |
-| Glass Cannon | 9 | 100% (+0) | 416 | -26 |
-| Thick Skin | 10 | 100% (+0) | 414 | -28 |
-| Heavier Balls | 10 | 100% (+0) | 412 | -30 |
-| Wraparound | 15 | 100% (+0) | 412 | -30 |
-| Magnetic | 9 | 100% (+0) | 410 | -32 |
-| Guardian | 8 | 100% (+0) | 407 | -35 |
-| Short Fuse | 4 | 100% (+0) | 406 | -36 |
-| Whetstone | 7 | 100% (+0) | 405 | -37 |
-| Second Wind | 8 | 100% (+0) | 401 | -41 |
-| Splash | 5 | 100% (+0) | 398 | -44 |
-| Featherweight | 7 | 100% (+0) | 385 | -57 |
-| Echo | 11 | 100% (+0) | 383 | -59 |
-| Kindling | 9 | 100% (+0) | 369 | -73 |
-| Critical Mass | 7 | 100% (+0) | 366 | -76 |
-| Momentum | 6 | 100% (+0) | 355 | -87 |
-| The Ceiling Is Lava | 6 | 100% (+0) | 353 | -89 |
+| Tinderbox | 6 | 100% (+0) | 383 | +111 |
+| Black Powder | 5 | 100% (+0) | 354 | +82 |
+| Critical Mass | 7 | 100% (+0) | 353 | +81 |
+| Wide Beam | 4 | 100% (+0) | 350 | +78 |
+| Clean Sweep | 8 | 100% (+0) | 346 | +74 |
+| Guardian | 4 | 100% (+0) | 319 | +47 |
+| Dense Core | 6 | 100% (+0) | 316 | +43 |
+| Magnetic | 4 | 100% (+0) | 316 | +43 |
+| Whetstone | 5 | 100% (+0) | 311 | +39 |
+| Second Wind | 4 | 100% (+0) | 307 | +34 |
+| Chain Lightning | 8 | 100% (+0) | 303 | +31 |
+| Featherweight | 4 | 100% (+0) | 296 | +24 |
+| First Blood | 6 | 100% (+0) | 296 | +24 |
+| Acid | 8 | 100% (+0) | 294 | +22 |
+| Overcharge | 4 | 100% (+0) | 294 | +21 |
+| Ghost | 8 | 100% (+0) | 291 | +19 |
+| Glass Cannon | 9 | 100% (+0) | 280 | +8 |
+| Copper Wire | 4 | 100% (+0) | 280 | +7 |
+| Heavier Balls | 10 | 100% (+0) | 278 | +6 |
+| Lucky Orbs | 7 | 100% (+0) | 270 | -2 |
+| Ricochet Rush | 6 | 100% (+0) | 269 | -4 |
+| Thick Skin | 4 | 100% (+0) | 260 | -12 |
+| Mercy Kill | 6 | 100% (+0) | 260 | -12 |
+| Sniper | 7 | 100% (+0) | 258 | -14 |
+| Short Fuse | 4 | 100% (+0) | 255 | -17 |
+| Long Sight | 7 | 100% (+0) | 253 | -19 |
+| Wraparound | 10 | 100% (+0) | 250 | -22 |
+| Brutal | 4 | 100% (+0) | 234 | -38 |
+| Wind-Up | 6 | 100% (+0) | 232 | -40 |
+| Wildfire | 5 | 100% (+0) | 229 | -43 |
+| Pierce | 6 | 100% (+0) | 227 | -46 |
+| Hazard Suit | 7 | 100% (+0) | 220 | -52 |
+| Extra Balls | 9 | 100% (+0) | 215 | -57 |
+| Mitosis | 5 | 100% (+0) | 212 | -60 |
+| Conductor | 4 | 100% (+0) | 211 | -62 |
+| Momentum | 4 | 100% (+0) | 200 | -72 |
+| Last Stand | 5 | 100% (+0) | 199 | -73 |
+| Rubber | 7 | 100% (+0) | 194 | -78 |
+| Composure | 6 | 100% (+0) | 186 | -86 |
+| Bounty | 4 | 100% (+0) | 170 | -103 |
 
 ## Combos at The Core
 
@@ -122,76 +111,81 @@ A pair counts if runs holding both went deeper than runs holding only one of the
 
 | Pair | Runs with both | Mean final depth | Better than either alone by |
 |---|---|---|---|
-| Bellows + Time Dilation | 3 | 594 | +184 |
-| Sharp Eye + Bellows | 3 | 593 | +182 |
-| Black Powder + Lucky Orbs | 3 | 553 | +174 |
-| Overcharge + Glass Cannon | 3 | 592 | +173 |
-| Overcharge + Copper Wire | 3 | 585 | +164 |
-| Chain Lightning + Bellows | 3 | 594 | +161 |
-| Overcharge + First Blood | 3 | 587 | +158 |
-| Black Powder + Bounty | 3 | 543 | +156 |
-| Thick Skin + Pierce | 3 | 522 | +155 |
-| First Blood + Last Stand | 3 | 576 | +141 |
-| Heavier Balls + Guardian | 3 | 497 | +122 |
-| Tinderbox + Bellows | 3 | 552 | +121 |
-| Black Powder + Wraparound | 3 | 510 | +120 |
-| Sharp Eye + Long Sight | 3 | 593 | +116 |
-| Bellows + Long Sight | 3 | 593 | +116 |
+| Dense Core + Black Powder | 3 | 451 | +241 |
+| Black Powder + Chain Lightning | 3 | 441 | +216 |
+| Dense Core + First Blood | 3 | 415 | +198 |
+| Dense Core + Chain Lightning | 3 | 415 | +179 |
+| Chain Lightning + Clean Sweep | 3 | 443 | +156 |
+| Ghost + Clean Sweep | 3 | 443 | +155 |
+| Critical Mass + Clean Sweep | 4 | 406 | +120 |
+| Glass Cannon + Acid | 3 | 364 | +111 |
+| Mercy Kill + Ricochet Rush | 3 | 323 | +110 |
+| Wraparound + Ricochet Rush | 3 | 325 | +107 |
+| Critical Mass + Acid | 4 | 399 | +106 |
+| Whetstone + Clean Sweep | 3 | 404 | +93 |
+| Lucky Orbs + Sniper | 3 | 321 | +89 |
+| Heavier Balls + Glass Cannon | 7 | 304 | +85 |
+| Heavier Balls + Tinderbox | 3 | 424 | +83 |
 
 ## Early game: cards held on reaching The Deep
 
-112 runs reached The Deep (biome 3); 26% of them went on to reach The Core, mean final depth 183. Cards seen in at least 5 of those runs.
+113 runs reached The Deep (biome 3); 18% of them went on to reach The Core, mean final depth 111. Cards seen in at least 5 of those runs.
 
 | Card | Runs holding it | Reached The Core | Mean final depth |
 |---|---|---|---|
-| Acid | 25 | 60% (+34) | 345 |
-| Wraparound | 10 | 50% (+24) | 229 |
-| Echo | 11 | 45% (+20) | 221 |
-| Black Powder | 11 | 45% (+20) | 216 |
-| Ghost | 19 | 42% (+16) | 261 |
-| Extra Balls | 19 | 42% (+16) | 226 |
-| Mitosis | 5 | 40% (+14) | 247 |
-| Critical Mass | 5 | 40% (+14) | 150 |
-| Thick Skin | 21 | 38% (+12) | 236 |
-| Bellows | 14 | 36% (+10) | 254 |
-| Whetstone | 14 | 36% (+10) | 212 |
-| Overcharge | 17 | 35% (+9) | 206 |
-| Blood Pact | 9 | 33% (+7) | 240 |
-| First Blood | 15 | 33% (+7) | 220 |
-| Copper Wire | 9 | 33% (+7) | 198 |
-| Kindling | 12 | 33% (+7) | 196 |
-| Last Stand | 12 | 33% (+7) | 183 |
-| Pierce | 12 | 33% (+7) | 176 |
-| Can Opener | 14 | 29% (+3) | 233 |
-| Chain Lightning | 14 | 29% (+3) | 205 |
-| Heavier Balls | 18 | 28% (+2) | 192 |
-| Tinderbox | 11 | 27% (+1) | 180 |
-| Magnetic | 12 | 25% (-1) | 134 |
-| Guardian | 17 | 24% (-2) | 175 |
-| Wide Beam | 13 | 23% (-3) | 175 |
-| Dense Core | 13 | 23% (-3) | 174 |
-| Long Sight | 22 | 23% (-3) | 191 |
-| Wildfire | 9 | 22% (-4) | 196 |
-| Overgrowth | 5 | 20% (-6) | 198 |
-| Singularity | 5 | 20% (-6) | 181 |
-| Featherweight | 15 | 20% (-6) | 162 |
-| Glass Cannon | 5 | 20% (-6) | 149 |
-| Short Fuse | 11 | 18% (-8) | 164 |
-| Momentum | 18 | 17% (-9) | 131 |
-| Hazard Suit | 19 | 16% (-10) | 141 |
-| Bounty | 13 | 15% (-11) | 154 |
-| Ricochet Rush | 14 | 14% (-12) | 164 |
-| Conductor | 14 | 14% (-12) | 158 |
-| Second Wind | 7 | 14% (-12) | 135 |
-| Sharp Eye | 14 | 14% (-12) | 107 |
-| Chain Reaction | 8 | 13% (-13) | 137 |
-| Rubber | 19 | 11% (-15) | 141 |
-| Static | 10 | 10% (-16) | 123 |
-| Brutal | 10 | 10% (-16) | 108 |
-| Mercy Kill | 10 | 10% (-16) | 107 |
-| Lucky Orbs | 24 | 8% (-18) | 124 |
-| Splash | 14 | 7% (-19) | 104 |
-| Lead Core | 5 | 0% (-26) | 100 |
+| Wraparound | 8 | 63% (+45) | 159 |
+| Glass Cannon | 7 | 57% (+39) | 196 |
+| Momentum | 6 | 50% (+32) | 128 |
+| Heavier Balls | 16 | 31% (+14) | 163 |
+| Tinderbox | 10 | 30% (+12) | 190 |
+| Sniper | 10 | 30% (+12) | 160 |
+| Ghost | 20 | 30% (+12) | 151 |
+| Kindling | 7 | 29% (+11) | 142 |
+| Chain Lightning | 15 | 27% (+9) | 121 |
+| Dense Core | 16 | 25% (+7) | 153 |
+| Guardian | 8 | 25% (+7) | 127 |
+| Wildfire | 12 | 25% (+7) | 94 |
+| Extra Balls | 25 | 24% (+6) | 116 |
+| Black Powder | 13 | 23% (+5) | 161 |
+| Mercy Kill | 9 | 22% (+5) | 135 |
+| Blood Pact | 9 | 22% (+5) | 124 |
+| Hazard Suit | 9 | 22% (+5) | 120 |
+| Thick Skin | 18 | 22% (+5) | 117 |
+| Whetstone | 18 | 22% (+5) | 116 |
+| Pierce | 9 | 22% (+5) | 95 |
+| Lucky Orbs | 19 | 21% (+3) | 116 |
+| Can Opener | 10 | 20% (+2) | 111 |
+| Echo | 10 | 20% (+2) | 98 |
+| First Blood | 10 | 20% (+2) | 92 |
+| Composure | 15 | 20% (+2) | 84 |
+| Rubber | 16 | 19% (+1) | 100 |
+| Short Fuse | 11 | 18% (+0) | 115 |
+| Brutal | 11 | 18% (+0) | 104 |
+| Critical Mass | 12 | 17% (-1) | 125 |
+| Wind-Up | 12 | 17% (-1) | 109 |
+| Bounty | 13 | 15% (-2) | 101 |
+| Acid | 13 | 15% (-2) | 96 |
+| Copper Wire | 7 | 14% (-3) | 109 |
+| Mitosis | 7 | 14% (-3) | 104 |
+| Ricochet Rush | 14 | 14% (-3) | 102 |
+| Chain Reaction | 7 | 14% (-3) | 85 |
+| Volatile | 8 | 13% (-5) | 104 |
+| Long Sight | 19 | 11% (-7) | 100 |
+| Clean Sweep | 10 | 10% (-8) | 82 |
+| Berserker | 11 | 9% (-9) | 87 |
+| Overcharge | 12 | 8% (-9) | 115 |
+| Featherweight | 12 | 8% (-9) | 81 |
+| Wide Beam | 14 | 7% (-11) | 110 |
+| Splash | 14 | 7% (-11) | 78 |
+| Overkill | 17 | 6% (-12) | 87 |
+| Bellows | 18 | 6% (-12) | 89 |
+| Tunnel Vision | 5 | 0% (-18) | 88 |
+| Conductor | 8 | 0% (-18) | 83 |
+| Lead Core | 10 | 0% (-18) | 80 |
+| Static | 12 | 0% (-18) | 75 |
+| Sharp Eye | 12 | 0% (-18) | 75 |
+| Last Stand | 5 | 0% (-18) | 71 |
+| Magnetic | 14 | 0% (-18) | 63 |
 
 ### Early combos
 
@@ -199,15 +193,15 @@ Pairs held on reaching The Deep that got to The Core more often than either card
 
 | Pair | Runs with both | Reached The Core | Better than either alone by |
 |---|---|---|---|
-| Acid + Extra Balls | 4 | 100% | +48 pts |
-| Acid + Bellows | 6 | 83% | +31 pts |
-| Blood Pact + Long Sight | 4 | 50% | +30 pts |
-| Thick Skin + Heavier Balls | 7 | 57% | +29 pts |
-| Bellows + First Blood | 4 | 50% | +20 pts |
-| Whetstone + Pierce | 4 | 50% | +20 pts |
-| Acid + Ghost | 4 | 75% | +18 pts |
-| Lucky Orbs + Splash | 5 | 20% | +15 pts |
-| Thick Skin + Momentum | 4 | 50% | +15 pts |
-| Ghost + Long Sight | 4 | 50% | +10 pts |
-| Extra Balls + Hazard Suit | 4 | 50% | +10 pts |
-| Conductor + Lucky Orbs | 6 | 17% | +4 pts |
+| Ghost + Lucky Orbs | 5 | 80% | +67 pts |
+| Tinderbox + Dense Core | 4 | 50% | +33 pts |
+| Tinderbox + Black Powder | 4 | 50% | +33 pts |
+| Chain Lightning + Can Opener | 4 | 50% | +32 pts |
+| Extra Balls + Blood Pact | 4 | 50% | +31 pts |
+| Heavier Balls + Critical Mass | 4 | 50% | +25 pts |
+| Ghost + Extra Balls | 4 | 50% | +25 pts |
+| Whetstone + Rubber | 6 | 33% | +17 pts |
+| Acid + Clean Sweep | 4 | 25% | +14 pts |
+| Heavier Balls + Thick Skin | 5 | 40% | +13 pts |
+| Extra Balls + Composure | 6 | 33% | +12 pts |
+| Blood Pact + Bounty | 4 | 25% | +5 pts |

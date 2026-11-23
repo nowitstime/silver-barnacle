@@ -56,7 +56,7 @@ it('endgame report', async () => {
     for (let k = 0; k < MERGE; k++) res.push(...JSON.parse(readFileSync(new URL(`endgame-${k}.json`, OUT), 'utf8')) as Result[]);
     res.sort((a, b) => a.seed - b.seed);
   } else for (let i = SHARD; i < SEEDS; i += SHARDS) {
-    const seed = 70000 + i * 7919, cls = CLASSES[i % CLASSES.length].id;
+    const seed = 70000 + i * 7919, cls = (process.env.CLASS as ClassId | undefined) ?? CLASSES[i % CLASSES.length].id;
     const r = play(seed, cls);
     res.push(r);
     console.log(`run ${i + 1}/${SEEDS} ${cls}: depth ${r.depth}${r.won ? ' (beat The Core)' : ''}${r.capped ? ' [turn limit]' : ''}`);
