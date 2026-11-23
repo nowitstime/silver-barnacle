@@ -337,3 +337,109 @@ export function strategistAngle(sim: Sim, o: SmartOptions = {}): number {
   }
   return best;
 }
+
+// ---- Bot v4: v2's shots plus v3's best finds ----
+
+export type V4Feature = 'corridor' | 'pockets' | 'top' | 'triage' | 'safe';
+export const V4_ALL: V4Feature[] = ['corridor', 'pockets', 'top', 'triage', 'safe'];
+
+/** Full-precision laser features (game step size), for the extra v4 candidates. */
+function laserFeaturesExact(sim: Sim, a: number, must: Set<number>, walls: Set<number>, topY: number): Features {
+  const r = sim.ballRadius;
+  const b = { x: sim.launchX, y: FLOOR - r, r, vx: Math.cos(a) * 440, vy: -Math.sin(a) * 440 };
+  const f: Features = { a, must: false, hits: 0, corridor: 0, top: 0, wall: false };
+  let contacts = 0, horizFrom = -1, struck = false;
+  for (let i = 1; i < 2400 && contacts < 6; i++) {
+    const res = stepBody(b, STEP, sim.grid, sim.traceAccel(b.x, b.y), sim.stats.wrap);
+    if (struck && b.y < topY) f.top++;
+    if (!res || res.kind === 'wrap') continue;
+    if (res.kind === 'floor') break;
+    if (horizFrom >= 0) { f.corridor += Math.min(6, ((i - horizFrom) * STEP * 440) / CELL); horizFrom = -1; }
+    if (res.kind === 'brick') {
+      struck = true;
+      f.hits++;
+      if (contacts < 3 && must.has(res.brick.id)) f.must = true;
+      if (contacts < 2 && walls.has(res.brick.id)) f.wall = true;
+      bounce(b, res.contact);
+      if (Math.abs(b.vy) < 0.35 * Math.hypot(b.vx, b.vy)) horizFrom = i;
+    }
+    contacts++;
+  }
+  return f;
+}
+
+/**
+ * Bot v4. Starts from v2's candidates (centres, corners, gaps, bank shots) and adds v3's best
+ * finds as extras, each switchable: fine-tuned corridor corners, pocket openers, top-lane shots,
+ * must-handle shots (triage as a scoring bonus, not a filter), and safe-mode weighting.
+ */
+export function v4Angle(sim: Sim, features: V4Feature[] = V4_ALL, o: SmartOptions = {}): number {
+  const on = new Set(features);
+  const save = sim.toSave();
+  const balls = Math.max(1, sim.ballCount);
+  const budget = o.budget ?? Math.round(Math.max(10, Math.min(40, 48 / Math.sqrt(balls) + 8)));
+  const minAngle = o.minAngle ?? HUMAN_MIN;
+  const danger = sim.lowestRow >= ROWS - 3;
+  const safe = on.has('safe') && sim.dangerRow - 1 - sim.lowestRow <= 2 && sim.shields === 0;
+  const must = on.has('triage') ? mustHandle(sim) : new Set<number>();
+  const pk = on.has('pockets') ? pockets(sim) : { cells: 0, walls: new Set<number>() };
+  const angles = candidateAngles(sim, budget, minAngle);
+  const add = (a: number) => { if (!angles.some((x) => Math.abs(x - a) < 0.1 * DEG)) angles.push(a); };
+
+  if (on.has('corridor') || on.has('pockets') || on.has('top') || on.has('triage')) {
+    const topRow = Math.min(...sim.bricks.filter((b) => b.kind !== 'loot').map((b) => b.r), ROWS);
+    const topY = brickY(topRow) - 2;
+    const sweep: Features[] = [];
+    for (let a = minAngle; a <= Math.PI - minAngle; a += 0.25 * DEG) sweep.push(laserFeaturesExact(sim, a, must, pk.walls, topY));
+    const best = (key: (f: Features) => number, n: number) => sweep.filter((f) => key(f) > 0).sort((x, y) => key(y) - key(x)).slice(0, n);
+    if (on.has('corridor')) {
+      for (const f of best((g) => g.corridor, 2)) {
+        let top = f;
+        for (let d = -0.4; d <= 0.4; d += 0.05) {
+          const g = laserFeaturesExact(sim, Math.max(minAngle, Math.min(Math.PI - minAngle, f.a + d * DEG)), must, pk.walls, topY);
+          if (g.corridor > top.corridor) top = g;
+        }
+        add(top.a);
+      }
+    }
+    if (on.has('pockets')) for (const f of best((g) => (g.wall ? 1 + g.hits * 0.1 : 0), 2)) add(f.a);
+    if (on.has('top')) for (const f of best((g) => g.top, 2)) add(f.a);
+    if (on.has('triage')) for (const f of best((g) => (g.must ? 1 + g.hits * 0.1 : 0), 3)) add(f.a);
+  }
+
+  const score = (s: Sim) => {
+    let v = on.has('pockets') || safe ? boardScore3(s, { pocket: pk.cells }, safe) : boardScore2(s);
+    if (on.has('triage') && s.phase !== 'over') for (const b of s.bricks) if (must.has(b.id) && b.kind !== 'boss') v -= 300;
+    return v;
+  };
+  const play = (a: number, ahead: boolean): number => {
+    const copy = new Sim(save.seed, {}, structuredClone(save));
+    copy.fire(a);
+    finishTurn(copy, 30);
+    const s1 = score(copy);
+    if (!ahead || copy.phase !== 'aim') return s1;
+    const next = smartAngle(copy, { budget: 8, robust: false, lookahead: false, minAngle });
+    const save2 = copy.toSave();
+    const c2 = new Sim(save2.seed, {}, structuredClone(save2));
+    c2.fire(next);
+    finishTurn(c2, 30);
+    return 0.4 * s1 + 0.6 * score(c2);
+  };
+  const scored = angles.map((a) => ({ a, s: play(a, false) }));
+  scored.sort((x, y) => y.s - x.s);
+  for (const { a } of scored.slice(0, 3)) {
+    for (const d of [-0.6, 0.6, -1.5, 1.5]) {
+      const b = Math.max(minAngle, Math.min(Math.PI - minAngle, a + d * DEG));
+      scored.push({ a: b, s: play(b, false) });
+    }
+  }
+  scored.sort((x, y) => y.s - x.s);
+  let best = scored[0].a, bestScore = -Infinity;
+  for (const { a, s } of scored.slice(0, 4)) {
+    const lo = play(Math.max(minAngle, a - 0.25 * DEG), false), hi = play(Math.min(Math.PI - minAngle, a + 0.25 * DEG), false);
+    let v = 0.5 * s + 0.25 * lo + 0.25 * hi;
+    if (danger) v = 0.5 * v + 0.5 * play(a, true);
+    if (v > bestScore) { bestScore = v; best = a; }
+  }
+  return best;
+}
