@@ -605,6 +605,14 @@ export class Sim {
     }
     // Steel and items that fall off the bottom just disappear.
     this.bricks = this.bricks.filter((b) => !((b.kind === 'steel' || b.kind === 'loot') && b.r >= ROWS));
+    // Big Ball scoops up orbs that scroll off the bottom, so one ball doesn't fall behind a spray of them.
+    if (this.stats.bigBall) {
+      for (const i of this.items) {
+        if (i.kind !== 'orb' || i.r < ROWS) continue;
+        this.orbPickup(1);
+        this.events.push({ type: 'orb', x: cellCenterX(i.c), y: FLOOR - BALL_R, extra: false });
+      }
+    }
     this.items = this.items.filter((i) => i.r < ROWS);
   }
 
