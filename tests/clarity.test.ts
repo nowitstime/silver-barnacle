@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ROWS, STEP, cellCenterX, cellCenterY } from '../src/sim/constants';
+import { ROWS, STEP, W, cellCenterX, cellCenterY } from '../src/sim/constants';
 import { inspectAt } from '../src/content/inspect';
+import { traceShot } from '../src/sim/trace';
 import { Sim } from '../src/sim/world';
 
 function empty(seed = 1): Sim {
@@ -44,5 +45,18 @@ describe('hold to inspect', () => {
     expect(card.lines.join(' ')).toContain('HP 40 / 40');
     expect(card.warn).toBeTruthy();
     expect(inspectAt(sim, cellCenterX(0), cellCenterY(0))).toBeNull();
+  });
+});
+
+describe('aim laser near the walls', () => {
+  it('still shows a path when the launcher hugs a side wall and you aim at it', () => {
+    for (const cls of ['juggler', 'bigball'] as const) {
+      const sim = new Sim(3, { classId: cls });
+      const r = sim.ballRadius;
+      for (const [lx, deg] of [[r, 120], [r + 2, 160], [W - r, 60], [W - r - 2, 15]] as const) {
+        const t = traceShot(sim.grid, lx, (deg * Math.PI) / 180, 1, sim.traceAccel, false, 5, 4000, r);
+        expect(t.points.length).toBeGreaterThan(3);
+      }
+    }
   });
 });

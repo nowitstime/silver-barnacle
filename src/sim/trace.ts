@@ -14,6 +14,9 @@ export interface Trace {
  * Uses the exact same physics as real balls (including currents), so the laser never lies.
  * `maxContacts` of 0 or less draws only a short stub.
  */
+/** Travel (px) at the start of a shot during which a side-wall touch doesn't count as a bounce. */
+const EDGE_GRACE = 24;
+
 export function traceShot(
   grid: BrickGrid, x: number, angle: number, maxContacts = 1, accel: Accel | AccelFn = NO_ACCEL,
   wrap = false, sampleEvery = 5, maxSteps = 4000, r = BALL_R,
@@ -30,8 +33,11 @@ export function traceShot(
     if (res?.kind === 'floor') break;
     if (res?.kind === 'brick') bounce(b, res.contact);
     if (res) {
-      contacts.push([b.x, b.y]);
       points.push([b.x, b.y]);
+      // Launching right next to a side wall touches it straight away. That touch isn't a real
+      // bounce, so it doesn't use up the laser (otherwise the preview vanishes near the edges).
+      if (res.kind === 'wall' && i * STEP * BALL_SPEED < EDGE_GRACE) continue;
+      contacts.push([b.x, b.y]);
       if (contacts.length >= maxContacts) break;
     }
   }
