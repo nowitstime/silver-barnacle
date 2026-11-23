@@ -95,6 +95,23 @@ export interface Stats {
   ghost: number;
   /** Side walls are portals; each wrap adds damage (Wraparound). */
   wrap: boolean;
+  // ---- volley triggers: what each volley breaks (none / one / many / everything) ----
+  /** Break exactly 1 brick in a volley: +8% damage for the rest of the run. */
+  sniper: boolean;
+  /** Break nothing: the next volley gets +100% damage per charge (up to 4). */
+  windup: boolean;
+  /** Break 12+ bricks in a volley: +3% damage for the rest of the run. */
+  rampage: boolean;
+  /** Clear the board in one volley: +3 balls and +10% damage for the rest of the run. */
+  sweep: boolean;
+  /** Break more bricks than last volley: ×1.25 damage, stacking; resets otherwise. */
+  avalanche: boolean;
+  /** ×2 damage while a brick is in the bottom 3 rows, ×0.75 otherwise. */
+  berserker: boolean;
+  /** ×1.5 damage while every brick is in the top half, ×0.5 when one is in the bottom 3 rows. */
+  composure: boolean;
+  /** Damage beyond what a kill needed carries into the ball's next hit. */
+  overkill: boolean;
   // ---- class perks ----
   executioner: boolean;
   encore: boolean;
@@ -109,6 +126,7 @@ export const baseStats = (): Stats => ({
   afterburn: false, static: 0, bounty: 0, momentum: 0, wideLaser: 0, echo: false, detonate: 0,
   slowDrop: false, guardian: 0, critMass: 0, lastStand: 1, glassCannon: false, secondWind: false,
   singularity: 0, hazardMult: 1, hpMult: 1, acid: 0, tinder: false, chainReaction: false, conduct: 0, fireMult: 1, zapChance: 0, gravity: 0, rubber: 0, magnet: 0, ghost: 0, wrap: false,
+  sniper: false, windup: false, rampage: false, sweep: false, avalanche: false, berserker: false, composure: false, overkill: false,
   executioner: false, encore: false, payload: false, wildcard: false,
 });
 
@@ -179,7 +197,16 @@ export const UPGRADES: UpgradeDef[] = [
   U({ id: 'guardian', name: 'Guardian', rarity: 'epic', max: 3, desc: () => 'Gain a shield every time you clear a biome. +1 shield now.', apply: (s, n) => { s.guardian += n; }, onTake: (r) => r.addShields(1) }),
   U({ id: 'critmass', name: 'Critical Mass', rarity: 'epic', max: 3, desc: () => '+3% crit chance for every 10 balls you own.', apply: (s, n) => { s.critMass += 0.03 * n; } }),
   U({ id: 'laststand', name: 'Last Stand', rarity: 'epic', max: 2, desc: () => 'Double damage to bricks in the bottom 3 rows.', apply: (s, n) => { s.lastStand = 1 + n; } }),
+  // ---- volley triggers: set up what each volley breaks ----
+  U({ id: 'sniper', name: 'Sniper', rarity: 'rare', max: 1, desc: () => 'Break exactly 1 brick in a volley: your balls deal +8% damage for the rest of the run. Stacks forever.', apply: (s) => { s.sniper = true; } }),
+  U({ id: 'windup', name: 'Wind-Up', rarity: 'rare', max: 1, desc: () => 'Break nothing in a volley: your next volley gets +100% damage. Stacks up to 4 times; spent when you break something.', apply: (s) => { s.windup = true; } }),
+  U({ id: 'berserker', name: 'Berserker', rarity: 'rare', max: 1, desc: () => 'Fire while any brick is in the bottom 3 rows: double damage that volley. Otherwise 25% less.', apply: (s) => { s.berserker = true; } }),
+  U({ id: 'composure', name: 'Composure', rarity: 'rare', max: 1, desc: () => 'Fire while every brick is in the top half: +50% damage that volley. Half damage if one is in the bottom 3 rows.', apply: (s) => { s.composure = true; } }),
+  U({ id: 'overkill', name: 'Overkill', rarity: 'rare', max: 1, desc: () => 'Damage beyond what a kill needed carries into that ball\u2019s next hit.', apply: (s) => { s.overkill = true; } }),
+  U({ id: 'rampage', name: 'Rampage', rarity: 'epic', max: 1, desc: () => 'Break 12 or more bricks in one volley: +3% damage for the rest of the run. Stacks forever.', apply: (s) => { s.rampage = true; } }),
+  U({ id: 'sweep', name: 'Clean Sweep', rarity: 'epic', max: 1, desc: () => 'Clear every breakable brick in one volley: +3 balls and +10% damage for the rest of the run.', apply: (s) => { s.sweep = true; } }),
   // ---- legendary ----
+  U({ id: 'avalanche', name: 'Avalanche', rarity: 'legendary', max: 1, desc: () => 'Each volley that breaks more bricks than the one before multiplies your damage by 1.25. Break fewer and it resets.', apply: (s) => { s.avalanche = true; } }),
   U({ id: 'lava', name: 'The Ceiling Is Lava', rarity: 'legendary', max: 1, desc: () => 'A ball that touches the ceiling becomes a fireball: double damage, and it burns straight through everything it kills.', apply: (s) => { s.lava = true; } }),
   U({ id: 'glass', name: 'Glass Cannon', rarity: 'legendary', max: 1, desc: () => 'Triple damage. You lose all shields and can never gain more.', apply: (s) => { s.glassCannon = true; } }),
   U({ id: 'wind', name: 'Second Wind', rarity: 'legendary', max: 1, desc: () => 'Once per run, when you would lose, the bottom 3 rows are wiped instead.', apply: (s) => { s.secondWind = true; } }),
@@ -242,6 +269,7 @@ const CATEGORY: Record<string, Exclude<LootCategory, 'wild'>> = {
   acid: 'power', tinder: 'elemental', chainreact: 'elemental', conductor: 'elemental',
   whetstone: 'power', bellows: 'elemental', powder: 'elemental', copper: 'elemental',
   rubber: 'arsenal', lead: 'arsenal', feather: 'arsenal', magnet: 'arsenal', ghost: 'arsenal', wrap: 'arsenal',
+  sniper: 'power', windup: 'power', berserker: 'power', composure: 'guard', overkill: 'power', rampage: 'arsenal', sweep: 'arsenal', avalanche: 'power',
 };
 
 export const categoryOf = (id: string): Exclude<LootCategory, 'wild'> | undefined => CATEGORY[id];
@@ -332,13 +360,13 @@ const STAT_LABELS: Partial<Record<keyof Stats, [string, Fmt]>> = {
   hazardMult: ['Hazard frequency', times], hpMult: ['New brick HP', times],
   gravity: ['Ball weight', (v) => (Number(v) > 0 ? 'heavy' : Number(v) < 0 ? 'floaty' : 'normal')], rubber: ['Speed per bounce', (v) => `+${per(v)}`],
   magnet: ['Magnet pull', num], ghost: ['Pass-throughs per turn', num], wrap: ['Wraparound walls', onoff],
-  fireMult: ['Fire heat', times], zapChance: ['Zap chance per hit', per], acid: ['Acid on first hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
+  fireMult: ['Fire heat', times], sniper: ['Sniper', onoff], windup: ['Wind-Up', onoff], rampage: ['Rampage', onoff], sweep: ['Clean Sweep', onoff], avalanche: ['Avalanche', onoff], berserker: ['Berserker', onoff], composure: ['Composure', onoff], overkill: ['Overkill', onoff], zapChance: ['Zap chance per hit', per], acid: ['Acid on first hit', per], tinder: ['Tinderbox', onoff], chainReaction: ['Chain Reaction', onoff], conduct: ['Extra zap jumps', num],
 };
 
 /** Stats shown as their own line even when unchanged. */
 const HEADLINE: (keyof Stats)[] = ['critChance', 'critMult'];
 /** On/off stats that just repeat a card's name (already in the build list). */
-const NAMED_FLAGS = new Set<keyof Stats>(['glassCannon', 'secondWind', 'tinder', 'chainReaction', 'lava', 'echo', 'afterburn', 'armorPierce', 'hazardProof', 'slowDrop', 'wrap']);
+const NAMED_FLAGS = new Set<keyof Stats>(['sniper', 'windup', 'rampage', 'sweep', 'avalanche', 'berserker', 'composure', 'overkill', 'glassCannon', 'secondWind', 'tinder', 'chainReaction', 'lava', 'echo', 'afterburn', 'armorPierce', 'hazardProof', 'slowDrop', 'wrap']);
 
 /**
  * The run's current numbers for the pause screen: damage and crit first, then everything
@@ -390,7 +418,7 @@ export function previewUpgrade(id: string, owned: Record<string, number>, classA
 
 // ---- themes: what synergises with what ----
 
-export type Theme = 'crit' | 'fire' | 'explosion' | 'lightning' | 'bank' | 'multi' | 'damage' | 'defense' | 'general' | 'physics';
+export type Theme = 'crit' | 'fire' | 'explosion' | 'lightning' | 'bank' | 'multi' | 'damage' | 'defense' | 'general' | 'physics' | 'trigger';
 
 /** Each upgrade's themes. Generalists are good anywhere; the rest pay off together. */
 export const THEMES: Record<string, Theme[]> = {
@@ -408,6 +436,8 @@ export const THEMES: Record<string, Theme[]> = {
   rubber: ['physics', 'bank'], lead: ['physics', 'damage'], feather: ['physics', 'fire'], magnet: ['physics', 'crit'],
   ghost: ['physics', 'fire'], wrap: ['physics'],
   pact: ['damage'], overgrowth: ['multi'], tunnel: ['crit'],
+  sniper: ['trigger', 'damage'], windup: ['trigger', 'damage'], berserker: ['trigger', 'defense'], composure: ['trigger', 'defense'],
+  overkill: ['trigger', 'damage'], rampage: ['trigger', 'multi'], sweep: ['trigger', 'multi'], avalanche: ['trigger', 'multi'],
 };
 
 /** How well a card fits what you already own: shared themes count, generalists always count a little. */

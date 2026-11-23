@@ -282,7 +282,7 @@ function pause(): void {
   if (mode !== 'run' || sim.phase === 'over') return;
   loop.paused = true;
   menus.showPause({
-    classId: sim.classId, upgrades: sim.upgrades, stats: sim.stats, depth: sim.level, biome: sim.biome,
+    classId: sim.classId, upgrades: sim.upgrades, stats: sim.stats, triggers: sim.triggerLabels(), depth: sim.level, biome: sim.biome,
     shields: sim.shields, balls: sim.ballCount,
   });
 }
@@ -469,6 +469,11 @@ function feedback(events: SimEvent[]): void {
       case 'bloom': sfx.split(); break;
       case 'tide': sfx.portal(); break;
       case 'lava': sfx.heartbeat(); sfx.drop(); haptics.buzz([40, 60, 40], 0); break;
+      case 'trigger':
+        fx.text(126, 150, e.text, true);
+        if (e.text.endsWith('RESET')) sfx.drop(); else sfx.orb();
+        haptics.buzz(20, 0);
+        break;
       case 'bossPhase':
         sfx.bossRoar();
         fx.showBanner(`PHASE ${e.phase}`, e.text, 2.6);

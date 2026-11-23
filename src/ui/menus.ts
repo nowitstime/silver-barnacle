@@ -190,7 +190,7 @@ export class Menus {
 
   // ---- pause ----
 
-  showPause(v: { classId: ClassId; upgrades: Record<string, number>; stats: Stats; depth: number; biome: number; shields: number; balls: number }): void {
+  showPause(v: { classId: ClassId; upgrades: Record<string, number>; stats: Stats; triggers?: string[]; depth: number; biome: number; shields: number; balls: number }): void {
     const c = CLASS_BY_ID.get(v.classId)!;
     const ups = Object.entries(v.upgrades).filter(([, n]) => n > 0);
     this.render(`
@@ -205,7 +205,7 @@ export class Menus {
         <button class="btn-secondary" id="m-leave" type="button">Main menu <small>(run saved, Continue to resume)</small></button>
         <details class="stats" ${this.statsOpen ? 'open' : ''}>
           <summary>Your stats</summary>
-          <dl>${statSheet(v.stats, v.balls).map(([k, val]) => `<div><dt>${esc(k)}</dt><dd>${esc(val)}</dd></div>`).join('')}</dl>
+          <dl>${[...statSheet(v.stats, v.balls), ...(v.triggers ?? []).map((t) => ['Trigger', t] as [string, string])].map(([k, val]) => `<div><dt>${esc(k)}</dt><dd>${esc(val)}</dd></div>`).join('')}</dl>
         </details>
         <section class="build">
           <h3>Your build</h3>

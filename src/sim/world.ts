@@ -64,6 +64,8 @@ export interface SaveData {
   biomeRow: number;
   /** Turn endless mode began (older saves: estimated). */
   endlessStart?: number;
+  /** Volley trigger state (Sniper/Rampage/Sweep stacks, Wind-Up charge, Avalanche). */
+  growth?: Record<string, number>;
   bossActive: boolean;
   bricks: Brick[];
   items: Item[];
@@ -117,6 +119,10 @@ export class Sim {
   private toFire = 0;
   private copiesThisVolley = 0;
   private killsThisVolley = 0;
+  /** Volley trigger state: sniper/rampage/sweep stacks, Wind-Up charge, Avalanche multiplier and last count. */
+  growth: Record<string, number> = {};
+  /** Damage multiplier from trigger cards, fixed when the volley is fired. */
+  volleyMult = 1;
   private hitsThisVolley = 0;
   private goldenIndex = -1;
 
@@ -209,6 +215,54 @@ export class Sim {
     });
   }
 
+  /** Damage multiplier the trigger cards give the next volley (from growth and the board right now). */
+  triggerMult(): number {
+    const s = this.stats, g = this.growth;
+    let m = 1 + (g.sniper ?? 0) * 0.08 + (g.rampage ?? 0) * 0.03 + (g.sweep ?? 0) * 0.1;
+    if (s.windup && g.charge) m *= 1 + g.charge;
+    if (s.avalanche && g.avalanche) m *= g.avalanche;
+    const low = this.lowestRow;
+    if (s.berserker) m *= low >= ROWS - 3 ? 2 : 0.75;
+    if (s.composure) m *= low >= ROWS - 3 ? 0.5 : low < ROWS / 2 ? 1.5 : 1;
+    return m;
+  }
+
+  /** Short labels for what the trigger cards are doing right now (shown above Fire). */
+  triggerLabels(): string[] {
+    const s = this.stats, g = this.growth, out: string[] = [];
+    const grown = (g.sniper ?? 0) * 8 + (g.rampage ?? 0) * 3 + (g.sweep ?? 0) * 10;
+    if (grown) out.push(`+${grown}% grown`);
+    if (s.windup && g.charge) out.push(`Wind-Up ×${1 + g.charge}`);
+    if (s.avalanche && (g.avalanche ?? 1) > 1) out.push(`Avalanche ×${(g.avalanche ?? 1).toFixed(2)} (beat ${g.avLast ?? 0})`);
+    const low = this.lowestRow;
+    if (s.berserker) out.push(low >= ROWS - 3 ? 'Berserk ×2' : 'Berserker ×0.75');
+    if (s.composure && low >= ROWS - 3) out.push('Composure ×0.5');
+    else if (s.composure && low < ROWS / 2) out.push('Composure ×1.5');
+    return out;
+  }
+
+  /** Trigger cards look at what the volley broke. */
+  private volleyTriggers(): void {
+    const s = this.stats, g = this.growth, k = this.killsThisVolley;
+    const say = (id: string, text: string) => this.events.push({ type: 'trigger', id, text });
+    if (s.sniper && k === 1) { g.sniper = (g.sniper ?? 0) + 1; say('sniper', `SNIPER +${g.sniper * 8}%`); }
+    if (s.windup) {
+      if (k === 0) { g.charge = Math.min(4, (g.charge ?? 0) + 1); say('windup', `WIND-UP ×${1 + g.charge}`); }
+      else g.charge = 0;
+    }
+    if (s.rampage && k >= 12) { g.rampage = (g.rampage ?? 0) + 1; say('rampage', `RAMPAGE +${g.rampage * 3}%`); }
+    if (s.sweep && k > 0 && this.bricks.every((b) => b.kind === 'steel')) {
+      g.sweep = (g.sweep ?? 0) + 1;
+      this.runEffects().addBalls(3);
+      say('sweep', `CLEAN SWEEP +3 BALLS`);
+    }
+    if (s.avalanche) {
+      if (k > (g.avLast ?? 0)) { g.avalanche = (g.avalanche ?? 1) * 1.25; say('avalanche', `AVALANCHE ×${g.avalanche.toFixed(2)}`); }
+      else if ((g.avalanche ?? 1) > 1) { g.avalanche = 1; say('avalanche', 'AVALANCHE RESET'); }
+      g.avLast = k;
+    }
+  }
+
   /** What ended the run: the kinds of brick that crossed the line. */
   deathCause: BrickKind[] = [];
 
@@ -287,6 +341,7 @@ export class Sim {
     this.killsThisVolley = 0;
     this.hitsThisVolley = 0;
     this.goldenIndex = this.stats.encore ? Math.floor(this.combatRng() * this.ballCount) : -1;
+    this.volleyMult = this.triggerMult();
     this.balls = [];
     this.landX = null;
     return true;
@@ -414,6 +469,7 @@ export class Sim {
   /** Everything that happens between the last ball landing and the board moving down. */
   private endTurn(): void {
     const s = this.stats;
+    this.volleyTriggers();
     // Burning bricks take damage.
     for (const b of [...this.bricks]) {
       // A brick burns for a share of the hit that lit it (set when it was ignited).
@@ -974,6 +1030,8 @@ export class Sim {
     if (s.lastStand > 1 && brick.r + brick.h - 1 >= ROWS - 3) dmg *= s.lastStand;
     if (s.tinder && brick.burn > 0) dmg *= 1.25;
     if (crit) dmg *= s.critMult;
+    dmg *= this.volleyMult;
+    if (ball.carry) { dmg += ball.carry; ball.carry = 0; }
     return Math.max(1, Math.round(dmg));
   }
 
@@ -1023,6 +1081,8 @@ export class Sim {
 
     const dealt = Math.min(amount, brick.hp);
     brick.hp -= amount;
+    // Overkill: what the kill didn't need rides along to the ball's next hit.
+    if (s.overkill && ball && source === 'ball' && brick.hp < 0 && brick.kind !== 'boss') ball.carry = (ball.carry ?? 0) + (amount - dealt);
     if (brick.boss?.id === 'core' && brick.hp > 0) {
       const phase = brick.hp <= brick.maxHp / 3 ? 3 : brick.hp <= (brick.maxHp * 2) / 3 ? 2 : 1;
       if (phase !== brick.boss.phase) {
@@ -1303,6 +1363,7 @@ export class Sim {
       biome: this.biome,
       biomeRow: this.biomeRow,
       endlessStart: this.endlessStart,
+      growth: { ...this.growth },
       bossActive: this.bossActive,
       bricks: this.bricks.map((b) => ({ ...b, boss: b.boss ? { ...b.boss } : undefined })),
       items: this.items.map((i) => ({ ...i })),
@@ -1328,6 +1389,7 @@ export class Sim {
     this.won = !!d.won;
     this.biome = d.biome;
     this.biomeRow = d.biomeRow;
+    this.growth = { ...(d.growth ?? {}) };
     this.endlessStart = d.endlessStart ?? Math.max(0, d.turn - Math.max(0, d.biome - CORE) * 24 - d.biomeRow);
     this.bossActive = d.bossActive;
     const [lootAt, pickAt] = pickPoints(d.biome);

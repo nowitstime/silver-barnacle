@@ -68,7 +68,7 @@ describe('reroll keeps rarities', () => {
   it('falls back to a lower rarity when a tier is exhausted', () => {
     const rng = mulberry32(10);
     // Own every legendary except the one on offer, so no other legendary is available.
-    const owned = { glass: 1, wind: 1, singularity: 1 };
+    const owned = { glass: 1, wind: 1, singularity: 1, avalanche: 1 };
     const next = rerollSameTiers(rng, owned, ['lava']);
     expect(next[0]).not.toBe('lava');
     expect(UPGRADE_BY_ID.get(next[0])!.rarity).toBe('epic');

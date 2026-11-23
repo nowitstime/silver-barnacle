@@ -83,6 +83,8 @@ export interface Ball {
   wallBounces: number;
   /** Has hit a brick this turn (Ricochet bonuses only build after that). */
   struck: boolean;
+  /** Overkill: extra damage waiting for this ball's next hit. */
+  carry?: number;
   /** Hazard effects for the rest of the turn. */
   heavy: boolean;
   slow: boolean;
@@ -134,6 +136,8 @@ export type SimEvent =
   | { type: 'boss'; name: string; tell: string }
   | { type: 'bossDown'; name: string }
   | { type: 'bossPhase'; phase: number; text: string }
+  /** A volley trigger card fired (Sniper, Wind-Up, ...). */
+  | { type: 'trigger'; id: string; text: string }
   | { type: 'win' }
   | { type: 'loot'; category: LootCategory; upgrade: string | null; x: number; y: number }
   | { type: 'lootAppear' }

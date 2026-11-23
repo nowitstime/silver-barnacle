@@ -128,7 +128,7 @@ const PAGES: Page[] = [
     index: () => UPGRADES.map((u) => [u.name, `${u.rarity} ${u.desc(0)}`]),
     render: () => `
       <h1>Upgrades</h1>
-      <p class="lede">${UPGRADES.length} upgrades. Each has themes (crit, fire, explosion, lightning, bank, multi, damage, defense, general). <b>General</b> cards are solid in any build; the rest pay off when you stack a theme, and cards that fit your build are marked in the pick screen. Most stack: the card always describes the <i>next</i> stack. Rarer cards show up more often deeper in a run, and big picks never offer commons. Cursed cards only appear for the Gambler.</p>
+      <p class="lede">${UPGRADES.length} upgrades. Each has themes (crit, fire, explosion, lightning, bank, multi, damage, defense, physics, trigger, general). <b>Trigger</b> cards react to what each volley breaks: nothing, exactly one, lots, or the whole board. <b>General</b> cards are solid in any build; the rest pay off when you stack a theme, and cards that fit your build are marked in the pick screen. Most stack: the card always describes the <i>next</i> stack. Rarer cards show up more often deeper in a run, and big picks never offer commons. Cursed cards only appear for the Gambler.</p>
       <div class="filters" role="group" aria-label="Filter by rarity">
         <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
         ${RARITY_ORDER.map((r) => `<button type="button" class="chip" data-filter="${r}" aria-pressed="false">${r}</button>`).join('')}

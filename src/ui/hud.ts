@@ -25,6 +25,7 @@ export class Hud {
   private pause: HTMLButtonElement;
   private hint: HTMLElement;
   private card: HTMLElement;
+  private mods: HTMLElement;
   visible = false;
 
   constructor(parent: HTMLElement, private h: HudHandlers) {
@@ -34,6 +35,7 @@ export class Hud {
     this.root.innerHTML = `
       <button class="icon-btn pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
       <p class="hint" id="hint" hidden>Drag left or right to aim (higher on the screen = finer) · tap to point · hold a brick for info · ◀ ▶ to nudge · then Fire</p>
+      <p class="mods" id="mods" hidden></p>
       <div class="fire-row">
         <button class="nudge" id="nudge-l" type="button" aria-label="Turn aim left">◀</button>
         <button class="fire" id="fire" type="button">Fire</button>
@@ -51,6 +53,7 @@ export class Hud {
     this.pause = this.root.querySelector('#pause')!;
     this.hint = this.root.querySelector('#hint')!;
     this.card = this.root.querySelector('#inspect')!;
+    this.mods = this.root.querySelector('#mods')!;
 
     this.fire.addEventListener('click', () => this.h.onFire());
     this.fireRow = this.root.querySelector('.fire-row')!;
@@ -98,6 +101,10 @@ export class Hud {
     if (!this.visible) return;
     const inVolley = sim.phase === 'fire' || sim.phase === 'run';
     this.fireRow.hidden = sim.phase !== 'aim' || blocked;
+    // What the trigger cards will do to this volley.
+    const mods = sim.phase === 'aim' && !blocked ? sim.triggerLabels().join(' · ') : '';
+    if (this.mods.textContent !== mods) this.mods.textContent = mods;
+    this.mods.hidden = !mods;
     this.ff.hidden = !(inVolley && (sim.turnTime > FF_AFTER || speed > 1));
     // Recall shows after a while, or straight away once there's nothing left to break.
     const cleared = inVolley && sim.turnTime > 0.3 && sim.bricks.every((b) => b.kind === 'steel');
