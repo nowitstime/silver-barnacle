@@ -40,8 +40,8 @@ export const CLASSES: ClassDef[] = [
     apply: (s) => { s.wildcard = true; },
   },
   {
-    id: 'bigball', name: 'Big Ball', tagline: 'One ball. It only gets heavier.', startBalls: 1,
-    perk: 'Heavyweight', perkDesc: 'You only ever have one big ball. Every extra ball you would get (orbs, cards, bounties) adds +1 damage to it instead.',
+    id: 'bigball', name: 'Big Ball', tagline: 'Few balls. Every orb makes them heavier.', startBalls: 1,
+    perk: 'Heavyweight', perkDesc: 'Starts with one big ball. Ball orbs on the board add +1 damage to every ball instead of a new ball. Only cards (Extra Balls, Bounty, Clean Sweep) give more balls.',
     apply: (s) => { s.bigBall = true; },
   },
 ];

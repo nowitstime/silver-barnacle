@@ -263,11 +263,10 @@ export class Sim {
     }
   }
 
-  /** New balls join the volley, or, for Big Ball, add damage to the one ball. */
-  private gainBalls(n: number): void {
-    if (n <= 0) return;
+  /** A ball orb on the board was collected: a ball next volley, or, for Big Ball, +1 damage per orb right away. */
+  private orbPickup(n: number): void {
     if (this.stats.bigBall) this.growth.big = (this.growth.big ?? 0) + n;
-    else this.ballCount += n;
+    else this.pendingBalls += n;
   }
 
   /** Collision radius of a fresh ball. */
@@ -332,7 +331,7 @@ export class Sim {
 
   private runEffects() {
     return {
-      addBalls: (n: number) => this.gainBalls(n),
+      addBalls: (n: number) => (this.ballCount += n),
       addShields: (n: number) => { if (!this.stats.glassCannon) this.shields += n; },
     };
   }
@@ -543,7 +542,7 @@ export class Sim {
     this.items = this.items.filter((i) => !i.used);
 
     if (this.landX !== null) this.launchX = this.landX;
-    this.gainBalls(this.pendingBalls);
+    this.ballCount += this.pendingBalls;
     this.pendingBalls = 0;
     this.balls = [];
     this.turn++;
@@ -918,7 +917,7 @@ export class Sim {
         this.items.splice(i, 1);
         let extra = Math.floor(this.stats.luckyOrbs);
         if (this.combatRng() < this.stats.luckyOrbs % 1) extra++;
-        this.pendingBalls += 1 + extra;
+        this.orbPickup(1 + extra);
         this.events.push({ type: 'orb', x: ix, y: iy, extra: extra > 0 });
       } else if (it.kind === 'laserH' || it.kind === 'laserV') {
         if (ball.lasers.includes(it.id)) continue;
@@ -1133,7 +1132,7 @@ export class Sim {
       return true;
     }
     if (brick.bloom) {
-      this.pendingBalls++;
+      this.orbPickup(1);
       this.events.push({ type: 'orb', x: cx, y: cy, extra: false });
     }
     if (brick.kind === 'bomb') this.explode(brick.c, brick.r, Math.max(this.level, s.damage * 3), cx, cy);

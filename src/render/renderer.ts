@@ -976,8 +976,9 @@ export class Renderer {
       ctx.font = `700 11px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Big Ball shows its damage instead of a ball count.
-      const label = sim.stats.bigBall ? `${sim.stats.damage + (sim.growth.big ?? 0)} dmg` : `×${count}`;
+      // Big Ball shows its damage alongside the ball count.
+      const dmg = sim.stats.damage + (sim.growth.big ?? 0);
+      const label = sim.stats.bigBall ? (count > 1 ? `×${count} · ${dmg} dmg` : `${dmg} dmg`) : `×${count}`;
       ctx.fillText(label, Math.max(20, Math.min(W - 20, sim.launchX)), FLOOR + 15);
     }
   }
