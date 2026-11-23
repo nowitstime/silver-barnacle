@@ -31,8 +31,11 @@ export interface RowOptions extends SpawnTuning {
  * so it keeps pace with your ball count and upgrades.
  */
 export function brickHp(level: number, biome: number): number {
-  return level * (1 + level / HP_CURVE) * (1 + BIOME_HP * biome);
+  const l = level * PACE;
+  return l * (1 + l / HP_CURVE) * (1 + BIOME_HP * biome);
 }
+/** The run is ~16% shorter than it used to be (84 rows to The Core, was 100); bricks toughen a bit faster to match. */
+export const PACE = 1.1;
 export const HP_CURVE = 50;
 export const BIOME_HP = 0.2;
 

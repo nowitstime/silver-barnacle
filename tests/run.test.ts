@@ -22,9 +22,9 @@ function play(sim: Sim, turns: number, onEvent?: (e: ReturnType<Sim['drainEvents
 
 describe('run structure', () => {
   it('biomes follow the 12/16/20/24/28 curve, then stay long', () => {
-    expect(BIOME_ROWS).toEqual([12, 16, 20, 24, 28]);
-    expect(biomeLength(0)).toBe(12);
-    expect(biomeLength(7)).toBe(24);
+    expect(BIOME_ROWS).toEqual([10, 14, 17, 20, 23]);
+    expect(biomeLength(0)).toBe(10);
+    expect(biomeLength(7)).toBe(20);
     expect(gimmickFor(0)).toBe('growth');
     expect(gimmickFor(1)).toBe('dark');
     expect(gimmickFor(5)).toBe('none');
@@ -250,8 +250,8 @@ describe('ricochet rush', () => {
 describe('three upgrade moments per biome', () => {
   it('loot at a third, a small card pick at two-thirds (commons allowed), the big pick after the boss', () => {
     const [lootAt, pickAt] = pickPoints(0);
-    expect(lootAt).toBe(4);
-    expect(pickAt).toBe(8);
+    expect(lootAt).toBe(3);
+    expect(pickAt).toBe(7);
     const sim = new Sim(40);
     sim.debugAddBalls(60);
     for (let i = 0; i < 8; i++) sim.debugGrant('heavy');

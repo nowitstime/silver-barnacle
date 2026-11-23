@@ -1,11 +1,11 @@
 /** Rows in each of the five main biomes before its mini-boss. Early biomes are short, later ones longer. */
-export const BIOME_ROWS = [12, 16, 20, 24, 28];
+export const BIOME_ROWS = [10, 14, 17, 20, 23];
 export const BIOME_COUNT = BIOME_ROWS.length;
 /** Biome index of The Core: no rows, just the final boss. */
 export const CORE = 5;
 /** First endless biome (after the Core is broken). */
 export const ENDLESS_START = CORE + 1;
-const ENDLESS_ROWS = 24;
+const ENDLESS_ROWS = 20;
 
 /** Which of the 5 biome themes (or 5 = the Core) a biome number uses. Endless cycles the five. */
 export const themeOf = (b: number): number => (b < CORE ? b : b === CORE ? CORE : (b - ENDLESS_START) % BIOME_COUNT);
