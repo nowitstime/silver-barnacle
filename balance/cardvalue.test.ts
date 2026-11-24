@@ -7,19 +7,19 @@
  * with run-to-run randomness cancelled out. The main run then takes the card that did best, so it
  * drafts like a strong player.
  *
- * `npm run balance -- cardvalue` (RUNS=40, HORIZON=60). Several cores: SHARDS=4 SHARD=0..3, then MERGE=4.
+ * `npm run balance -- cardvalue` (RUNS=40, HORIZON=30). Several cores: SHARDS=4 SHARD=0..3, then MERGE=4.
  * Writes docs/card-values.md and balance/card-values.json (the learned value table).
  */
 import { it } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { CLASSES, type ClassId } from '../src/content/classes';
 import { UPGRADE_BY_ID } from '../src/content/upgrades';
-import { bestAngle, finishTurn, smartAngle } from '../src/sim/bot';
+import { finishTurn, smartAngle, v4Angle } from '../src/sim/bot';
 import { ROWS } from '../src/sim/constants';
 import { Sim } from '../src/sim/world';
 
 const SEEDS = Number(process.env.RUNS ?? 40);
-const HORIZON = Number(process.env.HORIZON ?? 60);
+const HORIZON = Number(process.env.HORIZON ?? 30);
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? 400);
 const SHARDS = Number(process.env.SHARDS ?? 1), SHARD = Number(process.env.SHARD ?? 0), MERGE = Number(process.env.MERGE ?? 0);
 const OUT = new URL('./.out/', import.meta.url);
@@ -33,7 +33,7 @@ function rollout(sim: Sim, turns: number): number {
   while (sim.phase !== 'over' && t < turns) {
     if (sim.phase === 'won') { if (!sim.continueEndless()) break; continue; }
     if (sim.phase === 'pick') { sim.choose(0); continue; }
-    sim.fire(bestAngle(sim, 6));
+    sim.fire(smartAngle(sim, { budget: 5, robust: false, lookahead: false }));
     finishTurn(sim);
     t++;
   }
@@ -61,7 +61,7 @@ function play(seed: number, classId: ClassId): Sample[] {
       sim.choose(values.indexOf(Math.max(...values)));
       continue;
     }
-    sim.fire(smartAngle(sim, { budget: 14, lookahead: false }));
+    sim.fire(v4Angle(sim));
     finishTurn(sim);
     turns++;
   }
@@ -77,15 +77,21 @@ const sgn = (x: number) => `${x >= 0 ? '+' : ''}${x.toFixed(1)}`;
 it('card value report', async () => {
   let all: Sample[] = [];
   if (MERGE) {
-    for (let k = 0; k < MERGE; k++) all.push(...(JSON.parse(readFileSync(new URL(`cards-${k}.json`, OUT), 'utf8')) as Sample[]));
+    for (let k = 0; k < MERGE; k++) all.push(...(JSON.parse(readFileSync(new URL(`cards-${k}.json`, OUT), 'utf8')) as { samples: Sample[] }[]).flatMap((d) => d.samples));
   } else {
+    const file = new URL(`cards-${SHARD}.json`, OUT);
+    // Resume: keep runs this shard already finished (it saves after every run).
+    const done: { seed: number; samples: Sample[] }[] = SHARDS > 1 && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
     for (let i = SHARD; i < SEEDS; i += SHARDS) {
-      all.push(...play(90000 + i * 6007, (process.env.CLASS as ClassId | undefined) ?? CLASSES[i % CLASSES.length].id));
+      const seed = 90000 + i * 6007;
+      if (done.some((d) => d.seed === seed)) continue;
+      done.push({ seed, samples: play(seed, (process.env.CLASS as ClassId | undefined) ?? CLASSES[i % CLASSES.length].id) });
+      if (SHARDS > 1) { if (!existsSync(OUT)) mkdirSync(OUT); writeFileSync(file, JSON.stringify(done)); }
       await new Promise((ok) => setTimeout(ok, 0));
     }
+    all = done.flatMap((d) => d.samples);
     if (SHARDS > 1) {
-      if (!existsSync(OUT)) mkdirSync(OUT);
-      writeFileSync(new URL(`cards-${SHARD}.json`, OUT), JSON.stringify(all));
+      writeFileSync(new URL(`cards-${SHARD}.done`, OUT), '');
       return;
     }
   }

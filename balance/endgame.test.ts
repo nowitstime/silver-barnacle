@@ -10,15 +10,17 @@ import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { CLASSES, type ClassId } from '../src/content/classes';
 import { UPGRADE_BY_ID, THEMES } from '../src/content/upgrades';
 import { mulberry32 } from '../src/core/rng';
-import { bestAngle, finishTurn, smartAngle, strategistAngle } from '../src/sim/bot';
+import { bestAngle, finishTurn, smartAngle, strategistAngle, v4Angle } from '../src/sim/bot';
 import { Sim } from '../src/sim/world';
 import { CORE } from '../src/sim/run';
 
 const SEEDS = Number(process.env.RUNS ?? 60);
 const CANDIDATES = Number(process.env.CANDIDATES ?? 4);
 const MAX_TURNS = Number(process.env.MAX_TURNS ?? 600);
-/** v2 (default): aims at corners, gaps and bank shots with a precision check. v1: 4 evenly spaced angles. v3: strategist (triage, pockets, corridors, top lane). */
-const BOT = process.env.BOT ?? 'v2';
+/** v4 (default): v2 plus triage. v2: aims at corners, gaps and bank shots with a precision check. v1: 4 evenly spaced angles. v3: strategist (triage, pockets, corridors, top lane). */
+const BOT = process.env.BOT ?? 'v4';
+/** Names this test's shard files, so a restarted shard picks up where it left off. */
+const TAG = process.env.TAG ?? 'run';
 const SHARDS = Number(process.env.SHARDS ?? 1), SHARD = Number(process.env.SHARD ?? 0), MERGE = Number(process.env.MERGE ?? 0);
 const OUT = new URL('./.out/', import.meta.url);
 
@@ -33,7 +35,7 @@ function play(seed: number, classId: ClassId): Result {
     if (!atDeep && sim.biome >= 2 && sim.phase === 'aim') atDeep = { ...sim.upgrades };
     if (sim.phase === 'won') { won = true; if (!sim.continueEndless()) break; continue; }
     if (sim.phase === 'pick') { sim.choose(Math.floor(rnd() * sim.offer!.ids.length)); continue; }
-    sim.fire(BOT === 'v1' ? bestAngle(sim, CANDIDATES) : BOT === 'v3' ? strategistAngle(sim) : smartAngle(sim));
+    sim.fire(BOT === 'v1' ? bestAngle(sim, CANDIDATES) : BOT === 'v3' ? strategistAngle(sim) : BOT === 'v4' ? v4Angle(sim) : smartAngle(sim));
     finishTurn(sim);
     turns++;
   }
@@ -55,18 +57,24 @@ const themesOf = (b: Record<string, number>) => {
 it('endgame report', async () => {
   let res: Result[] = [];
   if (MERGE) {
-    for (let k = 0; k < MERGE; k++) res.push(...JSON.parse(readFileSync(new URL(`endgame-${k}.json`, OUT), 'utf8')) as Result[]);
+    for (let k = 0; k < MERGE; k++) res.push(...JSON.parse(readFileSync(new URL(`endgame-${TAG}-${k}.json`, OUT), 'utf8')) as Result[]);
     res.sort((a, b) => a.seed - b.seed);
-  } else for (let i = SHARD; i < SEEDS; i += SHARDS) {
+  } else {
+   const file = new URL(`endgame-${TAG}-${SHARD}.json`, OUT);
+   // Resume: keep runs this shard already finished (it saves after every run).
+   if (SHARDS > 1 && existsSync(file)) res = JSON.parse(readFileSync(file, 'utf8')) as Result[];
+   for (let i = SHARD; i < SEEDS; i += SHARDS) {
     const seed = 70000 + i * 7919, cls = (process.env.CLASS as ClassId | undefined) ?? CLASSES[i % CLASSES.length].id;
+    if (res.some((x) => x.seed === seed)) continue;
     const r = play(seed, cls);
     res.push(r);
+    if (SHARDS > 1) { if (!existsSync(OUT)) mkdirSync(OUT); writeFileSync(file, JSON.stringify(res)); }
     console.log(`run ${i + 1}/${SEEDS} ${cls}: depth ${r.depth}${r.won ? ' (beat The Core)' : ''}${r.capped ? ' [turn limit]' : ''}`);
     await new Promise((ok) => setTimeout(ok, 0));
+   }
   }
   if (SHARDS > 1) {
-    if (!existsSync(OUT)) mkdirSync(OUT);
-    writeFileSync(new URL(`endgame-${SHARD}.json`, OUT), JSON.stringify(res));
+    writeFileSync(new URL(`endgame-${TAG}-${SHARD}.done`, OUT), '');
     return;
   }
   const RUNS_DONE = res.length;
