@@ -1,0 +1,387 @@
+{
+ "pact": {
+  "all": 3,
+  "n": 13,
+  "early": 0.75,
+  "mid": 1.45,
+  "late": 5.9
+ },
+ "singularity": {
+  "all": 2.24,
+  "n": 11,
+  "early": 6.78,
+  "late": 0.78
+ },
+ "chain": {
+  "all": 2.14,
+  "n": 26,
+  "early": 0.17,
+  "mid": 3,
+  "late": 1.9
+ },
+ "laststand": {
+  "all": 2.06,
+  "n": 19,
+  "mid": 2.01,
+  "late": 1
+ },
+ "heavy": {
+  "all": 2.05,
+  "n": 13,
+  "early": 2.62,
+  "mid": 2.89,
+  "late": -0.11
+ },
+ "wrap": {
+  "all": 1.73,
+  "n": 16,
+  "early": 1,
+  "mid": 5.23,
+  "late": -0.36
+ },
+ "sweep": {
+  "all": 1.64,
+  "n": 22,
+  "early": 1,
+  "mid": 4.5,
+  "late": -0.39
+ },
+ "extra": {
+  "all": 1.6,
+  "n": 16,
+  "early": 1.72,
+  "mid": 2.1,
+  "late": 0.22
+ },
+ "ricochet": {
+  "all": 1.24,
+  "n": 15,
+  "early": -0.78,
+  "mid": 4.44,
+  "late": -0.96
+ },
+ "kindling": {
+  "all": 1.2,
+  "n": 13,
+  "early": -0.08,
+  "mid": 2.07,
+  "late": 1.4
+ },
+ "berserker": {
+  "all": 1.15,
+  "n": 13,
+  "mid": 4.33,
+  "late": -0.14
+ },
+ "overcharge": {
+  "all": 1.11,
+  "n": 13,
+  "mid": 0.08,
+  "late": 2.06
+ },
+ "splash": {
+  "all": 1.09,
+  "n": 20,
+  "early": 3.45,
+  "mid": -1.43,
+  "late": 1.82
+ },
+ "detonate": {
+  "all": 1.07,
+  "n": 17,
+  "early": 1.56,
+  "mid": 0.44,
+  "late": 1.06
+ },
+ "ghost": {
+  "all": 0.93,
+  "n": 20,
+  "early": 1.48,
+  "late": 0.32
+ },
+ "wind": {
+  "all": 0.75,
+  "n": 17,
+  "early": 0.33,
+  "mid": 1.18,
+  "late": 0.62
+ },
+ "glass": {
+  "all": 0.73,
+  "n": 14,
+  "early": 0.67,
+  "late": 0.79
+ },
+ "pierce": {
+  "all": 0.72,
+  "n": 23,
+  "early": 0.96,
+  "mid": 0,
+  "late": 1.81
+ },
+ "powder": {
+  "all": 0.64,
+  "n": 11,
+  "early": 0.57,
+  "mid": 0.75
+ },
+ "rubber": {
+  "all": 0.56,
+  "n": 19,
+  "early": 1.67,
+  "mid": -0.22,
+  "late": 0.29
+ },
+ "fuse": {
+  "all": 0.5,
+  "n": 10,
+  "early": 0.33,
+  "late": 0.58
+ },
+ "avalanche": {
+  "all": 0.45,
+  "n": 11,
+  "mid": 1.33,
+  "late": -0.01
+ },
+ "acid": {
+  "all": 0.4,
+  "n": 28,
+  "early": -1.85,
+  "mid": -0.2,
+  "late": 3.96
+ },
+ "skin": {
+  "all": 0.36,
+  "n": 22,
+  "early": 0.12,
+  "mid": 0.78,
+  "late": 0.11
+ },
+ "bounty": {
+  "all": 0.3,
+  "n": 23,
+  "early": -0.71,
+  "mid": 0.42,
+  "late": 1.46
+ },
+ "core": {
+  "all": 0.29,
+  "n": 14,
+  "early": -2.33,
+  "mid": 2.01
+ },
+ "sight": {
+  "all": 0.16,
+  "n": 12,
+  "early": 0.27,
+  "mid": -0.11
+ },
+ "composure": {
+  "all": 0.14,
+  "n": 10,
+  "mid": 0.48
+ },
+ "echo": {
+  "all": 0.09,
+  "n": 17,
+  "early": -0.19,
+  "mid": 0.24,
+  "late": 0.06
+ },
+ "sniper": {
+  "all": 0.09,
+  "n": 19,
+  "early": 0.5,
+  "mid": 0.79,
+  "late": -0.95
+ },
+ "overkill": {
+  "all": 0.08,
+  "n": 13,
+  "early": 0.08,
+  "late": 0.01
+ },
+ "first": {
+  "all": -0.09,
+  "n": 24,
+  "early": -0.68,
+  "mid": 0.39,
+  "late": -0.18
+ },
+ "magnet": {
+  "all": -0.09,
+  "n": 15,
+  "early": -0.02,
+  "mid": -0.67,
+  "late": 0.53
+ },
+ "chainreact": {
+  "all": -0.21,
+  "n": 14,
+  "early": 1.02,
+  "mid": -4.11,
+  "late": 0.76
+ },
+ "copper": {
+  "all": -0.24,
+  "n": 12,
+  "early": 0.25,
+  "mid": -0.25,
+  "late": -0.89
+ },
+ "guardian": {
+  "all": -0.25,
+  "n": 14,
+  "mid": -0.67,
+  "late": 0.12
+ },
+ "proof": {
+  "all": -0.29,
+  "n": 9,
+  "early": -3.22,
+  "mid": 2.92,
+  "late": -0.56
+ },
+ "dilation": {
+  "all": -0.32,
+  "n": 12,
+  "mid": -1.89,
+  "late": 0.96
+ },
+ "sharp": {
+  "all": -0.32,
+  "n": 17,
+  "early": -1.19,
+  "late": 0.48
+ },
+ "momentum": {
+  "all": -0.35,
+  "n": 25,
+  "early": 0,
+  "mid": -0.04,
+  "late": -0.6
+ },
+ "mercy": {
+  "all": -0.37,
+  "n": 20,
+  "early": 0.89,
+  "mid": 0.07,
+  "late": -1.05
+ },
+ "tinder": {
+  "all": -0.53,
+  "n": 17,
+  "mid": -3.67,
+  "late": 0.39
+ },
+ "wide": {
+  "all": -0.54,
+  "n": 18,
+  "early": 0.25,
+  "mid": -0.33,
+  "late": -1.19
+ },
+ "lucky": {
+  "all": -0.63,
+  "n": 15,
+  "early": -0.88,
+  "mid": -0.68
+ },
+ "brutal": {
+  "all": -0.67,
+  "n": 12,
+  "early": -0.13,
+  "late": 0.8
+ },
+ "rampage": {
+  "all": -0.8,
+  "n": 21,
+  "early": 1.06,
+  "mid": -0.2,
+  "late": -1.67
+ },
+ "steeltoe": {
+  "all": -0.97,
+  "n": 13,
+  "early": -0.11,
+  "mid": -1.29
+ },
+ "mitosis": {
+  "all": -1,
+  "n": 15,
+  "late": -0.42
+ },
+ "critmass": {
+  "all": -1.01,
+  "n": 19,
+  "early": 0,
+  "mid": -0.89,
+  "late": -1.27
+ },
+ "lava": {
+  "all": -1.03,
+  "n": 15,
+  "mid": 1.5,
+  "late": -2.29
+ },
+ "afterburn": {
+  "all": -1.28,
+  "n": 12,
+  "early": -0.33,
+  "mid": -0.33,
+  "late": -2.6
+ },
+ "conductor": {
+  "all": -1.3,
+  "n": 14,
+  "early": -0.67,
+  "mid": -3.75,
+  "late": 1.25
+ },
+ "static": {
+  "all": -1.33,
+  "n": 19,
+  "early": -0.08,
+  "mid": 0,
+  "late": -2.08
+ },
+ "bellows": {
+  "all": -1.71,
+  "n": 10,
+  "early": -3.62,
+  "mid": 0.33
+ },
+ "feather": {
+  "all": -1.85,
+  "n": 18,
+  "early": -0.5,
+  "mid": -3.1,
+  "late": -1.37
+ },
+ "whetstone": {
+  "all": -1.99,
+  "n": 11,
+  "early": -4.52,
+  "mid": -0.64
+ },
+ "windup": {
+  "all": -2.6,
+  "n": 14,
+  "mid": -6.73,
+  "late": -0.3
+ },
+ "overgrowth": {
+  "all": -4.97,
+  "n": 20,
+  "early": -6.31,
+  "mid": -8.21,
+  "late": -1.86
+ },
+ "lead": {
+  "all": -4.98,
+  "n": 16,
+  "mid": -8.26,
+  "late": -2.98
+ }
+}
