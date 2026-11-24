@@ -342,6 +342,8 @@ export function strategistAngle(sim: Sim, o: SmartOptions = {}): number {
 
 export type V4Feature = 'corridor' | 'pockets' | 'top' | 'triage' | 'safe';
 export const V4_ALL: V4Feature[] = ['corridor', 'pockets', 'top', 'triage', 'safe'];
+/** What tested best on 24 Big Ball seeds: v2 plus triage. The other pieces were neutral or worse. */
+export const V4_BEST: V4Feature[] = ['triage'];
 
 /** Full-precision laser features (game step size), for the extra v4 candidates. */
 function laserFeaturesExact(sim: Sim, a: number, must: Set<number>, walls: Set<number>, topY: number): Features {
@@ -373,7 +375,7 @@ function laserFeaturesExact(sim: Sim, a: number, must: Set<number>, walls: Set<n
  * finds as extras, each switchable: fine-tuned corridor corners, pocket openers, top-lane shots,
  * must-handle shots (triage as a scoring bonus, not a filter), and safe-mode weighting.
  */
-export function v4Angle(sim: Sim, features: V4Feature[] = V4_ALL, o: SmartOptions = {}): number {
+export function v4Angle(sim: Sim, features: V4Feature[] = V4_BEST, o: SmartOptions = {}): number {
   const on = new Set(features);
   const save = sim.toSave();
   const balls = Math.max(1, sim.ballCount);
